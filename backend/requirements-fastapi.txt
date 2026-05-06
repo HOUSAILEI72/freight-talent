@@ -1,0 +1,14 @@
+# FastAPI 服务专用依赖（独立于 Flask，轻量化）
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic-settings==2.7.0
+PyJWT==2.10.1
+redis==5.2.1
+pymysql==1.1.1
+sqlalchemy==2.0.36
+python-dotenv==1.0.1
+cryptography==44.0.3
+httpx==0.28.1
+python-multipart==0.0.20
+openpyxl==3.1.5
+apscheduler>=3.10.4,<4.0

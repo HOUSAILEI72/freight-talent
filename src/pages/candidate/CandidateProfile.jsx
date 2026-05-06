@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { MapPin, Briefcase, GraduationCap, Clock, Star, Send, ChevronLeft, CheckCircle, Edit, Loader2, AlertCircle } from 'lucide-react'
+import { MapPin, Briefcase, GraduationCap, Clock, Star, Send, ChevronLeft, CheckCircle, Edit, Loader2, AlertCircle, Mail, Phone, Home, MessageSquare } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { TagList } from '../../components/ui/TagList'
 import { MatchScore } from '../../components/ui/MatchScore'
+import { TagNoteModal } from '../../components/ui/TagNoteModal'
 import { useAuth } from '../../context/AuthContext'
 import { candidatesApi } from '../../api/candidates'
 import { invitationsApi } from '../../api/invitations'
+import { getTags } from '../../api/tagsV2'
 
 function FreshnessIndicator({ days }) {
   const color = days <= 3 ? 'emerald' : days <= 7 ? 'blue' : 'gray'
@@ -40,15 +42,21 @@ export default function CandidateProfile({ viewMode }) {
   const [inviteError, setInviteError] = useState('')
   const [inviteSuccess, setInviteSuccess] = useState(false)
 
-  // viewMode="self" 或候选人用 user.id 看自己
-  const isOwnProfile = viewMode === 'self' || (user?.role === 'candidate' && String(user.id) === String(id))
+  // 标签描述弹窗
+  const [noteTag, setNoteTag] = useState(null)   // { id, name, category } | null
+  const [allTagObjects, setAllTagObjects] = useState([]) // active 标签完整对象（含 id）
+
+  // viewMode="self" → 候选人从 /candidate/profile/me 进入，直接调 /candidates/me
+  // 数字 id 路由 → 调公开档案接口，后端会对候选人本人豁免角色限制
+  const isOwnProfile = viewMode === 'self'
 
   useEffect(() => {
     setLoadError('')
     if (isOwnProfile) {
       candidatesApi.getMyCandidateProfile()
         .then(res => {
-          setProfile(res.data.profile ?? null)
+          const p = res.data.profile ?? null
+          setProfile(p)
         })
         .catch(() => {
           setLoadError('加载档案失败，请刷新重试')
@@ -73,6 +81,11 @@ export default function CandidateProfile({ viewMode }) {
         .finally(() => setLoading(false))
     }
   }, [id, isOwnProfile, viewMode])
+
+  // 加载 active 标签完整对象（用于 note 弹窗）
+  useEffect(() => {
+    getTags().then(data => setAllTagObjects(data.tags || [])).catch(() => {})
+  }, [])
 
   // 发起邀约（企业端：需要先选岗位，此处简化为提示去候选人池选岗位后发邀）
   async function handleInvite() {
@@ -139,8 +152,27 @@ export default function CandidateProfile({ viewMode }) {
     updatedAt: profile.updated_at?.slice(0, 10) ?? '—',
   }
 
+  // CAND-8A: gate the new richer sections on "owner OR employer that the
+  // backend has unlocked". Front-end never tries to compute the unlock — we
+  // trust profile.private_visible from /api/candidates/<id>. /me always
+  // returns private_visible=true.
+  const unlockedDetails = isOwnProfile || !!profile.private_visible
+
+  // Terminal mode is enabled only for the candidate viewing their own profile
+  // (`viewMode="self"`). Employer / admin viewing /candidate/profile/:id stays
+  // in the original light layout.
+  const terminal = isOwnProfile
+
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10">
+    <div
+      className={
+        terminal
+          ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar px-6 py-8'
+          : 'max-w-5xl mx-auto px-6 py-10'
+      }
+      style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
+    >
+      <div className={terminal ? 'mx-auto w-full max-w-5xl' : ''}>
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6"
@@ -268,7 +300,36 @@ export default function CandidateProfile({ viewMode }) {
                 <h2 className="font-semibold text-slate-800">技能标签</h2>
                 <span className="text-xs text-slate-400">· 真实档案标签</span>
               </div>
-              <TagList tags={display.tags} max={20} />
+              <div className="flex flex-wrap gap-2">
+                {display.tags.map((tagName, i) => {
+                  const tagObj = allTagObjects.find(t => t.name === tagName)
+                  const colors = ['blue', 'purple', 'green', 'orange']
+                  const color = colors[i % colors.length]
+                  const colorClasses = {
+                    blue: 'bg-blue-50 text-blue-700 border-blue-100',
+                    purple: 'bg-purple-50 text-purple-700 border-purple-100',
+                    green: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                    orange: 'bg-orange-50 text-orange-700 border-orange-100',
+                  }
+                  return (
+                    <div key={tagName} className="flex items-center gap-1">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colorClasses[color]}`}>
+                        {tagName}
+                      </span>
+                      {tagObj && (
+                        <button
+                          type="button"
+                          title="为此标签写描述"
+                          onClick={() => setNoteTag(tagObj)}
+                          className="text-slate-300 hover:text-blue-400 transition-colors"
+                        >
+                          <MessageSquare size={12} />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 
@@ -290,6 +351,118 @@ export default function CandidateProfile({ viewMode }) {
             </div>
           )}
 
+          {/* CAND-8A: 当前任职（self 永远显示；employer 仅 private_visible 时显示）*/}
+          {unlockedDetails && (
+            profile.current_company ||
+            profile.current_responsibilities ||
+            profile.current_salary_min != null ||
+            profile.current_salary_max != null ||
+            profile.current_salary_months != null ||
+            profile.current_average_bonus_percent != null ||
+            profile.current_has_year_end_bonus != null
+          ) && (
+            <div className="card p-6">
+              <h2 className="font-semibold text-slate-800 mb-4">当前任职</h2>
+              {(profile.current_company || profile.current_title) && (
+                <p className="text-sm text-slate-700 mb-2">
+                  {profile.current_company || '—'}
+                  {profile.current_title ? ` · ${profile.current_title}` : ''}
+                </p>
+              )}
+              {profile.current_responsibilities && (
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line mb-3">
+                  <span className="text-xs text-slate-400 mr-1">职责：</span>
+                  {profile.current_responsibilities}
+                </p>
+              )}
+              {(profile.current_salary_min != null ||
+                profile.current_salary_max != null ||
+                profile.current_salary_months != null ||
+                profile.current_average_bonus_percent != null ||
+                profile.current_has_year_end_bonus != null) && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    {
+                      label: '当前月薪',
+                      value: (profile.current_salary_min != null || profile.current_salary_max != null)
+                        ? `${profile.current_salary_min ?? '—'} ~ ${profile.current_salary_max ?? '—'}`
+                        : '—',
+                    },
+                    {
+                      label: '薪资月数',
+                      value: profile.current_salary_months != null ? `${profile.current_salary_months} 月` : '—',
+                    },
+                    {
+                      label: '平均奖金',
+                      value: profile.current_average_bonus_percent != null ? `${profile.current_average_bonus_percent}%` : '—',
+                    },
+                    {
+                      label: '年终奖',
+                      value: profile.current_has_year_end_bonus
+                        ? (profile.current_year_end_bonus_months != null
+                            ? `${profile.current_year_end_bonus_months} 月`
+                            : '有')
+                        : (profile.current_has_year_end_bonus === false ? '无' : '—'),
+                    },
+                  ].map(item => (
+                    <div key={item.label} className="bg-slate-50 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] text-slate-400 mb-0.5">{item.label}</p>
+                      <p className="text-sm font-semibold text-slate-700">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CAND-8A: 工作经历（self 永远显示；employer 仅 private_visible 时显示）*/}
+          {unlockedDetails && Array.isArray(profile.work_experiences) && profile.work_experiences.length > 0 && (
+            <div className="card p-6">
+              <h2 className="font-semibold text-slate-800 mb-4">工作经历</h2>
+              <div className="space-y-4">
+                {profile.work_experiences.map((w, i) => {
+                  const company = w.company_name || w.company || '—'
+                  const period = w.period
+                    || (w.start_month || w.end_month
+                      ? `${w.start_month || '?'} – ${w.end_month || '至今'}`
+                      : '—')
+                  const salaryRange = (w.salary_min != null || w.salary_max != null)
+                    ? `${w.salary_min ?? '—'} ~ ${w.salary_max ?? '—'}`
+                    : null
+                  const yebText = w.has_year_end_bonus
+                    ? (w.year_end_bonus_months != null ? `${w.year_end_bonus_months} 月` : '有')
+                    : (w.has_year_end_bonus === false ? '无' : null)
+                  return (
+                    <div key={i} className="border-l-2 border-blue-200 pl-3 py-1">
+                      <p className="text-sm font-medium text-slate-800">
+                        {w.title || '—'} · {company}
+                      </p>
+                      <p className="text-xs text-slate-500">{period}</p>
+                      {w.responsibilities && (
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-line">
+                          <span className="mr-1 text-slate-400">职责：</span>{w.responsibilities}
+                        </p>
+                      )}
+                      {w.achievements && (
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-line">
+                          <span className="mr-1 text-slate-400">成就：</span>{w.achievements}
+                        </p>
+                      )}
+                      {(salaryRange || w.salary_months != null || w.average_bonus_percent != null || yebText != null) && (
+                        <p className="text-xs text-slate-500 mt-1">
+                          {salaryRange && <span className="mr-2">薪资 {salaryRange}</span>}
+                          {w.salary_months != null && <span className="mr-2">{w.salary_months} 月</span>}
+                          {w.average_bonus_percent != null && <span className="mr-2">奖金 {w.average_bonus_percent}%</span>}
+                          {yebText && <span>年终奖 {yebText}</span>}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {profile.education && (
             <div className="card p-6">
               <h2 className="font-semibold text-slate-800 mb-4">教育背景</h2>
@@ -303,8 +476,80 @@ export default function CandidateProfile({ viewMode }) {
               </div>
             </div>
           )}
+
+          {/* 联系信息 — 自己只读展示；编辑统一进入个人简历页。
+              企业 / admin：仅在 private_visible 时展示 */}
+          {isOwnProfile && (
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-slate-800">联系信息</h2>
+                <Button size="sm" variant="secondary" onClick={() => navigate('/candidate/profile/builder')}>
+                  <Edit size={12} />编辑个人简历
+                </Button>
+              </div>
+              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                联系方式将在你接受企业邀约或主动投递后，对相关企业可见。其它企业仍然看不到你的电话和邮箱。
+              </p>
+              <div className="space-y-2 text-sm">
+                {profile.email ? (
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Mail size={14} className="text-slate-400 flex-shrink-0" />
+                    <span>{profile.email}</span>
+                  </div>
+                ) : null}
+                {profile.phone ? (
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Phone size={14} className="text-slate-400 flex-shrink-0" />
+                    <span>{profile.phone}</span>
+                  </div>
+                ) : null}
+                {profile.address ? (
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Home size={14} className="text-slate-400 flex-shrink-0" />
+                    <span>{profile.address}</span>
+                  </div>
+                ) : null}
+                {!profile.email && !profile.phone && !profile.address && (
+                  <p className="text-sm text-slate-400">暂无联系信息，请在个人简历中补充。</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 企业 / admin 查看候选人时，只有 private_visible 才展示联系信息 */}
+          {!isOwnProfile && profile.private_visible && (profile.email || profile.phone || profile.address) && (
+            <div className="card p-6">
+              <h2 className="font-semibold text-slate-800 mb-4">联系信息</h2>
+              <div className="space-y-2 text-sm">
+                {profile.email && (
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Mail size={14} className="text-slate-400 flex-shrink-0" />
+                    <a href={`mailto:${profile.email}`} className="hover:text-blue-600">{profile.email}</a>
+                  </div>
+                )}
+                {profile.phone && (
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Phone size={14} className="text-slate-400 flex-shrink-0" />
+                    <a href={`tel:${profile.phone}`} className="hover:text-blue-600">{profile.phone}</a>
+                  </div>
+                )}
+                {profile.address && (
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Home size={14} className="text-slate-400 flex-shrink-0" />
+                    {profile.address}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* 标签描述弹窗 */}
+      {noteTag && (
+        <TagNoteModal tag={noteTag} onClose={() => setNoteTag(null)} />
+      )}
+    </div>
     </div>
   )
 }

@@ -17,9 +17,31 @@ const INV_STATUS = {
   accepted: { label: '已接受', Icon: CheckCircle, cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   declined: { label: '已婉拒', Icon: XCircle,     cls: 'bg-slate-100 text-slate-500 border-slate-200' },
 }
-function InvBadge({ status }) {
+
+// Terminal-mode color tokens for invitation status (matches Phase 7 token map).
+// Public mode is unaffected — it still reads from INV_STATUS[status].cls.
+const INV_STATUS_TERMINAL_STYLE = {
+  pending:  { background: 'rgba(96, 165, 250, 0.12)', color: 'var(--t-chart-blue)', borderColor: 'var(--t-chart-blue)' },
+  accepted: { background: 'rgba(34, 197, 94, 0.12)',  color: 'var(--t-success)',    borderColor: 'var(--t-success)' },
+  declined: { background: 'var(--t-bg-elevated)',     color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' },
+}
+
+function InvBadge({ status, terminal = false }) {
   const cfg = INV_STATUS[status] ?? INV_STATUS.pending
   const { Icon } = cfg
+
+  if (terminal) {
+    const style = INV_STATUS_TERMINAL_STYLE[status] ?? INV_STATUS_TERMINAL_STYLE.pending
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border"
+        style={style}
+      >
+        <Icon size={10} />{cfg.label}
+      </span>
+    )
+  }
+
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.cls}`}>
       <Icon size={10} />{cfg.label}
@@ -28,10 +50,78 @@ function InvBadge({ status }) {
 }
 
 // ── 会话列表项（含未读角标）────────────────────────────────────────────────────
-function ConvItem({ conv, isActive, onClick, myRole }) {
+function ConvItem({ conv, isActive, onClick, myRole, terminal = false }) {
   const label   = myRole === 'employer' ? conv.candidate_name : conv.company_name
   const subtext = conv.job_title
   const unread  = conv.unread_count ?? 0
+
+  if (terminal) {
+    return (
+      <button
+        onClick={onClick}
+        className="w-full text-left px-4 py-3.5 transition-colors relative"
+        style={{
+          background: isActive ? 'var(--t-bg-active)' : 'transparent',
+          borderBottom: '1px solid var(--t-border-subtle)',
+        }}
+        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--t-bg-hover)' }}
+        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+      >
+        {isActive && (
+          <span
+            aria-hidden
+            className="absolute left-0 top-2 h-[calc(100%-1rem)] w-0.5 rounded-r"
+            style={{ background: 'var(--t-primary)' }}
+          />
+        )}
+        <div className="flex items-start gap-3">
+          <div className="relative flex-shrink-0">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
+              style={{ background: 'var(--t-primary)' }}
+            >
+              {(label?.[0] ?? '?').toUpperCase()}
+            </div>
+            {unread > 0 && (
+              <span
+                className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none"
+                style={{ background: 'var(--t-danger)' }}
+              >
+                {unread > 99 ? '99+' : unread}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span
+                className={`text-sm truncate ${unread > 0 ? 'font-semibold' : 'font-medium'}`}
+                style={{ color: 'var(--t-text)' }}
+              >
+                {label}
+              </span>
+              {conv.latest_message_at && (
+                <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--t-text-muted)' }}>
+                  {conv.latest_message_at.slice(0, 10)}
+                </span>
+              )}
+            </div>
+            <p className="text-xs truncate mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{subtext}</p>
+            {conv.latest_message ? (
+              <p
+                className={`text-xs truncate mt-1 ${unread > 0 ? 'font-medium' : ''}`}
+                style={{ color: unread > 0 ? 'var(--t-text)' : 'var(--t-text-secondary)' }}
+              >
+                {conv.latest_message}
+              </p>
+            ) : (
+              <p className="text-xs truncate mt-1 italic" style={{ color: 'var(--t-text-muted)' }}>暂无消息</p>
+            )}
+          </div>
+        </div>
+      </button>
+    )
+  }
+
   return (
     <button
       onClick={onClick}
@@ -94,7 +184,21 @@ function dateLabel(dateKey) {
 }
 
 // ── 日期分割线 ────────────────────────────────────────────────────────────────
-function DateDivider({ dateKey }) {
+function DateDivider({ dateKey, terminal = false }) {
+  if (terminal) {
+    return (
+      <div className="flex items-center gap-3 py-1">
+        <div className="flex-1 h-px" style={{ background: 'var(--t-border-subtle)' }} />
+        <span
+          className="text-[11px] font-medium select-none whitespace-nowrap"
+          style={{ color: 'var(--t-text-muted)' }}
+        >
+          {dateLabel(dateKey)}
+        </span>
+        <div className="flex-1 h-px" style={{ background: 'var(--t-border-subtle)' }} />
+      </div>
+    )
+  }
   return (
     <div className="flex items-center gap-3 py-1">
       <div className="flex-1 h-px bg-slate-200" />
@@ -107,7 +211,7 @@ function DateDivider({ dateKey }) {
 }
 
 // ── 单条消息气泡 ───────────────────────────────────────────────────────────────
-function Bubble({ msg, isMine, onRetry }) {
+function Bubble({ msg, isMine, onRetry, terminal = false }) {
   const senderLabel = msg.sender_name
     ?? (msg.sender_role === 'employer' ? '企业' : '候选人')
 
@@ -116,6 +220,92 @@ function Bubble({ msg, isMine, onRetry }) {
   const isFailed   = msg.status === 'failed'
   const isRead     = msg.is_read
 
+  if (terminal) {
+    // ── Terminal mode bubble (token-driven) ─────────────────────────────
+    const avatarBg = isMine
+      ? (isFailed ? 'var(--t-danger-muted)' : 'var(--t-primary)')
+      : 'var(--t-bg-active)'
+    const avatarColor = isMine && isFailed ? 'var(--t-danger)' : '#fff'
+
+    let bubbleStyle
+    if (isMine) {
+      if (isFailed) {
+        bubbleStyle = {
+          background: 'var(--t-danger-muted)',
+          color: 'var(--t-danger)',
+          border: '1px solid var(--t-danger)',
+        }
+      } else {
+        bubbleStyle = { background: 'var(--t-primary)', color: '#fff' }
+      }
+    } else {
+      bubbleStyle = {
+        background: 'var(--t-bg-elevated)',
+        color: 'var(--t-text)',
+        border: '1px solid var(--t-border)',
+      }
+    }
+
+    const metaColor = isFailed
+      ? 'var(--t-danger)'
+      : isMine
+        ? 'rgba(255,255,255,0.7)'
+        : 'var(--t-text-muted)'
+
+    return (
+      <div className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : ''}`}>
+        <div
+          title={senderLabel}
+          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+          style={{ background: avatarBg, color: avatarColor }}
+        >
+          {senderLabel[0].toUpperCase()}
+        </div>
+        <div className="flex flex-col gap-0.5" style={{ maxWidth: '65%' }}>
+          {!isMine && (
+            <span className="text-[10px] ml-1" style={{ color: 'var(--t-text-muted)' }}>{senderLabel}</span>
+          )}
+          <div
+            className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed transition-opacity ${
+              isMine ? 'rounded-br-sm' : 'rounded-bl-sm'
+            } ${(isSending || isRetrying) ? 'opacity-60' : ''}`}
+            style={bubbleStyle}
+          >
+            {msg.content}
+            <p className="text-[10px] mt-1" style={{ color: metaColor }}>
+              {isSending
+                ? '发送中…'
+                : isRetrying
+                  ? `重试中${msg._retryLabel ?? ''}…`
+                  : msg.created_at?.slice(11, 16)
+              }
+              {isMine && !isSending && !isRetrying && !isFailed && (
+                <span className="ml-1 select-none">
+                  {isRead ? '✓✓' : '✓'}
+                </span>
+              )}
+            </p>
+          </div>
+          {isFailed && (
+            <div className={`flex items-center gap-1.5 mt-0.5 ${isMine ? 'justify-end' : ''}`}>
+              <span className="text-[10px]" style={{ color: 'var(--t-danger)' }}>
+                {msg._errorMsg ?? '发送失败'}
+              </span>
+              <button
+                onClick={() => onRetry?.(msg._tempId, msg.content)}
+                className="text-[10px] font-medium underline underline-offset-2"
+                style={{ color: 'var(--t-chart-blue)' }}
+              >
+                重试
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Public (light) mode bubble — original markup unchanged ──────────────
   return (
     <div className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : ''}`}>
       <div
@@ -172,7 +362,7 @@ function Bubble({ msg, isMine, onRetry }) {
 }
 
 // ── 消息面板 ──────────────────────────────────────────────────────────────────
-function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionStatus, onConversationUpdated }) {
+function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionStatus, onConversationUpdated, terminal = false }) {
   const [thread,      setThread]      = useState(null)
   const [messages,    setMessages]    = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -214,7 +404,17 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
         onReadRef.current?.(threadId)
         shouldScrollRef.current = true
       })
-      .catch(err => setMsgError(err.response?.data?.message ?? '加载消息失败'))
+      .catch(err => {
+        console.error('Failed to load messages:', {
+          threadId,
+          status: err.response?.status,
+          data: err.response?.data,
+          code: err.code,
+          message: err.message,
+        })
+        const errMsg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.detail || '加载消息失败'
+        setMsgError(errMsg)
+      })
       .finally(() => setLoading(false))
   }, [threadId])
 
@@ -471,17 +671,26 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center text-slate-400 gap-2">
-        <Loader2 size={20} className="animate-spin" />
-        <span className="text-sm">加载消息...</span>
+      <div
+        className="flex-1 flex items-center justify-center gap-2"
+        style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
+      >
+        <Loader2 size={20} className={terminal ? 'animate-spin' : 'animate-spin text-slate-400'} />
+        <span className={terminal ? 'text-sm' : 'text-sm text-slate-400'}>加载消息...</span>
       </div>
     )
   }
   if (msgError) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-400">
-        <AlertCircle size={28} className="text-red-300" />
-        <p className="text-sm text-red-500">{msgError}</p>
+      <div
+        className="flex-1 flex flex-col items-center justify-center gap-2"
+        style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
+      >
+        <AlertCircle size={28} style={terminal ? { color: 'var(--t-danger)' } : undefined} className={terminal ? '' : 'text-red-300'} />
+        <p className="text-sm" style={terminal ? { color: 'var(--t-danger)' } : undefined}>
+          {!terminal && <span className="text-red-500">{msgError}</span>}
+          {terminal && msgError}
+        </p>
       </div>
     )
   }
@@ -491,27 +700,71 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Panel header */}
-      <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-3 flex-shrink-0">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+      <div
+        className={
+          terminal
+            ? 'px-5 py-3.5 flex items-center gap-3 flex-shrink-0'
+            : 'px-5 py-3.5 border-b border-slate-100 flex items-center gap-3 flex-shrink-0'
+        }
+        style={terminal ? { borderBottom: '1px solid var(--t-border-subtle)' } : undefined}
+      >
+        <div
+          className={
+            terminal
+              ? 'w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm'
+              : 'w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm'
+          }
+          style={terminal ? { background: 'var(--t-primary)' } : undefined}
+        >
           {(otherName?.[0] ?? '?').toUpperCase()}
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <p className="font-semibold text-slate-800 text-sm">{otherName}</p>
-            {thread?.invitation_status && <InvBadge status={thread.invitation_status} />}
+            <p
+              className={terminal ? 'font-semibold text-sm' : 'font-semibold text-slate-800 text-sm'}
+              style={terminal ? { color: 'var(--t-text)' } : undefined}
+            >
+              {otherName}
+            </p>
+            {thread?.invitation_status && <InvBadge status={thread.invitation_status} terminal={terminal} />}
           </div>
-          <p className="text-xs text-slate-400">{thread?.job_title}</p>
+          <p
+            className={terminal ? 'text-xs' : 'text-xs text-slate-400'}
+            style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
+          >
+            {thread?.job_title}
+          </p>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-slate-50/40">
+      <div
+        className={
+          terminal
+            ? 'flex-1 overflow-y-auto px-5 py-4 space-y-3 terminal-scrollbar'
+            : 'flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-slate-50/40'
+        }
+        style={terminal ? { background: 'var(--t-bg)' } : undefined}
+      >
         {hasMore && (
           <div className="flex justify-center pb-2">
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 bg-white border border-slate-200 rounded-full hover:border-slate-300 hover:text-slate-700 transition-colors disabled:opacity-50"
+              className={
+                terminal
+                  ? 'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full transition-colors disabled:opacity-50'
+                  : 'flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 bg-white border border-slate-200 rounded-full hover:border-slate-300 hover:text-slate-700 transition-colors disabled:opacity-50'
+              }
+              style={
+                terminal
+                  ? {
+                      background: 'var(--t-bg-panel)',
+                      border: '1px solid var(--t-border)',
+                      color: 'var(--t-text-secondary)',
+                    }
+                  : undefined
+              }
             >
               {loadingMore
                 ? <><Loader2 size={11} className="animate-spin" />加载中...</>
@@ -523,7 +776,10 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
         <div ref={topAnchorRef} />
 
         {messages.length === 0 && (
-          <div className="text-center text-sm text-slate-400 py-12">
+          <div
+            className={terminal ? 'text-center text-sm py-12' : 'text-center text-sm text-slate-400 py-12'}
+            style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
+          >
             暂无消息，发一条开始沟通吧
           </div>
         )}
@@ -534,21 +790,34 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
           const showDivider = curKey && curKey !== prevKey
           return (
             <div key={key}>
-              {showDivider && <DateDivider dateKey={curKey} />}
+              {showDivider && <DateDivider dateKey={curKey} terminal={terminal} />}
               <Bubble
                 msg={msg}
                 isMine={msg.sender_user_id === myUserId}
                 onRetry={handleRetry}
+                terminal={terminal}
               />
             </div>
           )
         })}
-        <TypingIndicator visible={isTyping} />
+        <TypingIndicator visible={isTyping} terminal={terminal} />
         <div ref={bottomRef} />
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSend} className="px-4 py-3 border-t border-slate-100 bg-white flex-shrink-0">
+      <form
+        onSubmit={handleSend}
+        className={
+          terminal
+            ? 'px-4 py-3 flex-shrink-0'
+            : 'px-4 py-3 border-t border-slate-100 bg-white flex-shrink-0'
+        }
+        style={
+          terminal
+            ? { borderTop: '1px solid var(--t-border-subtle)', background: 'var(--t-bg-panel)' }
+            : undefined
+        }
+      >
         <div className="flex items-end gap-2">
           <textarea
             rows={2}
@@ -558,7 +827,20 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e) }
             }}
-            className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
+            className={
+              terminal
+                ? 'flex-1 px-3 py-2 text-sm rounded-xl focus:outline-none resize-none'
+                : 'flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none'
+            }
+            style={
+              terminal
+                ? {
+                    background: 'var(--t-bg-input)',
+                    border: '1px solid var(--t-border)',
+                    color: 'var(--t-text)',
+                  }
+                : undefined
+            }
           />
           <Button type="submit" size="sm" disabled={!input.trim()} className="flex-shrink-0">
             <Send size={13} />发送
@@ -570,7 +852,7 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
 }
 
 // ── 主页面 ────────────────────────────────────────────────────────────────────
-export default function Messages() {
+export default function Messages({ terminal = false, basePath = '/messages', backPath = '/employer/dashboard' }) {
   const { threadId: paramThreadId } = useParams()
   const navigate  = useNavigate()
   const { user }  = useAuth()
@@ -624,14 +906,30 @@ export default function Messages() {
           setListError('')
           if (!paramThreadId && convs.length > 0) {
             setActiveId(convs[0].id)
-            navigate(`/messages/${convs[0].id}`, { replace: true })
+            navigate(`${basePath}/${convs[0].id}`, { replace: true })
           }
         } else {
           mergeConversations(convs)
         }
       })
       .catch(err => {
-        if (isInitial) setListError(err.response?.data?.message ?? '加载会话失败')
+        // Dev visibility: surface backend status + payload + URL so the next
+        // 500 won't be silently swallowed as "加载会话失败".
+        // eslint-disable-next-line no-console
+        console.error('Failed to load conversations:', {
+          status: err.response?.status,
+          data: err.response?.data,
+          url: err.config?.url,
+          method: err.config?.method,
+        })
+        const data = err.response?.data
+        const message =
+          data?.message ||
+          data?.error ||
+          data?.detail ||
+          data?.msg ||
+          '加载会话失败'
+        if (isInitial) setListError(message)
       })
       .finally(() => { if (isInitial) setLoadingList(false) })
   }, [mergeConversations, navigate, paramThreadId])
@@ -694,40 +992,114 @@ export default function Messages() {
 
   function handleSelect(conv) {
     setActiveId(conv.id)
-    navigate(`/messages/${conv.id}`)
+    navigate(`${basePath}/${conv.id}`)
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
-      <ConnectionBanner status={connectionStatus} />
+    <div
+      className={
+        terminal
+          ? 'terminal-mode flex flex-1 w-full min-w-0 flex-col h-full min-h-0 overflow-hidden px-4 py-4'
+          : 'max-w-6xl mx-auto px-4 py-6'
+      }
+      style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
+    >
+      <ConnectionBanner status={connectionStatus} terminal={terminal} />
 
       <div className="mb-4 flex items-center gap-2">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
+        <button
+          onClick={() => terminal ? navigate(backPath) : navigate(-1)}
+          className={
+            terminal
+              ? 'flex items-center gap-1 text-sm transition-colors'
+              : 'flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700'
+          }
+          style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}
+          onMouseEnter={(e) => { if (terminal) e.currentTarget.style.color = 'var(--t-text)' }}
+          onMouseLeave={(e) => { if (terminal) e.currentTarget.style.color = 'var(--t-text-secondary)' }}
+        >
           <ChevronLeft size={15} />返回
         </button>
-        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <MessageSquare size={20} className="text-blue-500" />消息
+        <h1
+          className={
+            terminal
+              ? 'text-xl font-bold flex items-center gap-2'
+              : 'text-xl font-bold text-slate-800 flex items-center gap-2'
+          }
+          style={terminal ? { color: 'var(--t-text)' } : undefined}
+        >
+          <MessageSquare size={20} style={terminal ? { color: 'var(--t-chart-blue)' } : undefined} className={terminal ? '' : 'text-blue-500'} />消息
         </h1>
       </div>
 
-      <div className="flex rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm" style={{ height: 'calc(100vh - 180px)', minHeight: 500 }}>
+      <div
+        className={
+          terminal
+            ? 'flex flex-1 min-h-0 border overflow-hidden'
+            : 'flex rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm'
+        }
+        style={
+          terminal
+            ? { borderColor: 'var(--t-border)', background: 'var(--t-bg-panel)' }
+            : { height: 'calc(100vh - 180px)', minHeight: 500 }
+        }
+      >
         {/* Left: conversation list */}
-        <div className="w-64 border-r border-slate-100 flex flex-col flex-shrink-0">
-          <div className="px-4 py-3 border-b border-slate-100">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">会话</p>
+        <div
+          className={
+            terminal
+              ? 'w-64 flex flex-col flex-shrink-0'
+              : 'w-64 border-r border-slate-100 flex flex-col flex-shrink-0'
+          }
+          style={terminal ? { borderRight: '1px solid var(--t-border)' } : undefined}
+        >
+          <div
+            className={
+              terminal
+                ? 'px-4 py-3'
+                : 'px-4 py-3 border-b border-slate-100'
+            }
+            style={terminal ? { borderBottom: '1px solid var(--t-border-subtle)' } : undefined}
+          >
+            <p
+              className={
+                terminal
+                  ? 'text-xs font-semibold uppercase tracking-wide'
+                  : 'text-xs font-semibold text-slate-500 uppercase tracking-wide'
+              }
+              style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
+            >
+              会话
+            </p>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className={terminal ? 'flex-1 overflow-y-auto terminal-scrollbar' : 'flex-1 overflow-y-auto'}>
             {loadingList && (
               <div className="flex justify-center py-8">
-                <Loader2 size={18} className="animate-spin text-slate-300" />
+                <Loader2
+                  size={18}
+                  className="animate-spin"
+                  style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
+                />
               </div>
             )}
             {!loadingList && listError && (
-              <div className="px-4 py-6 text-center text-xs text-red-400">{listError}</div>
+              <div
+                className={terminal ? 'px-4 py-6 text-center text-xs' : 'px-4 py-6 text-center text-xs text-red-400'}
+                style={terminal ? { color: 'var(--t-danger)' } : undefined}
+              >
+                {listError}
+              </div>
             )}
             {!loadingList && !listError && conversations.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-slate-400 px-4 text-center">
-                <FolderOpen size={28} className="mb-2 text-slate-300" />
+              <div
+                className={
+                  terminal
+                    ? 'flex flex-col items-center justify-center py-12 px-4 text-center'
+                    : 'flex flex-col items-center justify-center py-12 text-slate-400 px-4 text-center'
+                }
+                style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
+              >
+                <FolderOpen size={28} className={terminal ? 'mb-2' : 'mb-2 text-slate-300'} style={terminal ? { color: 'var(--t-text-muted)' } : undefined} />
                 <p className="text-xs">
                   {user?.role === 'employer'
                     ? '向候选人发出邀约后，沟通入口将出现在这里'
@@ -742,6 +1114,7 @@ export default function Messages() {
                 isActive={conv.id === activeId}
                 onClick={() => handleSelect(conv)}
                 myRole={user?.role}
+                terminal={terminal}
               />
             ))}
           </div>
@@ -757,10 +1130,18 @@ export default function Messages() {
             onRead={handleThreadRead}
             socket={socket}
             connectionStatus={connectionStatus}
+            terminal={terminal}
           />
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
-            <Briefcase size={32} className="text-slate-200" />
+          <div
+            className={
+              terminal
+                ? 'flex-1 flex flex-col items-center justify-center gap-3'
+                : 'flex-1 flex flex-col items-center justify-center text-slate-400 gap-3'
+            }
+            style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
+          >
+            <Briefcase size={32} style={terminal ? { color: 'var(--t-text-muted)' } : undefined} className={terminal ? '' : 'text-slate-200'} />
             <p className="text-sm">选择一个会话开始沟通</p>
           </div>
         )}

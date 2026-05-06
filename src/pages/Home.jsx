@@ -3,25 +3,25 @@ import { ArrowRight, Zap, Shield, Clock, Users, Briefcase, TrendingUp, ChevronRi
 import { Button } from '../components/ui/Button'
 
 const ROLE_CATEGORIES = [
-  { label: '海运操作', color: 'bg-blue-500' },
-  { label: '空运销售', color: 'bg-purple-500' },
-  { label: '报关员', color: 'bg-emerald-500' },
-  { label: '单证专员', color: 'bg-orange-500' },
-  { label: '海外客服', color: 'bg-pink-500' },
-  { label: '物流销售', color: 'bg-cyan-500' },
+  { label: '货代销售', color: 'bg-blue-500' },
+  { label: '海运操作', color: 'bg-purple-500' },
+  { label: '空运操作', color: 'bg-emerald-500' },
+  { label: '报关 / 单证', color: 'bg-orange-500' },
+  { label: '客服运营', color: 'bg-pink-500' },
+  { label: '供应链管理', color: 'bg-cyan-500' },
 ]
 
 const FEATURES = [
   {
     icon: Zap,
     title: '精准标签匹配',
-    desc: '基于货代行业专属标签体系，从岗位JD自动提取关键技能，与候选人标签精准对应，匹配准确率达 91%。',
+    desc: '基于货代行业专属标签体系，从岗位 JD 自动提取匹配标签，精准匹配候选人技能背景。',
     color: 'text-blue-600 bg-blue-50',
   },
   {
     icon: Clock,
     title: '简历鲜度优先',
-    desc: '近 30 天内确认或更新的简历优先展示。候选人越活跃，推荐排名越靠前，降低无效触达。',
+    desc: '近 30 天内确认或更新的简历优先推荐，候选人越活跃，推荐排名越靠前，降低无效触达。',
     color: 'text-emerald-600 bg-emerald-50',
   },
   {
@@ -32,8 +32,8 @@ const FEATURES = [
   },
   {
     icon: TrendingUp,
-    title: '快速邀约流程',
-    desc: '企业可在匹配结果页直接发起邀约，候选人收到通知后 24 小时内响应，平均到面周期仅 6.2 天。',
+    title: '邀约流程闭环',
+    desc: '企业可在匹配结果页直接发起邀约，沟通入口自动开放，招聘流程全程线上闭环，无需跨平台。',
     color: 'text-orange-600 bg-orange-50',
   },
 ]
@@ -55,7 +55,7 @@ export default function Home() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-medium mb-6">
               <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-              货代行业垂直人才撮合平台
+              货代行业垂直人才撮合平台，精准连接优质货代企业。
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
@@ -65,13 +65,13 @@ export default function Home() {
             </h1>
 
             <p className="text-slate-300 text-lg md:text-xl leading-relaxed mb-10 max-w-2xl">
-              专为货代、物流行业设计的人才匹配系统。精准标签 · 简历鲜度优先 · 行业经验验证，平均 6.2 天完成入职。
+              专为货代、物流行业设计的人才匹配系统。精准标签 · 简历鲜度优先 · 行业经验验证，助你快速完成入职。
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-14">
               <Button
                 size="xl"
-                onClick={() => navigate('/employer/post-job')}
+                onClick={() => navigate('/employer/jobs/new')}
                 className="bg-blue-500 hover:bg-blue-400 shadow-lg shadow-blue-900/40"
               >
                 发布招聘岗位
@@ -80,17 +80,17 @@ export default function Home() {
               <Button
                 size="xl"
                 variant="ghost"
-                onClick={() => navigate('/candidate/upload')}
+                onClick={() => navigate('/candidate/home')}
                 className="text-white border border-white/20 hover:bg-white/10 hover:text-white"
               >
-                上传我的简历
+                进入求职平台
               </Button>
             </div>
 
             {/* Stats row */}
             <div className="flex flex-wrap gap-x-8 gap-y-3">
               {[
-                { label: '货代行业专属', value: '垂直平台' },
+                { label: '货代行业专注', value: '垂直平台' },
                 { label: '简历鲜度优先', value: '精准匹配' },
                 { label: '行业经验验证', value: '质量保障' },
                 { label: '平均入职周期', value: '快速高效' },
@@ -138,7 +138,7 @@ export default function Home() {
       <section className="bg-white border-y border-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-14">
           <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-slate-800">为什么选择 FreightTalent</h2>
+            <h2 className="text-2xl font-bold text-slate-800">为什么选择 ACE-Talent</h2>
             <p className="text-slate-500 mt-2">专为货代行业设计，不是通用招聘平台的简单复制</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -171,7 +171,7 @@ export default function Home() {
           {/* 真实候选人数据由登录后的候选人池页展示，首页引导注册 */}
           <div className="card p-8 text-center text-slate-400 col-span-full">
             <p className="font-medium text-slate-600 mb-2">注册后查看完整候选人档案</p>
-            <p className="text-sm">基于货代行业专属标签体系，精准匹配候选人</p>
+            <p className="text-sm">无论你是正在寻找机会的货代从业者，还是急需优质人才的货代企业，ACE-Talent 都能精准匹配。</p>
           </div>
         </div>
       </section>
@@ -179,16 +179,16 @@ export default function Home() {
       {/* CTA */}
       <section className="max-w-7xl mx-auto px-6 py-16">
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-10 text-center text-white">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">准备好开始了吗？</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">货代行业精准人才撮合平台</h2>
           <p className="text-blue-100 mb-8 max-w-lg mx-auto">
-            无论你是正在寻找下一份机会的货代从业者，还是急需优质人才的货代企业，FreightTalent 都能帮你快速找到匹配。
+            精准标签匹配，告别无效投递。简历鲜度优先，找到真正活跃的候选人。行业经验验证，保障人选质量。
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button size="lg" onClick={() => navigate('/candidate/upload')} className="bg-blue-500 text-white hover:bg-blue-400 border border-blue-400">
+            <Button size="lg" onClick={() => navigate('/candidate/home')} className="bg-blue-500 text-white hover:bg-blue-400 border border-blue-400">
               <Users size={16} />
               我是求职者
             </Button>
-            <Button size="lg" onClick={() => navigate('/employer/post-job')} className="bg-blue-500 text-white hover:bg-blue-400 border border-blue-400">
+            <Button size="lg" onClick={() => navigate('/employer/jobs/new')} className="bg-blue-500 text-white hover:bg-blue-400 border border-blue-400">
               <Briefcase size={16} />
               我要招人
             </Button>

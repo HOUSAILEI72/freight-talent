@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Ship, AlertCircle, Loader2 } from 'lucide-react'
+import { getRoleHome } from '../../router/roleHome'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
 
@@ -9,16 +10,15 @@ const TABS = [
   { key: 'candidate', label: '候选人' },
 ]
 
-const REDIRECT = {
-  employer: '/employer/dashboard',
-  candidate: '/candidate/upload',
-  admin: '/admin/overview',
-}
+// Login post-success navigation now uses `getRoleHome(role)` (see import
+// above). Keep this file's role list in sync with `src/router/roleHome.js`
+// when adding new roles.
 
 // 登录页只支持 employer / candidate 注册；admin 通过 CLI seed
 
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { login, register } = useAuth()
 
   const [tab, setTab] = useState('employer')
@@ -51,7 +51,7 @@ export default function Login() {
     try {
       let user
       if (mode === 'login') {
-        user = await login({ email: form.email, password: form.password })
+        user = await login({ email: form.email, password: form.password, role: tab })
       } else {
         user = await register({
           email: form.email,
@@ -61,7 +61,20 @@ export default function Login() {
           company_name: tab === 'employer' ? form.company_name.trim() : undefined,
         })
       }
-      navigate(REDIRECT[user.role] ?? '/')
+
+      // 登录成功后回跳到 next 参数指定的页面（防止 open redirect）
+      const next = searchParams.get('next')
+      if (next && next.startsWith('/') && !next.startsWith('//')) {
+        // 验证 next 是站内路径且用户角色允许访问
+        // 简单实现：如果 next 包含角色前缀，检查是否匹配
+        const roleHome = getRoleHome(user.role)
+        if (next.startsWith(`/${user.role}/`) || next === roleHome) {
+          navigate(next)
+          return
+        }
+      }
+      // 默认跳转到角色首页
+      navigate(getRoleHome(user.role))
     } catch (err) {
       setError(err.response?.data?.message ?? '网络错误，请稍后重试')
     } finally {
@@ -80,11 +93,11 @@ export default function Login() {
             <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
               <Ship size={20} className="text-white" />
             </div>
-            <span className="text-white text-xl font-bold">FreightTalent</span>
+            <span className="text-white text-xl font-bold">ACE-Talent</span>
           </div>
           <h2 className="text-3xl font-bold text-white mb-4">货代行业<br />精准人才撮合平台</h2>
           <p className="text-slate-400 leading-relaxed mb-8">
-            连接 1,284 位货代从业者与 43 家头部货代企业，平均 6.2 天完成入职。
+            连接众多货代从业者与头部货代企业，快速完成精准入职。
           </p>
           <div className="space-y-3">
             {['精准标签匹配，告别无效投递', '简历鲜度优先，找到真正活跃的候选人', '行业经验验证，保障人选质量'].map(t => (

@@ -1,186 +1,162 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Plus, ChevronRight, Users, Zap, MessageSquare, Send, Loader2, FolderOpen } from 'lucide-react'
-import { Button } from '../../components/ui/Button'
-import { StatusBadge } from '../../components/ui/Badge'
-import { StatCard } from '../../components/ui/StatCard'
-import { TagList } from '../../components/ui/TagList'
+import { useEffect, useMemo, useState } from 'react'
+import { Users, Database, TrendingUp } from 'lucide-react'
+import TerminalLayout from '../../components/terminal/TerminalLayout'
+import FunctionRail, { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
+import AreaSidebar, { DEFAULT_AREAS } from '../../components/terminal/AreaSidebar'
+import CandidateChartPanel from '../../components/terminal/CandidateChartPanel'
+import TerminalActionBar from '../../components/terminal/TerminalActionBar'
+import MetricCard from '../../components/data/MetricCard'
 import { useAuth } from '../../context/AuthContext'
-import { jobsApi } from '../../api/jobs'
-import { invitationsApi } from '../../api/invitations'
+import { employerDashboardApi } from '../../api/employerDashboard'
+
+const DEFAULT_FUNCTION = 'ALL'
+const DEFAULT_AREA = 'Global'
+
+/**
+ * Phase A/B note (ACE-Talent Terminal):
+ * - Visual shell only — IconRail / FunctionRail / AreaSidebar / Chart / ActionBar
+ * - Function & Area lists currently use front-end constants (DEFAULT_FUNCTIONS / DEFAULT_AREAS)
+ * - Chart still calls the existing real API (employerDashboardApi.getChart) when filters
+ *   match what the backend understands; otherwise renders empty state.
+ *   Next phase will add a dedicated terminal aggregation endpoint.
+ */
 
 export default function Dashboard() {
-  const navigate = useNavigate()
   const { user } = useAuth()
+  const [selectedFunction, setSelectedFunction] = useState(DEFAULT_FUNCTION)
+  const [selectedArea, setSelectedArea] = useState(DEFAULT_AREA)
+  const [granularity, setGranularity] = useState('day')
+  const [chart, setChart] = useState(null)
+  const [chartLoading, setChartLoading] = useState(false)
 
-  const [jobs, setJobs] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [inviteSummary, setInviteSummary] = useState(null)
-
+  // Probe the existing real API; if it fails we silently fall back to empty state.
+  // The Function/Area constants drive the UI for now — backend integration comes next.
   useEffect(() => {
-    jobsApi.getMyJobs()
-      .then(res => setJobs(res.data.jobs))
-      .catch(err => setError(err.response?.data?.message ?? '加载岗位失败'))
-      .finally(() => setLoading(false))
-    invitationsApi.getCompanySummary()
-      .then(res => setInviteSummary(res.data))
-      .catch(() => {})
-  }, [])
+    let alive = true
+    setChartLoading(true)
+    // Backend (`/api/employer/dashboard-chart`) currently treats `'ALL'` as
+    // "no region filter". UI uses `Global` as the aggregate label, so map it
+    // when calling the API. Other area keys pass through unchanged.
+    const regionForApi = selectedArea === 'Global' ? 'ALL' : selectedArea
+    employerDashboardApi
+      .getChart({
+        functionValue: selectedFunction,
+        regionValue: regionForApi,
+        granularity,
+      })
+      .then((res) => {
+        if (alive) setChart(res.data)
+      })
+      .catch(() => {
+        if (alive) setChart(null)
+      })
+      .finally(() => {
+        if (alive) setChartLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [selectedFunction, selectedArea, granularity])
 
-  // 统计（基于真实数据）
-  const publishedCount = jobs.filter(j => j.status === 'published').length
-  const companyName = user?.company_name ?? '企业控制台'
+  const chartBars = useMemo(() => {
+    const bars = chart?.bars ?? []
+    const staleShape = bars.some((item) => item?.period == null && item?.period_label == null)
+    if (staleShape) {
+      console.warn('Employer dashboard chart ignored non-time-series payload:', {
+        mode: chart?.mode,
+        bars,
+      })
+      return []
+    }
+    return bars
+  }, [chart])
+  const total = chart?.total ?? 0
+
+  const subtitle = `FUNC=${selectedFunction} / AREA=${selectedArea}`
+  const updatedAt = chart?.updated_at
+    ? new Date(chart.updated_at).toLocaleString('zh-CN')
+    : '—'
+
+  const companyName = user?.company_name || user?.name || 'Employer'
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">企业控制台</h1>
-          <p className="text-slate-500 mt-1">{companyName}</p>
-        </div>
-        <Button onClick={() => navigate('/employer/post-job')}>
-          <Plus size={16} />
-          发布新岗位
-        </Button>
-      </div>
+    <TerminalLayout title="DASHBOARD" activeIconId="dashboard">
+      {/* Function rail (collapsible on hover) */}
+      <FunctionRail
+        value={selectedFunction}
+        onChange={setSelectedFunction}
+        functions={DEFAULT_FUNCTIONS}
+      />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard
-          label="在招岗位"
-          value={loading ? '—' : String(publishedCount)}
-          sub={loading ? '' : `共 ${jobs.length} 个岗位`}
-          icon={Zap}
-          color="blue"
-        />
-        <StatCard
-          label="匹配人选"
-          value={inviteSummary ? String(inviteSummary.accepted) : '—'}
-          sub={inviteSummary ? `已接受邀约 ${inviteSummary.accepted} 人` : ''}
-          icon={Users}
-          color="green"
-        />
-        <StatCard
-          label="已回复"
-          value={inviteSummary ? String(inviteSummary.replied) : '—'}
-          sub={inviteSummary ? `接受 ${inviteSummary.accepted ?? 0} · 婉拒 ${inviteSummary.declined ?? 0}` : ''}
-          icon={MessageSquare}
-          color="purple"
-        />
-        <StatCard
-          label="邀约发出"
-          value={inviteSummary ? String(inviteSummary.total) : '—'}
-          sub={inviteSummary ? `${inviteSummary.replied}人已回复` : ''}
-          icon={Send}
-          color="orange"
-        />
-      </div>
+      {/* Area sidebar (always expanded) */}
+      <AreaSidebar
+        value={selectedArea}
+        onChange={setSelectedArea}
+        areas={DEFAULT_AREAS}
+      />
 
-      {/* Job list */}
-      <div className="card">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-800">岗位列表</h2>
-          {!loading && (
-            <span className="text-xs text-slate-400">{jobs.length} 个岗位</span>
-          )}
+      {/* Main workspace */}
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Sub-header strip */}
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-5 py-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+              ACCOUNT
+            </span>
+            <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)] truncate">
+              {companyName}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+              UPDATED
+            </span>
+            <span className="font-[var(--t-font-mono)] text-[10px] text-[color:var(--t-text-secondary)]">
+              {updatedAt}
+            </span>
+          </div>
         </div>
 
-        {/* Loading */}
-        {loading && (
-          <div className="flex items-center justify-center gap-2 py-32 text-slate-400" style={{ minHeight: 240 }}>
-            <Loader2 size={18} className="animate-spin" />
-            <span className="text-sm">加载中...</span>
+        {/* Body — metrics row + chart panel + action bar */}
+        <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
+          {/* Metric strip */}
+          <div className="grid shrink-0 grid-cols-3 gap-4">
+            <MetricCard
+              label="Candidates"
+              value={chartLoading ? '—' : total}
+              helper={subtitle}
+              icon={<Users size={14} />}
+            />
+            <MetricCard
+              label="Functions"
+              value={DEFAULT_FUNCTIONS.length - 1}
+              helper={selectedFunction === DEFAULT_FUNCTION ? 'ALL' : selectedFunction}
+              icon={<Database size={14} />}
+            />
+            <MetricCard
+              label="Areas"
+              value={DEFAULT_AREAS.length - 1}
+              helper={selectedArea}
+              icon={<TrendingUp size={14} />}
+            />
           </div>
-        )}
 
-        {/* Error */}
-        {!loading && error && (
-          <div className="py-10 text-center text-sm text-red-500">{error}</div>
-        )}
+          {/* Chart panel */}
+          <CandidateChartPanel
+            data={chartBars}
+            title="CANDIDATE TREND"
+            subtitle={subtitle}
+            loading={chartLoading}
+            meta={updatedAt}
+            unitLabel="candidates"
+            granularity={granularity}
+            onGranularityChange={setGranularity}
+          />
 
-        {/* Empty state */}
-        {!loading && !error && jobs.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-            <FolderOpen size={36} className="mb-3 text-slate-300" />
-            <p className="text-sm font-medium">还没有发布任何岗位</p>
-            <p className="text-xs mt-1 mb-4">点击「发布新岗位」开始招聘</p>
-            <Button size="sm" onClick={() => navigate('/employer/post-job')}>
-              <Plus size={14} />
-              发布岗位
-            </Button>
-          </div>
-        )}
-
-        {/* Job rows */}
-        {!loading && !error && jobs.length > 0 && (
-          <div className="divide-y divide-slate-50">
-            {jobs.map((job) => {
-              const allTags = [...(job.route_tags || []), ...(job.skill_tags || [])]
-              const salaryText = job.salary_label ?? (
-                job.salary_min && job.salary_max
-                  ? `${job.salary_min / 1000}k-${job.salary_max / 1000}k`
-                  : '面议'
-              )
-              const createdDate = job.created_at
-                ? job.created_at.slice(0, 10)
-                : ''
-
-              return (
-                <div key={job.id} className="px-6 py-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
-                  <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
-                    {job.title[0]}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-slate-800">{job.title}</p>
-                      <StatusBadge status={job.status} />
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {job.city} · {salaryText} · 发布于 {createdDate}
-                    </p>
-                  </div>
-
-                  <div className="hidden md:flex items-center gap-1.5">
-                    <TagList tags={allTags} max={3} />
-                  </div>
-
-                  <div className="flex items-center gap-5 flex-shrink-0">
-                    <div className="text-center hidden sm:block">
-                      <p className="text-base font-bold text-blue-600">—</p>
-                      <p className="text-[11px] text-slate-400">匹配</p>
-                    </div>
-                    <div className="text-center hidden sm:block">
-                      <p className="text-base font-bold text-emerald-600">—</p>
-                      <p className="text-[11px] text-slate-400">邀约</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => navigate(`/employer/match/${job.id}`)}
-                      disabled={job.status === 'closed'}
-                    >
-                      查看匹配
-                      <ChevronRight size={13} />
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Quick tips */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
-        <p className="text-sm font-medium text-blue-800 mb-2">提升匹配效果的建议</p>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>· 岗位标签越精准，候选人匹配质量越高</li>
-          <li>· 近 30 天内更新简历的候选人优先推荐</li>
-          <li>· 发起邀约后候选人通常在 24 小时内响应</li>
-        </ul>
-      </div>
-    </div>
+          {/* Bottom CTA bar */}
+          <TerminalActionBar />
+        </div>
+      </main>
+    </TerminalLayout>
   )
 }

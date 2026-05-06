@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { useAuth } from '../../context/AuthContext'
 import { candidatesApi } from '../../api/candidates'
+import RegionSelector from '../../components/RegionSelector'
 
 const SUGGESTED_TAGS = [
   '海运操作', '空运操作', '报关员', '单证制作', '货代销售',
@@ -25,7 +26,7 @@ function inferTagTypes(tags) {
   }
 }
 
-export default function UploadResume() {
+export default function UploadResume({ terminal = false }) {
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -54,6 +55,11 @@ export default function UploadResume() {
   const [selectedTags, setSelectedTags] = useState([])
   const [existingProfile, setExistingProfile] = useState(null)
 
+  // Phase E: standard location (RegionSelector). business_area_* is purely
+  // display-side here — the back-end recomputes it on save and any value
+  // we send for it is discarded by validate_location_payload.
+  const [location, setLocation] = useState(null)
+
   // 页面加载：拉取已有档案
   useEffect(() => {
     candidatesApi.getMyCandidateProfile()
@@ -73,6 +79,18 @@ export default function UploadResume() {
           summary: p.summary || '',
         })
         setSelectedTags(p.all_tags || [])
+        // Hydrate RegionSelector from profile if back-end returned a
+        // standard location (Phase C onwards).
+        if (p.location_code) {
+          setLocation({
+            location_code: p.location_code,
+            location_name: p.location_name,
+            location_path: p.location_path,
+            location_type: p.location_type,
+            business_area_code: p.business_area_code,
+            business_area_name: p.business_area_name,
+          })
+        }
         if (p.resume_file_name) {
           setUploadedFile({
             name: p.resume_file_name,
@@ -138,7 +156,10 @@ export default function UploadResume() {
   function validateForm() {
     if (!form.full_name.trim()) return '请填写姓名'
     if (!form.current_title.trim()) return '请填写当前职位'
-    if (!form.current_city) return '请选择所在城市'
+    if (!location || !location.location_code) return '请选择所在地区'
+    if (!location.location_name || !location.location_path || !location.location_type) {
+      return '地区数据不完整，请重新选择'
+    }
     if (form.experience_years && (isNaN(Number(form.experience_years)) || Number(form.experience_years) < 0)) {
       return '工作年限请填写正整数'
     }
@@ -154,6 +175,15 @@ export default function UploadResume() {
       const { route_tags, skill_tags } = inferTagTypes(selectedTags)
       await candidatesApi.updateMyCandidateProfile({
         ...form,
+        // Phase E: standard location (back-end computes business_area_*).
+        // We DO NOT send business_area_code from the client.
+        location_code: location.location_code,
+        location_name: location.location_name,
+        location_path: location.location_path,
+        location_type: location.location_type,
+        // Compatibility: keep the legacy current_city column populated so
+        // pre-Phase-C list UIs that still read current_city continue to work.
+        current_city: location.location_name,
         experience_years: form.experience_years ? Number(form.experience_years) : null,
         route_tags,
         skill_tags,
@@ -177,7 +207,15 @@ export default function UploadResume() {
 
   // ── 渲染 ──
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
+    <div
+      className={
+        terminal
+          ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar px-6 py-8'
+          : 'max-w-3xl mx-auto px-6 py-12'
+      }
+      style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
+    >
+      <div className={terminal ? 'mx-auto w-full max-w-3xl' : ''}>
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-10">
         {STEPS.map((s, i) => (
@@ -198,8 +236,12 @@ export default function UploadResume() {
       {/* ── Step 0：上传简历 ── */}
       {step === 0 && (
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">上传你的简历</h1>
-          <p className="text-slate-500 mb-6">支持 PDF、Word 格式，系统将自动解析并生成结构化档案</p>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">
+            {existingProfile?.resume_file_name ? '更新你的简历' : '上传你的简历'}
+          </h1>
+          <p className="text-slate-500 mb-6">
+            支持 PDF、Word 格式，重新上传会替换当前简历文件并刷新档案更新时间
+          </p>
 
           {error && (
             <div className="flex items-center gap-2 mb-4 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -220,9 +262,11 @@ export default function UploadResume() {
                   </p>
                 </div>
               </div>
-              <Button size="sm" variant="secondary" onClick={goDirectToEdit}>
-                直接编辑档案
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="secondary" onClick={goDirectToEdit}>
+                  直接编辑档案
+                </Button>
+              </div>
             </div>
           )}
 
@@ -266,8 +310,12 @@ export default function UploadResume() {
                 <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                   <Upload size={24} className="text-slate-400" />
                 </div>
-                <p className="font-semibold text-slate-800 mb-1">拖拽简历文件到此处</p>
-                <p className="text-sm text-slate-400 mb-4">或点击选择文件</p>
+                <p className="font-semibold text-slate-800 mb-1">
+                  {existingProfile?.resume_file_name ? '拖拽新简历到此处' : '拖拽简历文件到此处'}
+                </p>
+                <p className="text-sm text-slate-400 mb-4">
+                  {existingProfile?.resume_file_name ? '或点击选择新文件替换当前简历' : '或点击选择文件'}
+                </p>
                 <Badge color="gray">PDF / Word · 最大 10MB</Badge>
               </div>
             )}
@@ -358,24 +406,21 @@ export default function UploadResume() {
               </div>
             </div>
 
-            {/* 所在城市 */}
+            {/* 所在地区 (Phase E: standardised RegionSelector) */}
             <div>
-              <label className="block text-xs text-slate-500 mb-1.5">所在城市 *</label>
-              <div className="flex flex-wrap gap-2">
-                {CITY_OPTIONS.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setField('current_city', c)}
-                    className={`px-3 py-1 rounded-lg text-sm border transition-colors ${
-                      form.current_city === c
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'border-slate-200 text-slate-600 hover:border-blue-300'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
+              <label className="block text-xs text-slate-500 mb-1.5">所在地区 *</label>
+              <RegionSelector
+                value={location}
+                onChange={setLocation}
+                terminal={terminal}
+                placeholder="请选择所在地区（中国大陆 / 香港 / 台湾 / 海外 / Global / Remote）"
+              />
+              {location?.location_path && (
+                <p className="mt-1 text-xs text-slate-400">
+                  已选：{location.location_path}
+                  {location.business_area_name ? `（业务区域 ${location.business_area_name}）` : ''}
+                </p>
+              )}
             </div>
 
             {/* 期望薪资 */}
@@ -484,6 +529,7 @@ export default function UploadResume() {
           <p className="text-slate-500">正在跳转到你的候选人档案页...</p>
         </div>
       )}
+    </div>
     </div>
   )
 }

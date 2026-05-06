@@ -1,13 +1,13 @@
-import eventlet
-eventlet.monkey_patch(os=True, select=True, socket=True, thread=False, time=True)
-
 import os
 from flask import Flask, jsonify, send_from_directory
 from app.config import get_config
 from app.extensions import db, jwt, bcrypt, cors, migrate, limiter, socketio, blocklist_contains
+from app.logging_config import setup_logging
+from app.request_logging import init_request_logging
 
 
 def create_app(config_class=None):
+    setup_logging("flask")
     if config_class is None:
         config_class = get_config()
     app = Flask(__name__)
@@ -20,10 +20,14 @@ def create_app(config_class=None):
     cors.init_app(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
     migrate.init_app(app, db)
     limiter.init_app(app)
+
+    # message_queue: Redis URL — 空字符串或 None 时单进程模式，多实例需要设置
+    _mq = app.config.get("SOCKETIO_MESSAGE_QUEUE") or None
     socketio.init_app(
         app,
         cors_allowed_origins='*',
         async_mode='eventlet',
+        message_queue=_mq,
         logger=False,
         engineio_logger=False,
         ping_timeout=20,
@@ -53,14 +57,23 @@ def create_app(config_class=None):
     from app.routes.jobs import jobs_bp
     from app.routes.candidates import candidates_bp
     from app.routes.invitations import invitations_bp
+    from app.routes.applications import applications_bp
     from app.routes.admin import admin_bp
     from app.routes.conversations import conversations_bp
+    from app.routes.admin_import import admin_import_bp
+    from app.routes.employer_dashboard import employer_dashboard_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(jobs_bp)
     app.register_blueprint(candidates_bp)
     app.register_blueprint(invitations_bp, url_prefix='/api/invitations')
+    app.register_blueprint(applications_bp)
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(conversations_bp, url_prefix='/api/conversations')
+    app.register_blueprint(admin_import_bp, url_prefix='/api/admin/import')
+    app.register_blueprint(employer_dashboard_bp)
+
+    # 安装请求日志中间件（每个请求的方法、路径、状态、耗时、user_id、IP）
+    init_request_logging(app)
 
     # Socket.IO 事件处理器
     from app.routes.socket_events import register_socket_events
@@ -73,23 +86,49 @@ def create_app(config_class=None):
         from app.models import candidate    # noqa: F401
         from app.models import match_result # noqa: F401
         from app.models import invitation   # noqa: F401
+        from app.models import job_application  # noqa: F401
         from app.models import conversation # noqa: F401
+        from app.models import import_models  # noqa: F401
+        from app.models import tag          # noqa: F401
+        from app.models import junction_tags  # noqa: F401
 
     @app.get("/api/health")
     def health():
-        """Readiness probe：检查数据库连通性。"""
+        """Liveness probe：快速检查进程存活。"""
+        return jsonify({"status": "ok", "service": "freight-talent-flask"}), 200
+
+    @app.get("/api/ready")
+    def ready():
+        """Readiness probe：检查数据库和 Redis 连通性，503 时 LB 摘流量。"""
+        checks = {}
+
         try:
             db.session.execute(db.text("SELECT 1"))
-            db_ok = True
+            checks["database"] = "ok"
         except Exception:
-            db_ok = False
-        status = "ok" if db_ok else "degraded"
-        code = 200 if db_ok else 503
+            checks["database"] = "error"
+
+        redis_url = app.config.get("REDIS_URL", "")
+        if redis_url and redis_url.startswith("redis"):
+            try:
+                from app.extensions import _get_redis
+                r = _get_redis()
+                if r:
+                    r.ping()
+                    checks["redis"] = "ok"
+                else:
+                    checks["redis"] = "unavailable"
+            except Exception:
+                checks["redis"] = "error"
+        else:
+            checks["redis"] = "not_configured"
+
+        degraded = any(v == "error" for v in checks.values())
         return jsonify({
-            "status": status,
-            "service": "freight-talent-api",
-            "checks": {"database": "ok" if db_ok else "error"},
-        }), code
+            "status": "degraded" if degraded else "ok",
+            "service": "freight-talent-flask",
+            "checks": checks,
+        }), (503 if degraded else 200)
 
     # ── 生产环境：Flask 托管前端 dist（SERVE_STATIC=true 时启用） ────────────
     if app.config.get("SERVE_STATIC"):

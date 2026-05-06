@@ -11,7 +11,7 @@ export function Footer() {
               <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center">
                 <Ship size={14} className="text-white" />
               </div>
-              <span className="text-white font-semibold text-sm">FreightTalent</span>
+              <span className="text-white font-semibold text-sm">ACE-Talent</span>
             </div>
             <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
               货代行业垂直人才撮合平台，精准连接优质候选人与头部货代企业。
@@ -29,7 +29,7 @@ export function Footer() {
             <div>
               <p className="text-white font-medium mb-3">企业</p>
               <ul className="space-y-2">
-                <li><Link to="/employer/post-job" className="hover:text-white transition-colors">发布岗位</Link></li>
+                <li><Link to="/employer/jobs/new" className="hover:text-white transition-colors">发布岗位</Link></li>
                 <li><Link to="/employer/dashboard" className="hover:text-white transition-colors">企业控制台</Link></li>
               </ul>
             </div>
@@ -44,7 +44,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-slate-800 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-2">
-          <p className="text-xs text-slate-600">© 2026 FreightTalent. 专注货代行业人才匹配。</p>
+          <p className="text-xs text-slate-600">© 2026 ACE-Talent. 专注货代行业人才匹配。</p>
           <p className="text-xs text-slate-700">沪ICP备2026XXXXXX号</p>
         </div>
       </div>
