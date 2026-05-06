@@ -1,15 +1,31 @@
 FROM python:3.11-slim
 
+ARG APT_DEBIAN_MIRROR=http://mirrors.aliyun.com/debian
+ARG APT_DEBIAN_SECURITY_MIRROR=http://mirrors.aliyun.com/debian-security
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+
 WORKDIR /app
 
 # 系统依赖（MySQL client lib）
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN set -eux; \
+    if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+      sed -i \
+        -e "s|http://deb.debian.org/debian|${APT_DEBIAN_MIRROR}|g" \
+        -e "s|http://security.debian.org/debian-security|${APT_DEBIAN_SECURITY_MIRROR}|g" \
+        /etc/apt/sources.list.d/debian.sources; \
+    else \
+      sed -i \
+        -e "s|http://deb.debian.org/debian|${APT_DEBIAN_MIRROR}|g" \
+        -e "s|http://security.debian.org/debian-security|${APT_DEBIAN_SECURITY_MIRROR}|g" \
+        /etc/apt/sources.list; \
+    fi; \
+    apt-get update && apt-get install -y --no-install-recommends \
     default-libmysqlclient-dev gcc pkg-config curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 只安装 FastAPI 相关依赖（轻量，不含 Flask/eventlet/gunicorn）
 COPY requirements-fastapi.txt .
-RUN pip install --no-cache-dir -r requirements-fastapi.txt
+RUN pip install --no-cache-dir -i "$PIP_INDEX_URL" -r requirements-fastapi.txt
 
 COPY . .
 

@@ -1,9 +1,14 @@
 # ── 前端生产镜像（Nginx + React SPA）──────────────────────────────────────────
 FROM node:22-alpine AS builder
 
+ARG ALPINE_MIRROR=http://mirrors.aliyun.com/alpine
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --frozen-lockfile
+RUN sed -i "s|https://dl-cdn.alpinelinux.org/alpine|${ALPINE_MIRROR}|g" /etc/apk/repositories \
+    && npm config set registry "$NPM_REGISTRY" \
+    && npm ci --frozen-lockfile
 
 COPY . .
 RUN npm run build
