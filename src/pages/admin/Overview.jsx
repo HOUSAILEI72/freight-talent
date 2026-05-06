@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Users, Briefcase, Zap, CheckCircle, TrendingUp, Clock, Activity, Send, Loader2, XCircle, Hourglass } from 'lucide-react'
+import { Users, Briefcase, Zap, CheckCircle, TrendingUp, Clock, Send, Loader2, XCircle, Hourglass } from 'lucide-react'
 import { StatCard } from '../../components/ui/StatCard'
-import { Badge } from '../../components/ui/Badge'
 import { adminApi } from '../../api/admin'
 
 const ICON_MAP = {
@@ -66,24 +65,15 @@ export default function Overview() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Admin top bar */}
-      <div className="bg-slate-900 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
-            <Activity size={12} className="text-white" />
-          </div>
-          <span className="text-white text-sm font-medium">FreightTalent 运营后台</span>
-          <Badge color="blue">管理员</Badge>
-        </div>
-        <span className="text-slate-400 text-xs">
-          数据截至 {fetchedAt ? new Date(fetchedAt).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-') : '—'}
-        </span>
-      </div>
-
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-slate-800">运营概览</h1>
-          <p className="text-slate-500 text-sm mt-1">平台实时运营数据（真实）</p>
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h1 className="text-xl font-bold text-slate-800">运营概览</h1>
+            <p className="text-slate-500 text-sm mt-1">平台实时运营数据（真实）</p>
+          </div>
+          <span className="text-slate-400 text-xs mt-1">
+            数据截至 {fetchedAt ? new Date(fetchedAt).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-') : '—'}
+          </span>
         </div>
 
         {/* 顶部 4 个核心 StatCard */}

@@ -130,7 +130,7 @@ function InvitationCard({ inv, onStatusChange }) {
   )
 }
 
-export default function MyInvitations() {
+export default function MyInvitations({ terminal = false }) {
   const [invitations, setInvitations] = useState([])
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState('')
@@ -168,7 +168,15 @@ export default function MyInvitations() {
   const repliedCount  = invitations.filter(i => i.status !== 'pending').length
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
+    <div
+      className={
+        terminal
+          ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar px-6 py-8'
+          : 'max-w-3xl mx-auto px-6 py-10'
+      }
+      style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
+    >
+      <div className={terminal ? 'mx-auto w-full max-w-3xl' : ''}>
       <div className="mb-8 flex items-end justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">我的邀约</h1>
@@ -207,6 +215,7 @@ export default function MyInvitations() {
           ))}
         </div>
       )}
+    </div>
     </div>
   )
 }

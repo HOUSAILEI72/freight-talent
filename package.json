@@ -10,12 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@province-city-china/data": "^8.5.8",
     "@tailwindcss/vite": "^4.2.2",
     "axios": "^1.15.0",
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.0",
+    "recharts": "^3.8.1",
     "socket.io-client": "^4.7.5",
     "tailwindcss": "^4.2.2"
   },

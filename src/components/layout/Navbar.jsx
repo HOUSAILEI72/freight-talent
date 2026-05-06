@@ -7,20 +7,28 @@ import { conversationsApi } from '../../api/conversations'
 const NAV_BY_ROLE = {
   employer: [
     { label: '控制台', href: '/employer/dashboard' },
-    { label: '发布岗位', href: '/employer/post-job' },
+    { label: '候选人动态', href: '/employer/home' },
+    { label: '发布岗位', href: '/employer/jobs/new' },
     { label: '候选人池', href: '/candidates' },
     { label: '岗位广场', href: '/jobs' },
+    { label: '标签申请', href: '/tags' },
     { label: '消息', href: '/messages' },
   ],
   candidate: [
-    { label: '岗位广场', href: '/jobs' },
+    { label: '岗位动态', href: '/candidate/home' },
+    { label: '岗位广场', href: '/candidate/jobs' },
     { label: '我的简历', href: '/candidate/upload' },
     { label: '我的邀约', href: '/candidate/invitations' },
-    { label: '消息', href: '/messages' },
+    { label: '个人订阅', href: '/candidate/tags' },
+    { label: '消息', href: '/candidate/messages' },
   ],
   admin: [
     { label: '管理后台', href: '/admin/overview' },
-    { label: '岗位广场', href: '/jobs' },
+    { label: '导入管理', href: '/admin/import' },
+    { label: '审批中心', href: '/admin/approvals' },
+    { label: '数据图表', href: '/admin/charts' },
+    { label: '候选人池', href: '/admin/candidates' },
+    { label: '岗位广场', href: '/admin/jobs' },
     { label: '消息', href: '/messages' },
   ],
 }
@@ -28,7 +36,7 @@ const NAV_BY_ROLE = {
 const DEFAULT_NAV = [
   { label: '候选人', href: '/candidate/upload' },
   { label: '企业招聘', href: '/employer/dashboard' },
-  { label: '岗位广场', href: '/employer/post-job' },
+  { label: '岗位广场', href: '/employer/jobs/new' },
 ]
 
 // 角色对应的头像首字
@@ -85,7 +93,7 @@ export function Navbar() {
               <Ship size={16} className="text-white" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="font-bold text-slate-800 text-sm">FreightTalent</span>
+              <span className="font-bold text-slate-800 text-sm">ACE-Talent</span>
               <span className="text-[10px] text-slate-400 font-medium tracking-wide">货代精准招聘平台</span>
             </div>
           </Link>

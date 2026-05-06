@@ -18,12 +18,19 @@ depends_on = None
 
 
 def upgrade():
-    with op.batch_alter_table('invitations', schema=None) as batch_op:
-        batch_op.drop_constraint('uq_invitation_job_candidate', type_='unique')
+    # MySQL 1553: 删除 unique 约束前需先建立替代索引（支撑 job_id FK）。
+    # 使用原生 SQL 在同一 DDL 语句中完成两步操作，避免 Alembic batch 模式
+    # 多次往返导致中间状态下 MySQL 校验失败。
+    op.execute(
+        "ALTER TABLE invitations "
+        "ADD INDEX ix_invitations_job_id (job_id), "
+        "DROP INDEX uq_invitation_job_candidate"
+    )
 
 
 def downgrade():
-    with op.batch_alter_table('invitations', schema=None) as batch_op:
-        batch_op.create_unique_constraint(
-            'uq_invitation_job_candidate', ['job_id', 'candidate_id']
-        )
+    op.execute(
+        "ALTER TABLE invitations "
+        "ADD UNIQUE KEY uq_invitation_job_candidate (job_id, candidate_id), "
+        "DROP INDEX ix_invitations_job_id"
+    )

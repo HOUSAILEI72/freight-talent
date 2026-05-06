@@ -25,9 +25,12 @@ def _user_id_from_token(token: str) -> tuple[int | None, str | None]:
     """
     从 JWT 字符串解析 user_id 和 role，失败返回 (None, None)。
     同时检查 blocklist，已撤销的 token 返回 (None, None)。
+    仅接受 access token（type == "access"），拒绝 refresh token。
     """
     try:
         decoded = decode_token(token)
+        if decoded.get('type') != 'access':
+            return None, None
         jti = decoded.get('jti', '')
         if jti and blocklist_contains(jti):
             return None, None
@@ -63,12 +66,15 @@ def register_socket_events(socketio):
 
     # ── connect ────────────────────────────────────────────────────────────────
     @socketio.on('connect')
-    def handle_connect():
+    def handle_connect(auth=None):
         """
         握手：验证 JWT（含 blocklist 撤销检查），拒绝未授权连接。
-        前端传参：io(URL, { query: { token: '...' } })
+        Socket.IO v4 前端传参：io(URL, { auth: cb => cb({ token: '...' }) })
+          → Flask-SocketIO 将 auth 字典作为首位参数传给 connect handler
+        兼容旧 query 传参：io(URL, { query: { token: '...' } })
+          → token 出现在 request.args 中
         """
-        token = request.args.get('token', '')
+        token = (auth or {}).get('token') or request.args.get('token', '')
         user_id, role = _user_id_from_token(token)
         if not user_id:
             return False   # socket.io 自动发 connect_error 并断开
@@ -85,7 +91,31 @@ def register_socket_events(socketio):
         _sid_to_user.pop(request.sid, None)
         _sid_to_role.pop(request.sid, None)
 
-    # ── join_thread ────────────────────────────────────────────────────────────
+    # ── reauthenticate ──────────────────────────────────────────────────────────
+    @socketio.on('reauthenticate')
+    def handle_reauthenticate(data):
+        """
+        前端刷新 access token 后无需断线重连，直接发送新 token 更新认证状态。
+        data: { token: '<new_access_token>' }
+        成功：更新 sid 映射，emit 'reauthenticated'。
+        失败：emit 'error'，前端应主动断线重连。
+        """
+        token = (data or {}).get('token', '')
+        user_id, role = _user_id_from_token(token)
+        if not user_id:
+            emit('error', {'message': '新 token 无效，请重新连接'})
+            return
+
+        old_uid = _sid_to_user.get(request.sid)
+        _sid_to_user[request.sid] = user_id
+        _sid_to_role[request.sid] = role or 'candidate'
+
+        # 若用户 id 发生变化（理论上不应出现），同步更新房间
+        if old_uid and old_uid != user_id:
+            leave_room(f'user_{old_uid}')
+            join_room(f'user_{user_id}')
+
+        emit('reauthenticated', {'status': 'ok', 'user_id': user_id})
     @socketio.on('join_thread')
     def handle_join_thread(data):
         """

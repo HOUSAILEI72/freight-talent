@@ -13,9 +13,40 @@ function ScrollToTop() {
   return null
 }
 
+// Routes that use full-screen Terminal layout — no Navbar / Footer.
+const TERMINAL_PREFIXES = [
+  '/employer/dashboard',
+  '/employer/jobs',
+  '/employer/candidates',
+  '/employer/applications',
+  '/employer/post-job',
+  '/employer/match',
+  '/employer/messages',
+  '/employer/tags',
+  '/candidate/home',
+  '/candidate/jobs',
+  '/candidate/messages',
+  '/candidate/tags',
+  '/candidate/upload',
+  '/candidate/invitations',
+  '/candidate/applications',
+  '/candidate/profile/me',
+  '/candidate/profile/builder',
+]
+
 export default function App() {
   const location = useLocation()
   const hideFooter = location.pathname.startsWith('/admin')
+  const isTerminal = TERMINAL_PREFIXES.some((p) => location.pathname.startsWith(p))
+
+  if (isTerminal) {
+    return (
+      <>
+        <ScrollToTop />
+        <Outlet />
+      </>
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

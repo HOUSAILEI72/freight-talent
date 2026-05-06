@@ -1,34 +1,63 @@
 version: "3.9"
 
+# FreightTalent 生产 Docker Compose
+#
+# 网络架构：单一 app_net 内网，所有服务内部通信
+# 对外只暴露：80（HTTP）、443（HTTPS，SSL 就绪后取消注释）
+#
+# 使用前：
+#   cp .env.example .env
+#   # 填写 .env 后：
+#   docker compose up -d --build
+#   docker compose exec backend flask db upgrade   # 首次建表
+
 services:
-  # ── MySQL ────────────────────────────────────────────────────────────────────
+  # ── MySQL 8 ──────────────────────────────────────────────────────────────────
   db:
     image: mysql:8.0
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME:-freight_talent}
+      MYSQL_ROOT_HOST: "%"
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
     volumes:
       - db_data:/var/lib/mysql
+    networks:
+      - app_net
+    expose:
+      - "3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      # 用 127.0.0.1 而非 localhost，避免 unix socket 与 TCP 歧义
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1",
+             "-u", "root", "-p${DB_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
-    networks:
-      - internal
 
-  # ── Redis（限流存储）─────────────────────────────────────────────────────────
+  # ── Redis 7 ──────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
     volumes:
       - redis_data:/data
     networks:
-      - internal
+      - app_net
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
-  # ── 后端 Flask/Gunicorn ───────────────────────────────────────────────────────
+  # ── Flask / Gunicorn（存量 API + Socket.IO） ─────────────────────────────────
   backend:
     build:
       context: ./backend
@@ -38,7 +67,7 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     environment:
       FLASK_ENV: production
       DB_HOST: db
@@ -49,22 +78,65 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ACCESS_TOKEN_EXPIRES_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRES_MINUTES:-15}
       JWT_REFRESH_TOKEN_EXPIRES_DAYS: ${JWT_REFRESH_TOKEN_EXPIRES_DAYS:-7}
+      REDIS_URL: redis://redis:6379/0
       RATELIMIT_STORAGE_URI: redis://redis:6379/0
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      CORS_ORIGINS: ${CORS_ORIGINS}
       SERVE_STATIC: "false"
+      GUNICORN_BIND: "0.0.0.0:5000"
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_HOST: ${MAIL_HOST:-smtp.exmail.qq.com}
+      MAIL_PORT: ${MAIL_PORT:-465}
+      MAIL_USE_SSL: ${MAIL_USE_SSL:-true}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_DEFAULT_SENDER: ${MAIL_DEFAULT_SENDER:-ACE-Talent <ace_talent@globalogin.com>}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-https://globalogin.com}
     volumes:
       - uploads_data:/app/uploads
     networks:
-      - internal
-      - external
+      - app_net
+    expose:
+      - "5000"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5000/api/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:5000/api/ready"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
 
-  # ── 前端 Nginx ────────────────────────────────────────────────────────────────
+  # ── FastAPI（新增模块，/api/v2/*） ────────────────────────────────────────────
+  fastapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.fastapi
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-freight_talent}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      DEBUG: "false"
+    networks:
+      - app_net
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/v2/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Nginx + React SPA（唯一对外入口） ────────────────────────────────────────
   frontend:
     build:
       context: .
@@ -73,10 +145,24 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      fastapi:
+        condition: service_healthy
     ports:
       - "80:80"
+      # HTTPS：证书挂载就绪后取消注释
+      # - "443:443"
+    # HTTPS 证书挂载（就绪后取消注释，见 DEPLOY.md）：
+    # volumes:
+    #   - /etc/letsencrypt:/etc/letsencrypt:ro
+    #   - /var/www/certbot:/var/www/certbot:ro
     networks:
-      - external
+      - app_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   db_data:
@@ -84,7 +170,5 @@ volumes:
   uploads_data:
 
 networks:
-  internal:
-    driver: bridge
-  external:
+  app_net:
     driver: bridge

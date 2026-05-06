@@ -14,7 +14,7 @@ import { invitationsApi } from '../../api/invitations'
  *   onConfirm  — 邀约发出成功后的回调（无参数）
  *   onCancel   — 关闭弹窗的回调
  */
-export function InviteModal({ candidate, job, matchScore, onConfirm, onCancel }) {
+export function InviteModal({ candidate, job, matchScore, onConfirm, onCancel, terminal = false }) {
   const name = candidate.full_name ?? '该候选人'
   const exp  = candidate.experience_years ?? '—'
   const jobTitle = job?.title ?? '相关岗位'
@@ -61,7 +61,12 @@ export function InviteModal({ candidate, job, matchScore, onConfirm, onCancel })
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm px-4 ${
+        terminal ? 'terminal-mode' : ''
+      }`}
+      style={{
+        background: terminal ? 'rgba(7, 10, 16, 0.7)' : 'rgba(15, 23, 42, 0.5)',
+      }}
       onClick={handleOverlayClick}
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">

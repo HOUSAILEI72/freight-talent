@@ -4,10 +4,13 @@
  * status: 'connecting' | 'connected' | 'disconnected' | 'reconnecting'
  * - disconnected / reconnecting → 黄色条"连接已断开，重连中..."
  * - 刚从 reconnecting 切换到 connected → 绿色条"✓ 已重连"，2s 后消失
+ *
+ * terminal (optional): when true, switches to Terminal token colors so the
+ *   banner blends with the dark workspace. Public mode unchanged.
  */
 import { useState } from 'react'
 
-export default function ConnectionBanner({ status }) {
+export default function ConnectionBanner({ status, terminal = false }) {
   // 把 prevStatus 存为 state，在 render 里检测跳变（React 官方推荐的 getDerived 等价写法）
   const [prevStatus, setPrevStatus] = useState(status)
   const [reconnectFlash, setReconnectFlash] = useState(false)
@@ -31,13 +34,27 @@ export default function ConnectionBanner({ status }) {
 
   if (!visible) return null
 
-  const bgClass = showGreen ? 'bg-emerald-500' : 'bg-amber-400'
   const text = showGreen
     ? '✓ 已重连'
     : status === 'reconnecting'
       ? '连接已断开，重连中...'
       : '连接已断开'
 
+  if (terminal) {
+    const style = showGreen
+      ? { background: 'var(--t-success-muted)', color: 'var(--t-success)', borderBottom: '1px solid var(--t-success)' }
+      : { background: 'var(--t-warning-muted)', color: 'var(--t-warning)', borderBottom: '1px solid var(--t-warning)' }
+    return (
+      <div
+        className="fixed top-0 left-0 right-0 z-[9999] text-center py-1.5 text-sm font-medium transition-colors duration-300"
+        style={style}
+      >
+        {text}
+      </div>
+    )
+  }
+
+  const bgClass = showGreen ? 'bg-emerald-500' : 'bg-amber-400'
   return (
     <div
       className={`fixed top-0 left-0 right-0 z-[9999] ${bgClass} text-white text-center py-1.5 text-sm font-medium transition-colors duration-300`}

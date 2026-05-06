@@ -33,9 +33,9 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('auth:session-expired', handler)
   }, [])
 
-  const login = useCallback(async ({ email, password }) => {
-    const res = await authApi.login({ email, password })
-    const { token, refresh_token, user: userData } = res.data
+  const login = useCallback(async ({ email, password, role }) => {
+    const res = await authApi.login({ email, password, role })
+    const { access_token: token, refresh_token, user: userData } = res.data
     localStorage.setItem('token', token)
     if (refresh_token) localStorage.setItem('refresh_token', refresh_token)
     setUser(userData)
@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async ({ email, password, name, role, company_name }) => {
     const res = await authApi.register({ email, password, name, role, company_name })
-    const { token, refresh_token, user: userData } = res.data
+    const { access_token: token, refresh_token, user: userData } = res.data
     localStorage.setItem('token', token)
     if (refresh_token) localStorage.setItem('refresh_token', refresh_token)
     setUser(userData)

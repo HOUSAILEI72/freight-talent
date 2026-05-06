@@ -50,11 +50,20 @@ client.interceptors.response.use(
         }
 
         const { data } = await _refreshPromise
-        const newAccess = data.token
+        const newAccess = data.access_token
         const newRefresh = data.refresh_token
 
         localStorage.setItem('token', newAccess)
         if (newRefresh) localStorage.setItem('refresh_token', newRefresh)
+
+        // 通知 socket 使用新 token（无需断线重连）
+        try {
+          const { getSocket } = await import('../lib/socket')
+          const sock = getSocket()
+          if (sock?.connected) {
+            sock.emit('reauthenticate', { token: newAccess })
+          }
+        } catch { /* socket 模块不可用时静默忽略 */ }
 
         // 用新 access token 重试原请求
         original.headers.Authorization = `Bearer ${newAccess}`

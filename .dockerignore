@@ -1,0 +1,29 @@
+# ── 前端镜像构建排除（根目录 Dockerfile 构建 React SPA） ──────────────────────
+
+# Node modules（构建步骤内 npm ci 会重装）
+node_modules/
+
+# 后端代码（前端镜像不需要）
+backend/
+
+# 开发专用文件
+.env
+.env.*
+!.env.example
+
+# 版本控制 / IDE
+.git/
+.gitignore
+.github/
+.vscode/
+.idea/
+
+# 测试 / 构建产物
+dist/
+coverage/
+*.log
+
+# Docker 自身
+.dockerignore
+docker-compose*.yml
+Dockerfile*

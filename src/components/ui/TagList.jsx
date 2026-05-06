@@ -1,21 +1,20 @@
+const COLOR_CLASSES = [
+  'bg-blue-50 text-blue-700',
+  'bg-purple-50 text-purple-700',
+  'bg-emerald-50 text-emerald-700',
+  'bg-orange-50 text-orange-700',
+]
+
 export function TagList({ tags = [], max = 5, colorFn }) {
   const shown = tags.slice(0, max)
   const rest = tags.length - max
 
-  const defaultColors = ['blue', 'purple', 'green', 'orange']
-  const getColor = colorFn || ((_, i) => defaultColors[i % defaultColors.length])
-
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-row flex-wrap gap-1.5">
       {shown.map((tag, i) => (
         <span
           key={tag}
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-            ${getColor(tag, i) === 'blue' ? 'bg-blue-50 text-blue-700' : ''}
-            ${getColor(tag, i) === 'purple' ? 'bg-purple-50 text-purple-700' : ''}
-            ${getColor(tag, i) === 'green' ? 'bg-emerald-50 text-emerald-700' : ''}
-            ${getColor(tag, i) === 'orange' ? 'bg-orange-50 text-orange-700' : ''}
-          `}
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorFn ? colorFn(tag, i) : COLOR_CLASSES[i % COLOR_CLASSES.length]}`}
         >
           {tag}
         </span>

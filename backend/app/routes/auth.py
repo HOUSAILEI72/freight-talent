@@ -54,7 +54,7 @@ def register():
 
     token = create_access_token(identity=str(user.id))
     refresh = create_refresh_token(identity=str(user.id))
-    return jsonify({"success": True, "token": token, "refresh_token": refresh, "user": user.to_dict()}), 201
+    return jsonify({"success": True, "access_token": token, "refresh_token": refresh, "user": user.to_dict()}), 201
 
 
 @auth_bp.post("/login")
@@ -63,6 +63,8 @@ def login():
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
+
+    expected_role = (data.get("role") or "").strip()
 
     if not email or not password:
         return _err("请填写邮箱和密码")
@@ -73,12 +75,17 @@ def login():
     if not user.is_active:
         return _err("账号已被停用", 403)
 
+    # 角色隔离：若前端传入了期望角色，必须与账号实际角色一致
+    if expected_role and user.role != expected_role:
+        role_label = {"employer": "企业", "candidate": "候选人", "admin": "管理员"}
+        return _err(f"该账号不是{role_label.get(expected_role, expected_role)}账号，请切换正确的登录入口", 403)
+
     user.last_login = datetime.now(timezone.utc)
     db.session.commit()
 
     token = create_access_token(identity=str(user.id))
     refresh = create_refresh_token(identity=str(user.id))
-    return jsonify({"success": True, "token": token, "refresh_token": refresh, "user": user.to_dict()})
+    return jsonify({"success": True, "access_token": token, "refresh_token": refresh, "user": user.to_dict()})
 
 
 @auth_bp.get("/me")
@@ -143,7 +150,7 @@ def refresh():
         blocklist_add(jti, expires_in_seconds=ttl)
     new_access = create_access_token(identity=identity)
     new_refresh = create_refresh_token(identity=identity)
-    return jsonify({"success": True, "token": new_access, "refresh_token": new_refresh})
+    return jsonify({"success": True, "access_token": new_access, "refresh_token": new_refresh})
 
 
 # ── CLI：seed 管理员账号 ───────────────────────────────────────────────────────

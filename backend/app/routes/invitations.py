@@ -1,13 +1,16 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
+import logging
 from ..extensions import db
 from ..models.user import User
 from ..models.job import Job
 from ..models.candidate import Candidate
 from ..models.invitation import Invitation
 from ..models.conversation import ConversationThread
+from ..services.email_service import send_invitation_email
 
 invitations_bp = Blueprint('invitations', __name__)
+logger = logging.getLogger(__name__)
 
 
 @invitations_bp.route('', methods=['POST'])
@@ -92,12 +95,56 @@ def create_invitation():
     db.session.add(thread)
     db.session.commit()
 
-    return jsonify({
+    # 发送邀约邮件（新邀约才发送，existing pending/accepted 不重复发）
+    email_sent = False
+    email_error = None
+    try:
+        # 邮件邀约应发到候选人的登录账号邮箱；profile contact email 可能是
+        # 可见联系方式录入值，存在误填或与企业账号重复的情况，仅作为兜底。
+        candidate_email = (candidate.user.email if candidate.user else None) or candidate.email
+        if not candidate_email:
+            logger.warning(f"Candidate {candidate.id} has no email, skip sending invitation email")
+        else:
+            # 获取企业名称
+            company_name = user.company_name or user.name or "ACE-Talent 企业用户"
+
+            # 获取该企业所有 published 岗位
+            published_jobs = Job.query.filter_by(
+                company_id=current_user_id,
+                status='published'
+            ).order_by(Job.created_at.desc()).all()
+
+            # 构建岗位列表
+            jobs_data = []
+            for j in published_jobs:
+                jobs_data.append({
+                    'title': j.title,
+                    'location_name': j.location_name,
+                    'city': j.city,
+                    'function_name': j.function_name,
+                    'salary_label': j.salary_label,
+                })
+
+            # 发送邮件
+            site_url = current_app.config.get('PUBLIC_SITE_URL', 'https://globalogin.com')
+            send_invitation_email(candidate_email, company_name, jobs_data, site_url)
+            email_sent = True
+    except Exception as e:
+        # 邮件发送失败不影响邀约创建
+        logger.error(f"Failed to send invitation email for invitation {inv.id}: {type(e).__name__}")
+        email_error = str(e) if current_app.config.get('DEBUG') else None
+
+    response_data = {
         'message': '邀约已发出',
         'invitation': inv.to_dict(),
         'thread_id': thread.id,
         'already_existed': False,
-    }), 201
+        'email_sent': email_sent,
+    }
+    if email_error and current_app.config.get('DEBUG'):
+        response_data['email_error'] = email_error
+
+    return jsonify(response_data), 201
 
 
 @invitations_bp.route('/sent', methods=['GET'])

@@ -1,0 +1,273 @@
+/* ──────────────────────────────────────────────
+   Freightos Terminal — Design Tokens
+   Phase 1 · Pure CSS custom properties
+   No business logic. Import-only.
+────────────────────────────────────────────── */
+
+:root {
+  /* ── Backgrounds ── */
+  --t-bg:            #0b0e13;   /* root shell background */
+  --t-bg-panel:      #111720;   /* panel / card surface */
+  --t-bg-elevated:   #16202e;   /* slightly lifted surface */
+  --t-bg-hover:      #1a2535;   /* hover state */
+  --t-bg-active:     #1f2d42;   /* pressed / selected */
+  --t-bg-input:      #0f1823;   /* form input fill */
+
+  /* ── Borders ── */
+  --t-border:        #1e2d40;   /* default border */
+  --t-border-subtle: #162030;   /* dividers, separators */
+  --t-border-focus:  #2563eb;   /* keyboard focus ring */
+
+  /* ── Text ── */
+  --t-text:          #e2e8f0;   /* primary text */
+  --t-text-secondary:#94a3b8;   /* secondary / supporting */
+  --t-text-muted:    #4b5a6e;   /* muted / disabled */
+  --t-text-inverse:  #0b0e13;   /* text on bright backgrounds */
+
+  /* ── Brand / Accent ── */
+  --t-primary:       #2563eb;   /* primary blue */
+  --t-primary-hover: #1d4ed8;
+  --t-primary-muted: #1e3a6e;   /* primary bg tint */
+
+  /* ── Semantic Colors ── */
+  --t-success:       #22c55e;
+  --t-success-muted: #14532d;
+  --t-danger:        #ef4444;
+  --t-danger-muted:  #7f1d1d;
+  --t-warning:       #f59e0b;
+  --t-warning-muted: #78350f;
+
+  /* ── Chart Palette ── */
+  --t-chart-purple:  #a78bfa;
+  --t-chart-blue:    #60a5fa;
+  --t-chart-cyan:    #22d3ee;
+  --t-chart-green:   #4ade80;
+  --t-chart-amber:   #fbbf24;
+
+  /* ── Trend Indicators ── */
+  --t-trend-up:      #22c55e;
+  --t-trend-down:    #ef4444;
+  --t-trend-neutral: #94a3b8;
+
+  /* ── Spacing Scale ── */
+  --t-radius-sm:  4px;
+  --t-radius:     6px;
+  --t-radius-lg:  10px;
+  --t-radius-xl:  14px;
+
+  /* ── Shadows ── */
+  --t-shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.5),
+                    0 0 0 1px var(--t-border);
+  --t-shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.6),
+                       0 0 0 1px var(--t-border);
+
+  /* ── Typography ── */
+  --t-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+  --t-font-sans: "Inter", system-ui, sans-serif;
+
+  --t-text-xs:  0.75rem;   /* 12px */
+  --t-text-sm:  0.8125rem; /* 13px */
+  --t-text-base: 0.875rem; /* 14px — terminal default */
+  --t-text-md:  1rem;      /* 16px */
+  --t-text-lg:  1.125rem;  /* 18px */
+  --t-text-xl:  1.375rem;  /* 22px */
+
+  /* ── Transitions ── */
+  --t-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Terminal-only dark scrollbar (used by FunctionRail / AreaSidebar) ── */
+.terminal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.terminal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--t-border);
+  border-radius: 3px;
+}
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--t-bg-active);
+}
+.terminal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--t-border) transparent;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   `.terminal-mode` scoped overrides
+   ──────────────────────────────────────────────────────────────────
+   Applied ONLY when a page is rendered inside TerminalLayout in
+   employer routes. Public /jobs, /candidates, /messages, /tags
+   routes never receive this class and stay light-themed.
+
+   Strategy: remap the most common Tailwind color/border/shadow
+   utilities used across the shared business pages to Terminal
+   design tokens, so we don't need to rewrite every JSX className.
+   ────────────────────────────────────────────────────────────── */
+
+/* Surfaces ─────────────────────────────────────────── */
+.terminal-mode { color: var(--t-text); }
+
+.terminal-mode .bg-white,
+.terminal-mode .bg-slate-50,
+.terminal-mode .bg-slate-100 {
+  background-color: var(--t-bg-panel) !important;
+}
+.terminal-mode .bg-slate-50\/50,
+.terminal-mode .bg-slate-100\/60 {
+  background-color: var(--t-bg-panel) !important;
+}
+.terminal-mode .bg-blue-50 {
+  background-color: var(--t-primary-muted) !important;
+}
+.terminal-mode .bg-emerald-50,
+.terminal-mode .bg-green-50 {
+  background-color: var(--t-success-muted) !important;
+}
+.terminal-mode .bg-red-50,
+.terminal-mode .bg-rose-50 {
+  background-color: var(--t-danger-muted) !important;
+}
+.terminal-mode .bg-amber-50,
+.terminal-mode .bg-yellow-50 {
+  background-color: var(--t-warning-muted) !important;
+}
+
+/* Borders ──────────────────────────────────────────── */
+.terminal-mode .border-slate-100,
+.terminal-mode .border-slate-200,
+.terminal-mode .border-slate-300,
+.terminal-mode .border-neutral-100,
+.terminal-mode .border-neutral-200 {
+  border-color: var(--t-border) !important;
+}
+.terminal-mode .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.terminal-mode .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--t-border-subtle) !important;
+}
+
+/* Text ─────────────────────────────────────────────── */
+.terminal-mode .text-slate-900,
+.terminal-mode .text-slate-800,
+.terminal-mode .text-neutral-800,
+.terminal-mode .text-neutral-900 {
+  color: var(--t-text) !important;
+}
+.terminal-mode .text-slate-700,
+.terminal-mode .text-slate-600,
+.terminal-mode .text-neutral-600,
+.terminal-mode .text-neutral-700 {
+  color: var(--t-text-secondary) !important;
+}
+.terminal-mode .text-slate-500,
+.terminal-mode .text-slate-400,
+.terminal-mode .text-slate-300,
+.terminal-mode .text-neutral-400,
+.terminal-mode .text-neutral-500 {
+  color: var(--t-text-muted) !important;
+}
+
+/* Inputs / textareas / selects ────────────────────── */
+.terminal-mode input:not([type="checkbox"]):not([type="radio"]),
+.terminal-mode textarea,
+.terminal-mode select {
+  background-color: var(--t-bg-input) !important;
+  border-color: var(--t-border) !important;
+  color: var(--t-text) !important;
+}
+.terminal-mode input::placeholder,
+.terminal-mode textarea::placeholder {
+  color: var(--t-text-muted) !important;
+}
+.terminal-mode input:focus,
+.terminal-mode textarea:focus,
+.terminal-mode select:focus {
+  outline: none;
+  border-color: var(--t-border-focus) !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18) !important;
+}
+
+/* Hovers commonly used as row highlights ──────────── */
+.terminal-mode .hover\:bg-slate-50:hover,
+.terminal-mode .hover\:bg-slate-100:hover,
+.terminal-mode .hover\:bg-white:hover {
+  background-color: var(--t-bg-hover) !important;
+}
+
+/* Shadow noise — kill light-mode card shadows ─────── */
+.terminal-mode .shadow-sm,
+.terminal-mode .shadow,
+.terminal-mode .shadow-md,
+.terminal-mode .shadow-lg,
+.terminal-mode .shadow-card,
+.terminal-mode .shadow-card-hover {
+  box-shadow: none !important;
+}
+
+/* Tag-chip-ish surfaces (lightweight) */
+.terminal-mode .bg-blue-100\/50,
+.terminal-mode .bg-blue-100 {
+  background-color: rgba(96, 165, 250, 0.12) !important;
+  color: var(--t-chart-blue) !important;
+}
+
+/* Additional pastel surface / border / text overrides ─────────── */
+.terminal-mode .bg-slate-50\/40 {
+  background-color: rgba(17, 23, 32, 0.6) !important;
+}
+.terminal-mode .bg-emerald-100 {
+  background-color: rgba(74, 222, 128, 0.14) !important;
+  color: var(--t-chart-green) !important;
+}
+.terminal-mode .bg-amber-100 {
+  background-color: rgba(251, 191, 36, 0.14) !important;
+  color: var(--t-chart-amber) !important;
+}
+.terminal-mode .border-blue-100 {
+  border-color: rgba(96, 165, 250, 0.28) !important;
+}
+.terminal-mode .border-emerald-100 {
+  border-color: rgba(74, 222, 128, 0.28) !important;
+}
+.terminal-mode .text-blue-800 {
+  color: var(--t-chart-blue) !important;
+}
+.terminal-mode .text-emerald-800 {
+  color: var(--t-chart-green) !important;
+}
+
+/* `.card` (light-theme card from index.css) — flatten to terminal panel */
+.terminal-mode .card {
+  background: var(--t-bg-panel) !important;
+  border-color: var(--t-border) !important;
+  box-shadow: none !important;
+}
+.terminal-mode .card:hover {
+  box-shadow: none !important;
+}
+
+/* Buttons that were styled blue/white CTAs stay blue (--t-primary
+   is already #2563eb), so we don't need to remap text-white buttons. */
+
+/* Default to terminal scrollbar inside terminal-mode */
+.terminal-mode * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--t-border) transparent;
+}
+.terminal-mode *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.terminal-mode *::-webkit-scrollbar-track {
+  background: transparent;
+}
+.terminal-mode *::-webkit-scrollbar-thumb {
+  background: var(--t-border);
+  border-radius: 3px;
+}
+.terminal-mode *::-webkit-scrollbar-thumb:hover {
+  background: var(--t-bg-active);
+}
