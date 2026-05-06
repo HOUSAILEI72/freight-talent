@@ -2,7 +2,7 @@ import os
 from flask import Flask, jsonify, send_from_directory
 from app.config import get_config
 from app.extensions import db, jwt, bcrypt, cors, migrate, limiter, socketio, blocklist_contains
-from app.logging_config import setup_logging
+from logging_config import setup_logging
 from app.request_logging import init_request_logging
 
 

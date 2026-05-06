@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.logging_config import setup_logging
+from logging_config import setup_logging
 from fastapi_app.core.config import get_settings
 from fastapi_app.api.v2 import health, conversations, tags, chart
 from fastapi_app.api.v2 import settings as settings_router
