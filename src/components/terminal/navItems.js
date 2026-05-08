@@ -8,6 +8,7 @@ import {
   Send,
   Inbox,
   FileText,
+  CircleUser,
 } from 'lucide-react'
 
 export const EMPLOYER_ICON_NAV = [
@@ -28,5 +29,5 @@ export const CANDIDATE_ICON_NAV = [
   { id: 'messages',     icon: MessageSquare,   label: 'Messages',      href: '/candidate/messages' },
   { id: 'tags',         icon: Tags,            label: 'Subscriptions', href: '/candidate/tags' },
   { id: 'resume',       icon: FileText,        label: 'Resume',        href: '/candidate/profile/builder' },
-  { id: 'settings',     icon: Settings,        label: 'Profile',       href: '/candidate/profile/me' },
+  { id: 'profile',      icon: CircleUser,      label: 'Profile',       href: '/candidate/profile/me' },
 ]
