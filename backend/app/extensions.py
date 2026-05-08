@@ -69,3 +69,37 @@ def blocklist_contains(jti: str) -> bool:
 # 向后兼容：旧代码直接 import jwt_blocklist 的地方仍可用（仅 fallback set）
 jwt_blocklist = _fallback_blocklist
 
+
+# ── 邮件发送 ──────────────────────────────────────────────────────────────────
+
+def send_mail(to, subject, html_body):
+    """发送 HTML 邮件。若 MAIL_ENABLED=false 则静默返回。"""
+    import smtplib
+    import logging
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    from flask import current_app
+
+    cfg = current_app.config
+    if not cfg.get('MAIL_ENABLED'):
+        return
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = cfg['MAIL_DEFAULT_SENDER']
+    msg['To'] = to
+    msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+
+    try:
+        if cfg.get('MAIL_USE_SSL'):
+            server = smtplib.SMTP_SSL(cfg['MAIL_HOST'], cfg['MAIL_PORT'], timeout=10)
+        else:
+            server = smtplib.SMTP(cfg['MAIL_HOST'], cfg['MAIL_PORT'], timeout=10)
+            server.starttls()
+        server.login(cfg['MAIL_USERNAME'], cfg['MAIL_PASSWORD'])
+        server.sendmail(cfg['MAIL_DEFAULT_SENDER'], [to], msg.as_string())
+        server.quit()
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Failed to send email to {to}: {e}")
+        raise   # 让调用方感知 SMTP 失败
+

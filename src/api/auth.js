@@ -17,6 +17,14 @@ export const authApi = {
     return client.post('/auth/register', data)
   },
 
+  /**
+   * 发送邮箱验证码
+   * @param {{ email: string, role: string }} data
+   */
+  sendCode(data) {
+    return client.post('/auth/send-code', data)
+  },
+
   /** 获取当前登录用户信息（需 token） */
   me() {
     return client.get('/auth/me')

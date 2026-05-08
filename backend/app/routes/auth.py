@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import click
-from flask import Blueprint, request, jsonify
+import random
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -9,7 +10,7 @@ from flask_jwt_extended import (
     get_jwt,
     decode_token,
 )
-from app.extensions import db, limiter, blocklist_add, blocklist_contains
+from app.extensions import db, limiter, blocklist_add, blocklist_contains, _get_redis, send_mail
 from app.models.user import User
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -31,6 +32,7 @@ def register():
     name = (data.get("name") or "").strip()
     role = (data.get("role") or "candidate").strip()
     company_name = (data.get("company_name") or "").strip() or None
+    code = (data.get("code") or "").strip()
 
     # Basic validation
     if not email or "@" not in email:
@@ -44,6 +46,19 @@ def register():
     if role == "employer" and not company_name:
         return _err("企业用户请填写公司名称")
 
+    # Email verification code check (always required)
+    if not code:
+        return _err("请输入邮箱验证码")
+    r = _get_redis()
+    if not r:
+        return _err("验证服务暂不可用，请稍后再试", 503)
+    stored_code = r.get(f"email_code:{email}")
+    if stored_code is None:
+        return _err("验证码错误或已过期")
+    if stored_code != code:
+        return _err("验证码错误或已过期")
+    r.delete(f"email_code:{email}")
+
     if User.query.filter_by(email=email).first():
         return _err("该邮箱已注册", 409)
 
@@ -55,6 +70,58 @@ def register():
     token = create_access_token(identity=str(user.id))
     refresh = create_refresh_token(identity=str(user.id))
     return jsonify({"success": True, "access_token": token, "refresh_token": refresh, "user": user.to_dict()}), 201
+
+
+@auth_bp.post("/send-code")
+@limiter.limit("10 per hour; 3 per minute")
+def send_code():
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    role = (data.get("role") or "candidate").strip()
+
+    if not email or "@" not in email:
+        return _err("请输入有效的邮箱地址")
+    if role not in VALID_ROLES:
+        return _err("无效角色")
+
+    if User.query.filter_by(email=email).first():
+        return _err("该邮箱已注册", 409)
+
+    r = _get_redis()
+    if not r:
+        return _err("邮件服务暂不可用，请稍后再试", 503)
+
+    # Rate limit by email: max 3 per 10 minutes
+    cnt_key = f"email_code_cnt:{email}"
+    cnt = r.incr(cnt_key)
+    if cnt == 1:
+        r.expire(cnt_key, 600)
+    if cnt > 3:
+        return _err("验证码发送过于频繁，请 10 分钟后再试", 429)
+
+    code = str(random.randint(100000, 999999))
+    code_key = f"email_code:{email}"
+    r.setex(code_key, 300, code)
+
+    # Send email if MAIL_ENABLED=true
+    if current_app.config.get('MAIL_ENABLED'):
+        try:
+            send_mail(email, "ACE-Talent 邮箱验证码",
+                      f"<p>您的验证码是：<strong>{code}</strong></p><p>有效期 5 分钟，请勿泄露。</p>")
+        except Exception:
+            # SMTP 发送失败：回滚 Redis 计数和验证码，避免用户因服务故障被惩罚
+            r.delete(code_key)
+            r.decr(cnt_key)
+            current_app.logger.error(f"send_code: SMTP failed for {email}")
+            return _err("邮件发送失败，请稍后重试", 503)
+
+    # Development mode: return code in response for testing
+    response = {"success": True, "message": "验证码已发送"}
+    if current_app.debug and not current_app.config.get('MAIL_ENABLED'):
+        response["code"] = code  # Only in dev mode when email is disabled
+        response["message"] = "验证码已生成（开发模式）"
+
+    return jsonify(response)
 
 
 @auth_bp.post("/login")

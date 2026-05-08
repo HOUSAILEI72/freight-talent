@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Ship, AlertCircle, Loader2 } from 'lucide-react'
 import { getRoleHome } from '../../router/roleHome'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
+import { authApi } from '../../api/auth'
 
 const TABS = [
   { key: 'employer', label: '企业' },
@@ -19,13 +20,35 @@ const TABS = [
 export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { login, register } = useAuth()
+  const { login, register: authRegister } = useAuth()
 
   const [tab, setTab] = useState('employer')
   const [mode, setMode] = useState('login') // 'login' | 'register'
   const [form, setForm] = useState({ email: '', password: '', name: '', company_name: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Verification code state
+  const [codeSent, setCodeSent] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const [code, setCode] = useState('')
+  const [sendingCode, setSendingCode] = useState(false)
+  const countdownRef = useRef(null)
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown <= 0) return
+    countdownRef.current = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(countdownRef.current)
+          return 0
+        }
+        return c - 1
+      })
+    }, 1000)
+    return () => clearInterval(countdownRef.current)
+  }, [countdown > 0 ? 1 : 0])
 
   function updateField(field) {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
@@ -37,8 +60,32 @@ export default function Login() {
     if (mode === 'register') {
       if (!form.name.trim()) return '请输入姓名'
       if (tab === 'employer' && !form.company_name.trim()) return '企业用户请填写公司名称'
+      if (!codeSent) return '请先获取邮箱验证码'
+      if (code.length < 6) return '请输入 6 位验证码'
     }
     return ''
+  }
+
+  async function handleSendCode() {
+    if (!form.email || !form.email.includes('@')) {
+      setError('请先输入有效的邮箱地址')
+      return
+    }
+    setError('')
+    setSendingCode(true)
+    try {
+      const res = await authApi.sendCode({ email: form.email.trim().toLowerCase(), role: tab })
+      setCodeSent(true)
+      setCountdown(60)
+      // Development mode: auto-fill code if returned
+      if (res.data?.code) {
+        setCode(res.data.code)
+      }
+    } catch (err) {
+      setError(err.response?.data?.message ?? '发送验证码失败，请稍后重试')
+    } finally {
+      setSendingCode(false)
+    }
   }
 
   async function handleSubmit(e) {
@@ -53,13 +100,20 @@ export default function Login() {
       if (mode === 'login') {
         user = await login({ email: form.email, password: form.password, role: tab })
       } else {
-        user = await register({
-          email: form.email,
+        // Use authApi directly because AuthContext.register drops extra fields like `code`
+        const payload = {
+          email: form.email.trim().toLowerCase(),
           password: form.password,
           name: form.name.trim(),
           role: tab,
           company_name: tab === 'employer' ? form.company_name.trim() : undefined,
-        })
+          code,
+        }
+        const res = await authApi.register(payload)
+        const { access_token: token, refresh_token, user: userData } = res.data
+        localStorage.setItem('token', token)
+        if (refresh_token) localStorage.setItem('refresh_token', refresh_token)
+        user = userData
       }
 
       // 登录成功后回跳到 next 参数指定的页面（防止 open redirect）
@@ -128,7 +182,13 @@ export default function Login() {
             ).map(t => (
               <button
                 key={t.key}
-                onClick={() => { setTab(t.key); setError('') }}
+                onClick={() => {
+                  setTab(t.key)
+                  setError('')
+                  setCodeSent(false)
+                  setCode('')
+                  setCountdown(0)
+                }}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                   tab === t.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
                 }`}
@@ -186,6 +246,54 @@ export default function Login() {
               />
             </div>
 
+            {/* Verification code section — register mode only */}
+            {mode === 'register' && (
+              <div>
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={sendingCode || countdown > 0}
+                  className={`text-sm font-medium ${
+                    sendingCode || countdown > 0
+                      ? 'text-slate-400 cursor-not-allowed'
+                      : 'text-blue-600 hover:text-blue-700'
+                  }`}
+                >
+                  {sendingCode ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Loader2 size={12} className="animate-spin" /> 发送中...
+                    </span>
+                  ) : countdown > 0 ? (
+                    `${countdown}s 后重发`
+                  ) : codeSent ? (
+                    '重新发送验证码'
+                  ) : (
+                    '发送验证码'
+                  )}
+                </button>
+              </div>
+            )}
+
+            {mode === 'register' && codeSent && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">验证码</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 tracking-[0.3em] text-center text-lg"
+                  placeholder="000000"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                />
+                {code.length === 6 && (
+                  <p className="text-xs text-emerald-600 mt-1">
+                    ✓ 验证码已填写
+                  </p>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">密码</label>
               <input
@@ -207,7 +315,13 @@ export default function Login() {
             {mode === 'login' ? '还没有账号？' : '已有账号？'}
             {' '}
             <button
-              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }}
+              onClick={() => {
+                setMode(mode === 'login' ? 'register' : 'login')
+                setError('')
+                setCodeSent(false)
+                setCode('')
+                setCountdown(0)
+              }}
               className="text-blue-600 hover:underline font-medium"
             >
               {mode === 'login' ? '立即注册' : '去登录'}
