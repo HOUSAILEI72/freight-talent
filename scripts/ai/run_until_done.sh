@@ -63,10 +63,18 @@ while [ "$ROUND" -le "$MAX_ROUNDS" ]; do
       echo "Loop status: $LOOP_STATUS_FILE"
 
       if [ "${ASK_OFFICIAL_REVIEW:-0}" = "1" ]; then
-        LATEST_DIFF=$(find logs/ai -name "${TASK_NAME}-diff.patch" | sort | tail -1)
-        if [ -n "$LATEST_DIFF" ]; then
+        # 优先找最新的 *-TASK_NAME-diff.patch，没有再找 *-TASK_NAME-diff-after.patch
+        LATEST_DIFF=$(find logs/ai -maxdepth 1 -type f -name "*-${TASK_NAME}-diff.patch" -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+        if [ -z "$LATEST_DIFF" ]; then
+          LATEST_DIFF=$(find logs/ai -maxdepth 1 -type f -name "*-${TASK_NAME}-diff-after.patch" -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+        fi
+
+        if [ -n "$LATEST_DIFF" ] && [ -f "$LATEST_DIFF" ]; then
           echo "ASK_OFFICIAL_REVIEW=1，调用官方 Claude 审查..."
+          echo "  diff: $LATEST_DIFF"
           scripts/ai/ask_official_claude_review.sh "$TASK_FILE" "$LATEST_DIFF" "$STATUS_FILE"
+        else
+          echo "ASK_OFFICIAL_REVIEW=1，但未找到 diff 文件（搜索模式: *-${TASK_NAME}-diff.patch / *-${TASK_NAME}-diff-after.patch），跳过审查。"
         fi
       fi
       exit 0
@@ -79,7 +87,16 @@ while [ "$ROUND" -le "$MAX_ROUNDS" ]; do
       } >> "$LOOP_STATUS_FILE"
       echo ""
       echo "任务 diff 超过 500 行，需要审查，停止自动循环。"
-      echo "请调用: scripts/ai/ask_official_claude_review.sh $TASK_FILE <diff_file> $STATUS_FILE"
+      # 尝试找到 diff 文件路径以便提示
+      HINT_DIFF=$(find logs/ai -maxdepth 1 -type f -name "*-${TASK_NAME}-diff.patch" -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+      if [ -z "$HINT_DIFF" ]; then
+        HINT_DIFF=$(find logs/ai -maxdepth 1 -type f -name "*-${TASK_NAME}-diff-after.patch" -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+      fi
+      if [ -n "$HINT_DIFF" ]; then
+        echo "请调用: scripts/ai/ask_official_claude_review.sh $TASK_FILE $HINT_DIFF $STATUS_FILE"
+      else
+        echo "未找到 diff 文件（搜索模式: *-${TASK_NAME}-diff.patch / *-${TASK_NAME}-diff-after.patch），请确认 diff 文件路径后手动调用 ask_official_claude_review.sh。"
+      fi
       exit 2
     fi
   fi

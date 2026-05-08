@@ -4,56 +4,49 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
-echo "== DeepSeek daemon =="
-if scripts/ai/worker_daemon.sh status >/dev/null 2>&1; then
-  scripts/ai/worker_daemon.sh status
+echo "== DeepSeek Worker Processes =="
+PROCESS_PATTERN="run_deepseek_task.sh|deepseek-v4-pro"
+if ps -axo pid,ppid,etime,command 2>/dev/null | grep -E "$PROCESS_PATTERN" | grep -v grep >/dev/null 2>&1; then
+  ps -axo pid,ppid,etime,command 2>/dev/null | grep -E "$PROCESS_PATTERN" | grep -v grep
 else
-  echo "DeepSeek daemon not running."
-  echo "Start daemon: scripts/ai/worker_daemon.sh start"
+  echo "当前无 active worker，这是直接执行型工作流下的正常状态"
 fi
 
 echo ""
-echo "== AI task queues =="
-for dir in tasks/ai/queue tasks/ai/running tasks/ai/done tasks/ai/failed; do
-  mkdir -p "$dir"
-  count="$(find "$dir" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')"
-  echo "$dir: $count"
-  find "$dir" -maxdepth 1 -type f -name '*.md' -print | sort | tail -5 | sed 's/^/  - /'
-done
-
-echo ""
-echo "== DeepSeek worker processes =="
-PROCESS_PATTERN="run_deepseek_task.sh|claude.*deepseek-v4-pro|stream_json_to_text.cjs logs/ai/"
-if ps -axo pid,ppid,etime,command | grep -E "$PROCESS_PATTERN" | grep -v grep >/dev/null 2>&1; then
-  ps -axo pid,ppid,etime,command | grep -E "$PROCESS_PATTERN" | grep -v grep
+echo "== Recent DeepSeek Results (logs/ai/*-deepseek-result.md) =="
+if [ -d logs/ai ] && find logs/ai -maxdepth 1 -type f -name '*-deepseek-result.md' -print -quit 2>/dev/null | grep -q .; then
+  find logs/ai -maxdepth 1 -type f -name '*-deepseek-result.md' -print0 \
+    | xargs -0 ls -t 2>/dev/null \
+    | head -5 \
+    | while IFS= read -r f; do
+        echo "  $(basename "$f")"
+      done
 else
-  echo "No DeepSeek worker is currently running."
+  echo "  (none)"
 fi
 
 echo ""
-echo "== Latest AI run files =="
-if [ -d logs/ai ] && find logs/ai -type f -name '*-deepseek-result.md' -print -quit | grep -q .; then
-  find logs/ai -type f -name '*-deepseek-result.md' -print0 \
-    | xargs -0 ls -t \
-    | head -5
-  LATEST_LOG="$(find logs/ai -type f -name '*-deepseek-result.md' -print0 | xargs -0 ls -t | head -1)"
-  LATEST_PREFIX="${LATEST_LOG%-deepseek-result.md}"
-  echo ""
-  echo "Follow latest log:"
-  echo "scripts/ai/follow_ai_logs.sh \"$LATEST_LOG\""
-  echo ""
-  echo "Latest run related files:"
-  find logs/ai -maxdepth 1 -type f -name "$(basename "$LATEST_PREFIX")*" -print | sort
+echo "== Recent Status After (logs/ai/*-status-after.txt) =="
+if [ -d logs/ai ] && find logs/ai -maxdepth 1 -type f -name '*-status-after.txt' -print -quit 2>/dev/null | grep -q .; then
+  find logs/ai -maxdepth 1 -type f -name '*-status-after.txt' -print0 \
+    | xargs -0 ls -t 2>/dev/null \
+    | head -5 \
+    | while IFS= read -r f; do
+        echo "  $(basename "$f")"
+      done
 else
-  echo "No DeepSeek result logs found yet."
+  echo "  (none)"
 fi
 
 echo ""
-echo "== Latest AI status files =="
-if [ -d logs/ai ] && find logs/ai -type f -name '*-status-after.txt' -print -quit | grep -q .; then
-  find logs/ai -type f -name '*-status-after.txt' -print0 \
-    | xargs -0 ls -t \
-    | head -5
+echo "== Recent Task Status (tasks/status/*-status.md) =="
+if [ -d tasks/status ] && find tasks/status -maxdepth 1 -type f -name '*-status.md' -print -quit 2>/dev/null | grep -q .; then
+  find tasks/status -maxdepth 1 -type f -name '*-status.md' -print0 \
+    | xargs -0 ls -t 2>/dev/null \
+    | head -5 \
+    | while IFS= read -r f; do
+        echo "  $(basename "$f")"
+      done
 else
-  echo "No status-after files found yet."
+  echo "  (none)"
 fi
