@@ -1,0 +1,11 @@
+# REVIEW-DEEPSEEK COMMAND — DISABLED (2026-05-08)
+
+This command has been disabled. The review-deepseek pattern assumed official Claude
+is the default master reviewing DeepSeek's work. This is now inverted.
+
+In the new architecture:
+- DeepSeek is the default master and self-reviews its own work
+- Official Claude is only called for sensitive architecture review via `ask_official_claude_review.sh`
+- DeepSeek master can invoke: `ASK_OFFICIAL_REVIEW=1 scripts/ai/run_deepseek_task.sh tasks/ai/xxx.md`
+
+Original backup: `scripts/ai_backup_20260508_144425/.claude_commands/review-deepseek.md`
