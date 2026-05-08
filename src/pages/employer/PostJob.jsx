@@ -112,6 +112,8 @@ export default function PostJob({ terminal = false }) {
     if (!experienceRequired.trim())   return '请填写经验要求'
     if (!degreeRequired.trim())       return '请填写学历要求'
     if (skillTagsArr.length === 0)    return '请至少填写一个技能（可用逗号、顿号或换行分隔）'
+    if (!description.trim())          return '请填写岗位职责'
+    if (!requirements.trim())         return '请填写任职要求'
     if (!selectedFunction)            return '请选择板块'
     if (isManagementRole !== 'true' && isManagementRole !== 'false') return '请选择是否为管理人员'
     if (!location || !location.location_code) return '请选择地区'
@@ -199,9 +201,8 @@ export default function PostJob({ terminal = false }) {
       year_end_bonus_months:
         hasYearEndBonus === 'true' ? Number(yearEndBonusMonths) : null,
 
-      // Optional free text
       description:  description.trim(),
-      requirements: requirements.trim() || null,
+      requirements: requirements.trim(),
 
       status: 'published',
     }
@@ -422,7 +423,38 @@ export default function PostJob({ terminal = false }) {
             </div>
           </div>
 
-          {/* ── Section 2: 地区与板块 ───────────────────────────────── */}
+          {/* ── Section 2: 岗位描述 ─────────────────────────────────── */}
+          <div className={cardClass} style={cardStyle}>
+            <div className={sectionTitleClass} style={sectionTitleStyle}>
+              <Briefcase size={14} /> 岗位描述
+            </div>
+
+            <div>
+              <label className={labelClass} style={labelStyle}>岗位职责 *</label>
+              <textarea
+                rows={4}
+                className={textareaClass}
+                style={textareaStyle}
+                placeholder="描述该岗位的主要工作职责，例如：负责海运出口操作全流程管理..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass} style={labelStyle}>任职要求 *</label>
+              <textarea
+                rows={4}
+                className={textareaClass}
+                style={textareaStyle}
+                placeholder="描述应聘者需要具备的条件，例如：熟悉国际货代业务流程，具备团队管理经验..."
+                value={requirements}
+                onChange={(e) => setRequirements(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* ── Section 3: 地区与板块 ───────────────────────────────── */}
           <div className={cardClass} style={cardStyle}>
             <div className={sectionTitleClass} style={sectionTitleStyle}>
               地区与板块
@@ -492,7 +524,7 @@ export default function PostJob({ terminal = false }) {
             </div>
           </div>
 
-          {/* ── Section 3: 能力要求 ─────────────────────────────────── */}
+          {/* ── Section 4: 能力要求 ─────────────────────────────────── */}
           <div className={cardClass} style={cardStyle}>
             <div className={sectionTitleClass} style={sectionTitleStyle}>
               能力要求
@@ -538,7 +570,7 @@ export default function PostJob({ terminal = false }) {
             </div>
           </div>
 
-          {/* ── Section 4: 薪酬结构 ─────────────────────────────────── */}
+          {/* ── Section 5: 薪酬结构 ─────────────────────────────────── */}
           <div className={cardClass} style={cardStyle}>
             <div className={sectionTitleClass} style={sectionTitleStyle}>
               薪酬结构
@@ -625,37 +657,6 @@ export default function PostJob({ terminal = false }) {
                 <p className={helperClass} style={helperStyle}>0-24 之间，可填小数</p>
               </div>
             )}
-          </div>
-
-          {/* ── Section 5: 补充说明 ─────────────────────────────────── */}
-          <div className={cardClass} style={cardStyle}>
-            <div className={sectionTitleClass} style={sectionTitleStyle}>
-              补充说明（可选）
-            </div>
-
-            <div>
-              <label className={labelClass} style={labelStyle}>岗位职责</label>
-              <textarea
-                rows={3}
-                className={textareaClass}
-                style={textareaStyle}
-                placeholder="补充说明岗位的主要职责（可选）"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className={labelClass} style={labelStyle}>任职要求</label>
-              <textarea
-                rows={3}
-                className={textareaClass}
-                style={textareaStyle}
-                placeholder="补充任职要求（可选）"
-                value={requirements}
-                onChange={(e) => setRequirements(e.target.value)}
-              />
-            </div>
           </div>
 
           {/* ── Submit ───────────────────────────────────────────────── */}
