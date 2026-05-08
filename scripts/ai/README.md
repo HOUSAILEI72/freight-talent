@@ -85,6 +85,72 @@ scripts/ai/ask_official_claude_review.sh \
 
 ---
 
+### 5. 两阶段官方 Claude 规划（复杂/高风险需求推荐）
+
+对于复杂或高风险需求，使用两阶段规划流程。官方 Claude 先提调查问题 → DeepSeek 只读调查代码 → 官方 Claude 基于代码事实生成最终 plan。
+
+```bash
+# 第一步：写需求文件
+# 手动创建 tasks/requirements/REQ-XXX.md
+
+# 第二步：官方 Claude 生成调查问题（不读代码，不生成 plan）
+scripts/ai/ask_official_claude_questions.sh tasks/requirements/REQ-XXX.md
+# 输出: tasks/context/REQ-XXX-investigation-questions.md
+#       logs/ai/RUNID-REQ-XXX-official-questions.md
+
+# 第三步：DeepSeek 只读调查代码（不修改业务代码）
+scripts/ai/run_deepseek_investigation.sh \
+  tasks/requirements/REQ-XXX.md \
+  tasks/context/REQ-XXX-investigation-questions.md
+# 输出: tasks/context/REQ-XXX-code-summary.md
+#       logs/ai/RUNID-REQ-XXX-investigation.md
+#       logs/ai/RUNID-REQ-XXX-investigation-stream.raw.jsonl
+
+# 第四步：官方 Claude 基于 code-summary 生成最终 plan
+scripts/ai/ask_official_claude_plan.sh \
+  tasks/requirements/REQ-XXX.md \
+  tasks/context/REQ-XXX-code-summary.md
+# 输出: tasks/plans/REQ-XXX-plan.md
+#       logs/ai/RUNID-REQ-XXX-official-plan.md
+
+# 第五步：DeepSeek 执行 plan
+scripts/ai/run_deepseek_task.sh tasks/plans/REQ-XXX-plan.md
+
+# 第六步（可选）：多轮自动修复
+scripts/ai/run_until_done.sh tasks/plans/REQ-XXX-plan.md
+
+# 第七步（可选）：官方 Claude 审查
+scripts/ai/ask_official_claude_review.sh \
+  tasks/plans/REQ-XXX-plan.md \
+  logs/ai/RUNID-REQ-XXX-diff.patch \
+  tasks/status/REQ-XXX-plan-status.md
+```
+
+**需要两阶段规划的场景：**
+- 认证、权限相关
+- 订阅、支付相关
+- 数据库迁移（新增/修改表结构）
+- 消息系统核心逻辑
+- 候选人匹配算法
+- 大型重构（涉及 5 个以上文件）
+- 用户自己不确定实现路径的需求
+
+**不需要两阶段规划的场景（直接跳到第四步）：**
+- 文案修改
+- 小 UI 调整（单文件、纯样式）
+- 简单 bug 修复（单文件、逻辑明确）
+- 单文件低风险修改
+- 文档更新
+
+**两阶段规划的核心原理：**
+- 官方 Claude 不直接读项目代码，也不凭空生成最终 plan
+- 官方 Claude 先告诉 DeepSeek：它为了做高质量架构判断，需要知道哪些代码事实
+- DeepSeek 去项目代码里做只读调查，生成 code-summary
+- 官方 Claude 基于需求 + AI_CONTEXT.md + PROJECT_DECISIONS.md + code-summary 生成最终 plan
+- 所有阶段官方 Claude 均无工具权限
+
+---
+
 ## 持久上下文文件
 
 | 文件 | 用途 |
