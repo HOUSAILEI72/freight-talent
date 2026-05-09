@@ -1,9 +1,0 @@
-# ARCHITECT AGENT — DISABLED (2026-05-08)
-
-This agent has been disabled as part of the AI architecture rebuild.
-The new architecture uses DeepSeek as the default master.
-
-- DeepSeek master entry: `scripts/ai/cc_deepseek_master.sh`
-- Official Claude review (on-demand only): `scripts/ai/ask_official_claude_review.sh`
-
-Original backup: `scripts/ai_backup_20260508_144425/.claude_agents/architect.md`

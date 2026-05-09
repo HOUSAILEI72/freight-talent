@@ -54,19 +54,26 @@ backend/migrations/__pycache__/
 .AppleDouble
 .LSOverride
 
-# AI local secrets and run artifacts
-scripts/ai/official_claude_env.sh
+# AI local env secrets (never commit)
+scripts/ai/env.*.local.sh
 scripts/ai/deepseek_env.sh
+scripts/ai/official_claude_env.sh
+
+# Claude settings overrides
 .claude/settings.local.json
 .claude/settings.local.json.bak
 .claude/settings.local.deepseek.json
 .claude/.DS_Store
 .codex/
+
+# AI git trace logs (never commit)
+logs/git-trace/
+
+# AI misc logs and artifacts
 logs/ai/
-tasks/ai/queue/
-tasks/ai/running/
-tasks/ai/done/
-tasks/ai/failed/
+
+# AI trace state file
+.ai_trace_current
 
 # AI architecture backups
 scripts/ai_backup_*/
