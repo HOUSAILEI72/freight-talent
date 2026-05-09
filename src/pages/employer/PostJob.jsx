@@ -13,6 +13,8 @@ import RegionSelector from '../../components/RegionSelector'
 const FUNCTION_OPTIONS = DEFAULT_FUNCTIONS.filter(f => f.key !== 'ALL')
 
 const SALARY_MONTHS_OPTIONS = [12, 13, 14]
+const EXPERIENCE_YEAR_OPTIONS = Array.from({ length: 31 }, (_, i) => i)
+const DEGREE_REQUIRED_OPTIONS = ['不限', '高中/中专', '大专', '本科', '硕士', '博士']
 
 /** Split a comma / 顿号 / newline / whitespace string into a deduped array
  *  of trimmed non-empty strings. */
@@ -72,7 +74,7 @@ export default function PostJob({ terminal = false }) {
 
   // ── Form state ──────────────────────────────────────────────────────────
   const [title, setTitle]                       = useState('')
-  const [experienceRequired, setExperienceRequired] = useState('')
+  const [experienceYears, setExperienceYears]   = useState('')
   const [degreeRequired,     setDegreeRequired]     = useState('')
 
   const [skillsText, setSkillsText]             = useState('')
@@ -80,8 +82,10 @@ export default function PostJob({ terminal = false }) {
   const [functionCode, setFunctionCode]         = useState('')
 
   const [isManagementRole, setIsManagementRole] = useState('') // '' | 'true' | 'false'
+  const [managementHeadcount, setManagementHeadcount] = useState('')
 
   const [location, setLocation]                 = useState(null)
+  const [addressDetail, setAddressDetail]       = useState('')
 
   const [knowledgeText, setKnowledgeText]       = useState('')
   const [hardSkillText, setHardSkillText]       = useState('')
@@ -109,17 +113,25 @@ export default function PostJob({ terminal = false }) {
   // ── Validation ──────────────────────────────────────────────────────────
   function validate() {
     if (!title.trim())                return '请填写岗位名称'
-    if (!experienceRequired.trim())   return '请填写经验要求'
+    if (experienceYears === '')       return '请选择经验要求'
+    const exp = Number(experienceYears)
+    if (!Number.isInteger(exp) || exp < 0 || exp > 30) return '经验要求必须在 0-30 年之间'
     if (!degreeRequired.trim())       return '请填写学历要求'
     if (skillTagsArr.length === 0)    return '请至少填写一个技能（可用逗号、顿号或换行分隔）'
     if (!description.trim())          return '请填写岗位职责'
     if (!requirements.trim())         return '请填写任职要求'
     if (!selectedFunction)            return '请选择板块'
-    if (isManagementRole !== 'true' && isManagementRole !== 'false') return '请选择是否为管理人员'
+    if (isManagementRole !== 'true' && isManagementRole !== 'false') return '请选择该岗位是否属于管理行列'
+    if (isManagementRole === 'true') {
+      if (!managementHeadcount.trim()) return '请填写预计管理人数'
+      if (!/^\d+$/.test(managementHeadcount.trim())) return '预计管理人数必须为纯数字'
+      if (Number(managementHeadcount) <= 0) return '预计管理人数必须大于 0'
+    }
     if (!location || !location.location_code) return '请选择地区'
     if (!location.location_name || !location.location_path || !location.location_type) {
       return '地区数据不完整，请重新选择'
     }
+    if (addressDetail.trim().length > 200) return '详细地址不能超过 200 个字符'
     if (knowledgeArr.length === 0) return '请填写知识要求'
     if (hardSkillArr.length === 0) return '请填写硬技能要求'
     if (softSkillArr.length === 0) return '请填写软技能要求'
@@ -161,7 +173,7 @@ export default function PostJob({ terminal = false }) {
     const payload = {
       // Basic
       title: title.trim(),
-      experience_required: experienceRequired.trim(),
+      experience_required: `${Number(experienceYears)}年`,
       degree_required:     degreeRequired.trim(),
 
       // Function (Phase B FunctionRail constants)
@@ -173,6 +185,8 @@ export default function PostJob({ terminal = false }) {
 
       // Management
       is_management_role: isManagementRole === 'true',
+      management_headcount:
+        isManagementRole === 'true' ? Number(managementHeadcount.trim()) : null,
       job_type: isManagementRole === 'true' ? '管理' : '非管理',
 
       // Standard location (RegionSelector). DO NOT send business_area_code —
@@ -181,6 +195,7 @@ export default function PostJob({ terminal = false }) {
       location_name: location.location_name,
       location_path: location.location_path,
       location_type: location.location_type,
+      address: addressDetail.trim() || null,
 
       // Skills — feed the matching engine the union of all four lists.
       skill_tags: mergeUnique(skillTagsArr, knowledgeArr, hardSkillArr, softSkillArr),
@@ -387,23 +402,31 @@ export default function PostJob({ terminal = false }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelClass} style={labelStyle}>经验要求 *</label>
-                <input
+                <select
                   className={inputClass}
                   style={inputStyle}
-                  placeholder="例：3年以上"
-                  value={experienceRequired}
-                  onChange={(e) => setExperienceRequired(e.target.value)}
-                />
+                  value={experienceYears}
+                  onChange={(e) => setExperienceYears(e.target.value)}
+                >
+                  <option value="">请选择经验年限</option>
+                  {EXPERIENCE_YEAR_OPTIONS.map((year) => (
+                    <option key={year} value={year}>{year} 年</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className={labelClass} style={labelStyle}>学历要求 *</label>
-                <input
+                <select
                   className={inputClass}
                   style={inputStyle}
-                  placeholder="例：本科及以上"
                   value={degreeRequired}
                   onChange={(e) => setDegreeRequired(e.target.value)}
-                />
+                >
+                  <option value="">请选择学历要求</option>
+                  {DEGREE_REQUIRED_OPTIONS.map((degree) => (
+                    <option key={degree} value={degree}>{degree}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -476,6 +499,21 @@ export default function PostJob({ terminal = false }) {
             </div>
 
             <div>
+              <label className={labelClass} style={labelStyle}>详细地址</label>
+              <input
+                className={inputClass}
+                style={inputStyle}
+                placeholder="例：深圳市南山区科兴科学园 A 栋 12 层"
+                value={addressDetail}
+                onChange={(e) => setAddressDetail(e.target.value)}
+                maxLength={200}
+              />
+              <p className={helperClass} style={helperStyle}>
+                可填写园区、楼栋、楼层等补充信息，最多 200 字符
+              </p>
+            </div>
+
+            <div>
               <label className={labelClass} style={labelStyle}>板块 *</label>
               <div className="flex flex-wrap gap-2">
                 {FUNCTION_OPTIONS.map((f) => {
@@ -510,18 +548,46 @@ export default function PostJob({ terminal = false }) {
             </div>
 
             <div>
-              <label className={labelClass} style={labelStyle}>是否为管理人员 *</label>
+              <label className={labelClass} style={labelStyle}>该岗位是否属于管理行列 *</label>
               <select
                 className={inputClass}
                 style={inputStyle}
                 value={isManagementRole}
-                onChange={(e) => setIsManagementRole(e.target.value)}
+                onChange={(e) => {
+                  setIsManagementRole(e.target.value)
+                  if (e.target.value !== 'true') setManagementHeadcount('')
+                }}
               >
                 <option value="">请选择</option>
                 <option value="true">是</option>
                 <option value="false">否</option>
               </select>
             </div>
+
+            {isManagementRole === 'true' && (
+              <div>
+                <label className={labelClass} style={labelStyle}>预计管理人数 *</label>
+                <input
+                  className={inputClass}
+                  style={inputStyle}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="例：5"
+                  value={managementHeadcount}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    if (next === '' || /^\d*$/.test(next)) {
+                      setManagementHeadcount(next)
+                    } else {
+                      setSubmitError('预计管理人数必须为纯数字')
+                    }
+                  }}
+                />
+                <p className={helperClass} style={helperStyle}>
+                  仅填写数字，例如 5
+                </p>
+              </div>
+            )}
           </div>
 
           {/* ── Section 4: 能力要求 ─────────────────────────────────── */}

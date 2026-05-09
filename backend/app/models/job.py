@@ -43,6 +43,7 @@ class Job(db.Model):
     location_name      = db.Column(db.String(100), nullable=True)
     location_path      = db.Column(db.String(255), nullable=True)
     location_type      = db.Column(db.String(50), nullable=True)
+    address            = db.Column(db.String(200), nullable=True)
     business_area_code = db.Column(db.String(50), nullable=True, index=True)
     business_area_name = db.Column(db.String(100), nullable=True)
 
@@ -52,6 +53,7 @@ class Job(db.Model):
 
     # ── Phase C: Management flag ──
     is_management_role = db.Column(db.Boolean, nullable=True)
+    management_headcount = db.Column(db.Integer, nullable=True)
 
     # ── Phase C: Knowledge / skill arrays ──
     knowledge_requirements  = db.Column(db.JSON, nullable=True)
@@ -108,11 +110,13 @@ class Job(db.Model):
             "location_name": self.location_name,
             "location_path": self.location_path,
             "location_type": self.location_type,
+            "address": self.address,
             "business_area_code": self.business_area_code,
             "business_area_name": self.business_area_name,
             "function_code": self.function_code,
             "function_name": self.function_name,
             "is_management_role": self.is_management_role,
+            "management_headcount": self.management_headcount,
             "knowledge_requirements": self.knowledge_requirements or [],
             "hard_skill_requirements": self.hard_skill_requirements or [],
             "soft_skill_requirements": self.soft_skill_requirements or [],

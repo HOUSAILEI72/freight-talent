@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   MapPin, Briefcase, Clock, Search, X,
-  Loader2, FolderOpen, AlertCircle, Building2,
-  GraduationCap, Users, Zap, PlusCircle, Send, CheckCircle,
+  Loader2, FolderOpen, AlertCircle,
+  GraduationCap, Users, Zap, PlusCircle,
 } from 'lucide-react'
-import { TagList } from '../../components/ui/TagList'
 import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
 import TerminalPageSurface from '../../components/terminal/TerminalPageSurface'
@@ -15,94 +14,121 @@ import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 const FUNCTION_OPTIONS = DEFAULT_FUNCTIONS.filter(f => f.key !== 'ALL')
 
 // ── 右侧详情面板 ──────────────────────────────────────────────────────────────
-function JobDetailPanel({ job, terminal = false, canApply = false, applied = false, applying = false, onApply }) {
+function JobDetailPanel({ job, terminal = false }) {
   const tagsByCat = job.tags_by_category || {}
-  const fullLocation = [job.province, job.city_name, job.district].filter(Boolean).join(' · ') || job.city || '—'
+  const baseLocation =
+    job.location_path ||
+    [job.province, job.city_name, job.district].filter(Boolean).join(' · ') ||
+    job.location_name ||
+    job.city ||
+    '—'
+  const fullLocation = job.address ? `${baseLocation} · ${job.address}` : baseLocation
 
-  const titleColor   = terminal ? { color: 'var(--t-text)' } : undefined
-  const subColor     = terminal ? { color: 'var(--t-text-secondary)' } : undefined
-  const mutedColor   = terminal ? { color: 'var(--t-text-muted)' } : undefined
-  const accentColor  = terminal ? { color: 'var(--t-chart-blue)' } : undefined
-  const cellStyle    = terminal
-    ? { background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)' }
-    : undefined
-  const tagChipStyle = terminal
-    ? { background: 'rgba(96, 165, 250, 0.12)', color: 'var(--t-chart-blue)', border: '1px solid var(--t-border)' }
-    : undefined
+  const titleColor  = terminal ? { color: 'var(--t-text)' } : undefined
+  const subColor    = terminal ? { color: 'var(--t-text-secondary)' } : undefined
+  const mutedColor  = terminal ? { color: 'var(--t-text-muted)' } : undefined
+  const accentColor = terminal ? { color: 'var(--t-chart-blue)' } : undefined
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-start gap-4">
+    <div className="p-5 space-y-5">
+      {/* ── Header ── */}
+      <div className="flex items-start gap-3">
         <div
           className={
             terminal
-              ? 'w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0'
+              ? 'w-10 h-10 rounded flex items-center justify-center font-bold text-sm flex-shrink-0'
               : 'w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0'
           }
-          style={terminal ? { background: 'var(--t-primary)' } : undefined}
+          style={terminal
+            ? { background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }
+            : undefined}
         >
           {(job.company_name ?? job.title ?? '?')[0]}
         </div>
         <div>
-          <h2 className={terminal ? 'text-lg font-bold' : 'text-lg font-bold text-slate-800'} style={titleColor}>
+          <h2 className={terminal ? 'text-sm font-semibold' : 'text-lg font-bold text-slate-800'} style={titleColor}>
             {job.title}
           </h2>
-          <p className={terminal ? 'text-sm mt-0.5' : 'text-sm text-slate-500 mt-0.5'} style={subColor}>
+          <p className={terminal ? 'text-xs mt-0.5' : 'text-sm text-slate-500 mt-0.5'} style={subColor}>
             {job.company_name ?? '—'} · {fullLocation}
           </p>
-          <p className={terminal ? 'text-base font-bold mt-1' : 'text-base font-bold text-blue-600 mt-1'} style={accentColor}>
+          <p className={terminal ? 'text-sm font-semibold mt-1' : 'text-base font-bold text-blue-600 mt-1'} style={accentColor}>
             {job.salary_label ?? '面议'}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { icon: MapPin,        label: '工作地点', value: fullLocation },
-          { icon: Briefcase,     label: '薪资范围', value: job.salary_label ?? '面议' },
-          { icon: Clock,         label: '经验要求', value: job.experience_required ?? '不限' },
-          { icon: GraduationCap, label: '学历要求', value: job.degree_required ?? '不限' },
-          { icon: Users,         label: '招聘人数', value: job.headcount ? `${job.headcount} 人` : '—' },
-          { icon: Zap,           label: '紧急程度', value: job.urgency_level === 1 ? '紧急' : job.urgency_level === 3 ? '不急' : '正常' },
-        ].map(item => (
-          <div
-            key={item.label}
-            className={terminal ? 'rounded-xl px-3 py-2.5' : 'bg-slate-50 rounded-xl px-3 py-2.5'}
-            style={cellStyle}
-          >
-            <div className="flex items-center gap-1.5 mb-1">
-              <item.icon size={12} className={terminal ? '' : 'text-slate-400'} style={mutedColor} />
-              <p className={terminal ? 'text-[10px]' : 'text-[10px] text-slate-400'} style={mutedColor}>{item.label}</p>
+      {/* ── 基本信息格 ── */}
+      {terminal ? (
+        <div className="grid grid-cols-2 gap-px" style={{ background: 'var(--t-border-subtle)' }}>
+          {[
+            { label: 'LOCATION', value: fullLocation },
+            { label: 'SALARY',   value: job.salary_label ?? '面议' },
+            { label: 'EXP REQ',  value: job.experience_required ?? '不限' },
+            { label: 'DEGREE',   value: job.degree_required ?? '不限' },
+            { label: 'ROLE',     value: job.is_management_role ? `管理岗${job.management_headcount ? ` · ${job.management_headcount}人` : ''}` : '非管理岗' },
+            { label: 'HC',       value: job.headcount ? `${job.headcount} 人` : '—' },
+            { label: 'URGENCY',  value: job.urgency_level === 1 ? '紧急' : job.urgency_level === 3 ? '不急' : '正常' },
+          ].map(item => (
+            <div key={item.label} className="px-3 py-2" style={{ background: 'var(--t-bg-panel)' }}>
+              <p className="font-mono text-xs uppercase tracking-widest mb-0.5" style={mutedColor}>{item.label}</p>
+              <p className="text-sm" style={subColor}>{item.value}</p>
             </div>
-            <p className={terminal ? 'text-sm font-semibold' : 'text-sm font-semibold text-slate-700'} style={subColor}>
-              {item.value}
-            </p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { icon: MapPin,        label: '工作地点', value: fullLocation },
+            { icon: Briefcase,     label: '薪资范围', value: job.salary_label ?? '面议' },
+            { icon: Clock,         label: '经验要求', value: job.experience_required ?? '不限' },
+            { icon: GraduationCap, label: '学历要求', value: job.degree_required ?? '不限' },
+            { icon: Users, label: '管理属性', value: job.is_management_role ? `管理岗${job.management_headcount ? ` · ${job.management_headcount} 人` : ''}` : '非管理岗' },
+            { icon: Users, label: '招聘人数', value: job.headcount ? `${job.headcount} 人` : '—' },
+            { icon: Zap,   label: '紧急程度', value: job.urgency_level === 1 ? '紧急' : job.urgency_level === 3 ? '不急' : '正常' },
+          ].map(item => (
+            <div key={item.label} className="bg-slate-50 rounded-xl px-3 py-2.5">
+              <div className="flex items-center gap-1.5 mb-1">
+                <item.icon size={12} className="text-slate-400" />
+                <p className="text-[10px] text-slate-400">{item.label}</p>
+              </div>
+              <p className="text-sm font-semibold text-slate-700">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
+      {/* ── 标签 ── */}
       {Object.keys(tagsByCat).length > 0 && (
-        <div>
-          <p className={terminal ? 'text-sm font-semibold mb-2' : 'text-sm font-semibold text-slate-800 mb-2'} style={titleColor}>
-            标签
+        <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
+          <p
+            className={terminal ? 'font-mono text-xs uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            style={terminal ? mutedColor : titleColor}
+          >
+            {terminal ? 'TAGS' : '标签'}
           </p>
           <div className="space-y-2">
             {Object.entries(tagsByCat).map(([cat, names]) => (
               <div key={cat}>
-                <p className={terminal ? 'text-xs mb-1' : 'text-xs text-slate-400 mb-1'} style={mutedColor}>{cat}</p>
+                <p
+                  className={terminal ? 'font-mono text-xs uppercase tracking-widest mb-1' : 'text-xs text-slate-400 mb-1'}
+                  style={mutedColor}
+                >
+                  {cat}
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {names.map((n, i) => (
-                    <span
-                      key={i}
-                      className={
-                        terminal
-                          ? 'px-2 py-0.5 text-xs rounded-full'
-                          : 'px-2 py-0.5 text-xs bg-blue-50 text-blue-700 border border-blue-100 rounded-full'
-                      }
-                      style={tagChipStyle}
-                    >
-                      {n}
-                    </span>
+                    terminal ? (
+                      <span
+                        key={i}
+                        className="font-mono text-xs px-2 py-0.5"
+                        style={{ color: 'var(--t-text-secondary)', background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}
+                      >
+                        {n}
+                      </span>
+                    ) : (
+                      <span key={i} className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 border border-blue-100 rounded-full">{n}</span>
+                    )
                   ))}
                 </div>
               </div>
@@ -111,10 +137,14 @@ function JobDetailPanel({ job, terminal = false, canApply = false, applied = fal
         </div>
       )}
 
+      {/* ── 岗位职责 ── */}
       {job.description && (
-        <div>
-          <p className={terminal ? 'text-sm font-semibold mb-2' : 'text-sm font-semibold text-slate-800 mb-2'} style={titleColor}>
-            岗位职责
+        <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
+          <p
+            className={terminal ? 'font-mono text-xs uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            style={terminal ? mutedColor : titleColor}
+          >
+            {terminal ? 'JOB DESC' : '岗位职责'}
           </p>
           <p className={terminal ? 'text-sm leading-relaxed whitespace-pre-line' : 'text-sm text-slate-600 leading-relaxed whitespace-pre-line'} style={subColor}>
             {job.description}
@@ -122,10 +152,14 @@ function JobDetailPanel({ job, terminal = false, canApply = false, applied = fal
         </div>
       )}
 
+      {/* ── 任职要求 ── */}
       {job.requirements && (
-        <div>
-          <p className={terminal ? 'text-sm font-semibold mb-2' : 'text-sm font-semibold text-slate-800 mb-2'} style={titleColor}>
-            任职要求
+        <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
+          <p
+            className={terminal ? 'font-mono text-xs uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            style={terminal ? mutedColor : titleColor}
+          >
+            {terminal ? 'REQUIREMENTS' : '任职要求'}
           </p>
           <p className={terminal ? 'text-sm leading-relaxed whitespace-pre-line' : 'text-sm text-slate-600 leading-relaxed whitespace-pre-line'} style={subColor}>
             {job.requirements}
@@ -133,48 +167,8 @@ function JobDetailPanel({ job, terminal = false, canApply = false, applied = fal
         </div>
       )}
 
-      {canApply && (
-        <div className="pt-1">
-          {applied ? (
-            <span
-              className={
-                terminal
-                  ? 'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm border font-medium'
-                  : 'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-emerald-100 text-emerald-700 border border-emerald-300 font-medium'
-              }
-              style={
-                terminal
-                  ? {
-                      background: 'rgba(34,197,94,0.12)',
-                      color: 'var(--t-success)',
-                      borderColor: 'var(--t-success)',
-                    }
-                  : undefined
-              }
-            >
-              <CheckCircle size={14} />已投递
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onApply && onApply(job)}
-              disabled={applying}
-              className={
-                terminal
-                  ? 'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-white transition-colors disabled:opacity-60'
-                  : 'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60'
-              }
-              style={terminal ? { background: 'var(--t-primary)' } : undefined}
-            >
-              {applying ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              {applying ? '投递中...' : '投递岗位'}
-            </button>
-          )}
-        </div>
-      )}
-
       <p
-        className={terminal ? 'text-xs pt-2 border-t' : 'text-xs text-slate-400 pt-2 border-t border-slate-100'}
+        className={terminal ? 'text-[11px] pt-2 border-t' : 'text-xs text-slate-400 pt-2 border-t border-slate-100'}
         style={terminal ? { color: 'var(--t-text-muted)', borderColor: 'var(--t-border-subtle)' } : undefined}
       >
         发布于 {job.created_at?.slice(0, 10) ?? '—'}
@@ -194,12 +188,20 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
   const [q, setQ]                 = useState('')
   const [location, setLocation]   = useState(null)  // RegionSelector value
   const [functionCode, setFunctionCode] = useState('')
+  const [savedFilter, setSavedFilter] = useState('all')
+  const [appliedFilter, setAppliedFilter] = useState('all')
 
-  // CAND-4 — applied job ids and per-job submitting flag (only used when
-  // canApply=true, i.e. the candidate Terminal entry point).
-  const [appliedJobIds, setAppliedJobIds] = useState(new Set())
+  // CAND-4 — Maps of jobId → applicationId (only used when canApply=true).
+  // Using Map instead of Set so we can call the withdraw endpoint by app id.
+  const [appliedJobMap, setAppliedJobMap] = useState(new Map()) // jobId → appId
+  const [savedJobMap,   setSavedJobMap]   = useState(new Map()) // jobId → appId
   const [applyingJobId, setApplyingJobId] = useState(null)
+  const [savingJobId,   setSavingJobId]   = useState(null)
   const [applyError,    setApplyError]    = useState('')
+
+  // Derived sets for quick membership checks (used in render)
+  const appliedJobIds = useMemo(() => new Set(appliedJobMap.keys()), [appliedJobMap])
+  const savedJobIds   = useMemo(() => new Set(savedJobMap.keys()),   [savedJobMap])
 
   function fetchJobs(filters) {
     setLoading(true)
@@ -216,48 +218,137 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
 
   useEffect(() => { fetchJobs({}) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // CAND-4: when this page is rendered as the candidate entry, hydrate the
-  // applied-set so the button state survives page refresh.
+  // CAND-4: hydrate jobId→appId maps on mount so button state survives refresh.
   useEffect(() => {
     if (!canApply) return
     let cancelled = false
     applicationsApi.getMyApplications()
       .then(res => {
         if (cancelled) return
-        const ids = (res.data?.applications ?? [])
-          .filter(a => a && a.status !== 'withdrawn')
-          .map(a => a.job_id)
-        setAppliedJobIds(new Set(ids))
+        const applied = new Map()
+        const saved   = new Map()
+        for (const a of (res.data?.applications ?? [])) {
+          if (!a) continue
+          if (a.status === 'saved') {
+            saved.set(a.job_id, a.id)
+          } else if (!['withdrawn'].includes(a.status)) {
+            applied.set(a.job_id, a.id)
+          }
+        }
+        setAppliedJobMap(applied)
+        setSavedJobMap(saved)
       })
-      .catch(() => { /* silent — button defaults to "投递岗位" */ })
+      .catch(() => { /* silent */ })
     return () => { cancelled = true }
   }, [canApply])
+
+  const visibleJobs = useMemo(() => {
+    if (!canApply) return jobs
+    return jobs.filter(job => {
+      const isSaved = savedJobIds.has(job.id)
+      const isApplied = appliedJobIds.has(job.id)
+      if (savedFilter === 'saved' && !isSaved) return false
+      if (savedFilter === 'unsaved' && isSaved) return false
+      if (appliedFilter === 'applied' && !isApplied) return false
+      if (appliedFilter === 'unapplied' && isApplied) return false
+      return true
+    })
+  }, [appliedFilter, appliedJobIds, canApply, jobs, savedFilter, savedJobIds])
+
+  useEffect(() => {
+    if (loading || error) return
+    if (visibleJobs.length === 0) {
+      if (selected) setSelected(null)
+      return
+    }
+    if (!selected || !visibleJobs.some(job => job.id === selected.id)) {
+      setSelected(visibleJobs[0])
+    }
+  }, [error, loading, selected, visibleJobs])
 
   async function handleApply(job) {
     if (!job || !canApply) return
     setApplyError('')
+
+    // Toggle: already applied → withdraw
+    if (appliedJobIds.has(job.id)) {
+      const appId = appliedJobMap.get(job.id)
+      if (!appId || applyingJobId === job.id) return
+      setApplyingJobId(job.id)
+      try {
+        await applicationsApi.updateApplicationStatus(appId, 'withdrawn')
+        setAppliedJobMap(prev => { const next = new Map(prev); next.delete(job.id); return next })
+      } catch (err) {
+        setApplyError(err.response?.data?.message ?? '撤回失败，请重试')
+      } finally {
+        setApplyingJobId(null)
+      }
+      return
+    }
+
+    if (applyingJobId === job.id) return
     setApplyingJobId(job.id)
     try {
       const res = await applicationsApi.applyToJob(job.id)
       const a = res.data?.application
       if (a && a.status !== 'withdrawn') {
-        setAppliedJobIds(prev => {
-          const next = new Set(prev)
-          next.add(job.id)
-          return next
-        })
+        setAppliedJobMap(prev => { const next = new Map(prev); next.set(job.id, a.id); return next })
+        setSavedJobMap(prev => { const next = new Map(prev); next.delete(job.id); return next })
       }
     } catch (err) {
       const code   = err.response?.data?.error_code
       const status = err.response?.status
       if (status === 422 && code === 'profile_incomplete') {
-        // CAND-1 gate handles the rest.
         navigate('/candidate/tags')
         return
       }
       setApplyError(err.response?.data?.message ?? '投递失败，请重试')
     } finally {
       setApplyingJobId(null)
+    }
+  }
+
+  async function handleSave(job) {
+    if (!job || !canApply) return
+    setApplyError('')
+
+    // Toggle: already saved → withdraw (cancel save)
+    if (savedJobIds.has(job.id)) {
+      const appId = savedJobMap.get(job.id)
+      if (!appId || savingJobId === job.id) return
+      setSavingJobId(job.id)
+      try {
+        await applicationsApi.updateApplicationStatus(appId, 'withdrawn')
+        setSavedJobMap(prev => { const next = new Map(prev); next.delete(job.id); return next })
+      } catch (err) {
+        setApplyError(err.response?.data?.message ?? '取消收藏失败，请重试')
+      } finally {
+        setSavingJobId(null)
+      }
+      return
+    }
+
+    if (savingJobId === job.id) return
+    setSavingJobId(job.id)
+    try {
+      const res = await applicationsApi.saveJob(job.id)
+      const a = res.data?.application
+      if (a?.status === 'saved') {
+        setSavedJobMap(prev => { const next = new Map(prev); next.set(job.id, a.id); return next })
+      } else if (a && a.status !== 'withdrawn') {
+        setAppliedJobMap(prev => { const next = new Map(prev); next.set(job.id, a.id); return next })
+      }
+    } catch (err) {
+      const code    = err.response?.data?.error_code
+      const status  = err.response?.status
+      const missing = err.response?.data?.missing ?? []
+      if (status === 422 && code === 'profile_incomplete') {
+        navigate(missing.includes('profile') ? '/candidate/profile/builder' : '/candidate/tags')
+        return
+      }
+      setApplyError(err.response?.data?.message ?? '收藏失败，请重试')
+    } finally {
+      setSavingJobId(null)
     }
   }
 
@@ -276,7 +367,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
   }
 
   function handleReset() {
-    setQ(''); setLocation(null); setFunctionCode('')
+    setQ(''); setLocation(null); setFunctionCode(''); setSavedFilter('all'); setAppliedFilter('all')
     setSelected(null)
     fetchJobs({})
   }
@@ -293,7 +384,8 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
     fetchJobs(buildFilters(location, q, code))
   }
 
-  const hasFilter = q || !!location?.location_code || !!functionCode
+  const hasStatusFilter = canApply && (savedFilter !== 'all' || appliedFilter !== 'all')
+  const hasFilter = q || !!location?.location_code || !!functionCode || hasStatusFilter
 
   const inner = (
     <>
@@ -390,6 +482,56 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                 <option key={f.key} value={f.key}>{f.label}</option>
               ))}
             </select>
+            {canApply && (
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={savedFilter}
+                  onChange={(e) => setSavedFilter(e.target.value)}
+                  className={
+                    terminal
+                      ? 'w-full px-2 py-1.5 text-xs rounded-lg border'
+                      : 'w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
+                  }
+                  style={
+                    terminal
+                      ? {
+                          background: 'var(--t-bg-input)',
+                          borderColor: 'var(--t-border)',
+                          color: savedFilter === 'all' ? 'var(--t-text-muted)' : 'var(--t-text)',
+                        }
+                      : undefined
+                  }
+                  title="按收藏状态筛选"
+                >
+                  <option value="all">收藏：全部</option>
+                  <option value="saved">已收藏</option>
+                  <option value="unsaved">未收藏</option>
+                </select>
+                <select
+                  value={appliedFilter}
+                  onChange={(e) => setAppliedFilter(e.target.value)}
+                  className={
+                    terminal
+                      ? 'w-full px-2 py-1.5 text-xs rounded-lg border'
+                      : 'w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
+                  }
+                  style={
+                    terminal
+                      ? {
+                          background: 'var(--t-bg-input)',
+                          borderColor: 'var(--t-border)',
+                          color: appliedFilter === 'all' ? 'var(--t-text-muted)' : 'var(--t-text)',
+                        }
+                      : undefined
+                  }
+                  title="按投递状态筛选"
+                >
+                  <option value="all">投递：全部</option>
+                  <option value="applied">已投递</option>
+                  <option value="unapplied">未投递</option>
+                </select>
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 type="submit"
@@ -431,7 +573,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
               className={terminal ? 'text-xs mt-2' : 'text-xs text-slate-400 mt-2'}
               style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
             >
-              共 {jobs.length} 个岗位{hasFilter ? '（已筛选）' : ''}
+              共 {visibleJobs.length} 个岗位{hasFilter ? `（已筛选 / 全部 ${jobs.length}）` : ''}
             </p>
           )}
         </div>
@@ -461,7 +603,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
               </p>
             </div>
           )}
-          {!loading && !error && jobs.length === 0 && (
+          {!loading && !error && visibleJobs.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <FolderOpen
                 size={28}
@@ -476,11 +618,12 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
               </p>
             </div>
           )}
-          {!loading && !error && jobs.map(job => {
+          {!loading && !error && visibleJobs.map(job => {
             const isSelected = selected?.id === job.id
             const isUrgent = job.urgency_level === 1
-            const flatTags = Object.values(job.tags_by_category || {}).flat()
             const cityShort = job.city_name || job.city || '—'
+            const isApplied = appliedJobIds.has(job.id)
+            const isSaved = savedJobIds.has(job.id)
 
             // Selected / hover styles per mode
             const rowClass = terminal
@@ -511,9 +654,21 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                   if (terminal && !isSelected) e.currentTarget.style.background = 'transparent'
                 }}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-3">
+                  {/* 公司头像 */}
+                  <div
+                    className={
+                      terminal
+                        ? 'w-9 h-9 rounded flex items-center justify-center font-bold text-sm flex-shrink-0'
+                        : 'w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0 bg-blue-500'
+                    }
+                    style={terminal ? { background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', color: 'var(--t-text)' } : undefined}
+                  >
+                    {(job.company_name ?? job.title ?? '?')[0]}
+                  </div>
+                  {/* 信息区 */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
                       <p
                         className={terminal ? 'font-medium text-sm truncate' : 'font-medium text-sm text-slate-800 truncate'}
                         style={terminal ? { color: 'var(--t-text)' } : undefined}
@@ -527,55 +682,127 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                               ? 'flex-shrink-0 text-[10px] px-1 py-0.5 border rounded font-medium'
                               : 'flex-shrink-0 text-[10px] px-1 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded font-medium'
                           }
-                          style={
-                            terminal
-                              ? {
-                                  background: 'var(--t-danger-muted)',
-                                  color: 'var(--t-danger)',
-                                  borderColor: 'var(--t-danger)',
-                                }
-                              : undefined
-                          }
+                          style={terminal ? { background: 'var(--t-danger-muted)', color: 'var(--t-danger)', borderColor: 'var(--t-danger)' } : undefined}
                         >
                           急
                         </span>
                       )}
                     </div>
+                    <p
+                      className={terminal ? 'text-xs truncate mt-0.5' : 'text-xs text-slate-500 truncate mt-0.5'}
+                      style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}
+                    >
+                      {job.company_name ?? '—'}
+                    </p>
                     <div
-                      className={terminal ? 'flex items-center gap-2 mt-0.5 text-xs' : 'flex items-center gap-2 mt-0.5 text-xs text-slate-400'}
+                      className={terminal ? 'flex items-center gap-2 text-xs mt-0.5 flex-wrap' : 'flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap'}
                       style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
                     >
-                      <span className="flex items-center gap-0.5"><Building2 size={10} />{job.company_name ?? '—'}</span>
-                      <span className="flex items-center gap-0.5"><MapPin size={10} />{cityShort}</span>
+                      {cityShort !== '—' && (
+                        <span className="flex items-center gap-0.5"><MapPin size={9} />{cityShort}</span>
+                      )}
+                      {job.salary_label && (
+                        <span
+                          className={terminal ? 'font-semibold' : 'font-semibold text-blue-600'}
+                          style={terminal ? { color: 'var(--t-chart-blue)' } : undefined}
+                        >
+                          {job.salary_label}
+                        </span>
+                      )}
                     </div>
-                    {flatTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {flatTags.slice(0, 3).map((tag, i) => (
-                          <span
-                            key={i}
-                            className={
-                              terminal
-                                ? 'text-[10px] px-1.5 py-0.5 rounded-full'
-                                : 'text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-full'
-                            }
-                            style={
-                              terminal
-                                ? { background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)' }
-                                : undefined
-                            }
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                  <p
-                    className={terminal ? 'text-xs font-bold flex-shrink-0' : 'text-xs font-bold text-blue-600 flex-shrink-0'}
-                    style={terminal ? { color: 'var(--t-chart-blue)' } : undefined}
-                  >
-                    {job.salary_label ?? '面议'}
-                  </p>
+                  {/* 右侧操作按钮 */}
+                  {canApply && (
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0" style={{ width: '3.5rem' }}>
+                      {/* 收藏 / 取消收藏 toggle */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); if (savingJobId !== job.id) handleSave(job) }}
+                        disabled={savingJobId === job.id}
+                        className={terminal
+                          ? 'text-xs py-0.5 rounded w-full text-center'
+                          : `text-xs py-0.5 rounded border w-full text-center transition-colors ${
+                              isSaved
+                                ? 'border-emerald-300 text-emerald-600 bg-emerald-50 hover:border-red-300 hover:text-red-500 hover:bg-red-50'
+                                : 'border-slate-200 text-slate-500 bg-white hover:border-slate-300 hover:text-slate-700'
+                            }`
+                        }
+                        style={terminal ? {
+                          border: isSaved ? '1px solid var(--t-success)' : '1px solid var(--t-text-muted)',
+                          color: isSaved ? 'var(--t-success)' : 'var(--t-text-secondary)',
+                          background: isSaved ? 'var(--t-success-muted)' : 'transparent',
+                          borderRadius: 'var(--t-radius-sm)',
+                          opacity: savingJobId === job.id ? 0.5 : 1,
+                          cursor: savingJobId === job.id ? 'default' : 'pointer',
+                          width: '100%',
+                          textAlign: 'center',
+                        } : undefined}
+                        onMouseEnter={(e) => {
+                          if (!terminal || savingJobId === job.id) return
+                          if (isSaved) {
+                            e.currentTarget.style.borderColor = 'var(--t-danger)'
+                            e.currentTarget.style.color = 'var(--t-danger)'
+                            e.currentTarget.style.background = 'var(--t-danger-muted)'
+                          } else {
+                            e.currentTarget.style.borderColor = 'var(--t-text)'
+                            e.currentTarget.style.color = 'var(--t-text)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!terminal || savingJobId === job.id) return
+                          e.currentTarget.style.borderColor = isSaved ? 'var(--t-success)' : 'var(--t-text-muted)'
+                          e.currentTarget.style.color = isSaved ? 'var(--t-success)' : 'var(--t-text-secondary)'
+                          e.currentTarget.style.background = isSaved ? 'var(--t-success-muted)' : 'transparent'
+                        }}
+                      >
+                        {savingJobId === job.id ? '…' : isSaved ? '已收藏' : '收藏'}
+                      </button>
+                      {/* 投递 / 撤回投递 toggle */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); if (applyingJobId !== job.id) handleApply(job) }}
+                        disabled={applyingJobId === job.id}
+                        className={terminal
+                          ? 'text-xs py-0.5 rounded w-full text-center'
+                          : `text-xs py-0.5 rounded border w-full text-center transition-colors ${
+                              isApplied
+                                ? 'border-blue-300 text-blue-600 bg-blue-50 hover:border-red-300 hover:text-red-500 hover:bg-red-50'
+                                : 'border-slate-200 text-slate-500 bg-white hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
+                            }`
+                        }
+                        style={terminal ? {
+                          border: isApplied ? '1px solid var(--t-primary)' : '1px solid var(--t-text-muted)',
+                          color: isApplied ? 'var(--t-primary)' : 'var(--t-text-secondary)',
+                          background: isApplied ? 'var(--t-primary-muted)' : 'transparent',
+                          opacity: applyingJobId === job.id ? 0.5 : 1,
+                          cursor: applyingJobId === job.id ? 'default' : 'pointer',
+                          borderRadius: 'var(--t-radius-sm)',
+                          width: '100%',
+                          textAlign: 'center',
+                        } : undefined}
+                        onMouseEnter={(e) => {
+                          if (!terminal || applyingJobId === job.id) return
+                          if (isApplied) {
+                            e.currentTarget.style.borderColor = 'var(--t-danger)'
+                            e.currentTarget.style.color = 'var(--t-danger)'
+                            e.currentTarget.style.background = 'var(--t-danger-muted)'
+                          } else {
+                            e.currentTarget.style.borderColor = 'var(--t-primary)'
+                            e.currentTarget.style.color = 'var(--t-primary)'
+                            e.currentTarget.style.background = 'var(--t-primary-muted)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!terminal || applyingJobId === job.id) return
+                          e.currentTarget.style.borderColor = isApplied ? 'var(--t-primary)' : 'var(--t-text-muted)'
+                          e.currentTarget.style.color = isApplied ? 'var(--t-primary)' : 'var(--t-text-secondary)'
+                          e.currentTarget.style.background = isApplied ? 'var(--t-primary-muted)' : 'transparent'
+                        }}
+                      >
+                        {applyingJobId === job.id ? '…' : isApplied ? '已投递' : '投递'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -609,10 +836,6 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
             <JobDetailPanel
               job={selected}
               terminal={terminal}
-              canApply={canApply}
-              applied={appliedJobIds.has(selected.id)}
-              applying={applyingJobId === selected.id}
-              onApply={handleApply}
             />
           </>
         ) : (
@@ -621,7 +844,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
             style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
           >
             <div className="text-center">
-              <Building2
+              <FolderOpen
                 size={40}
                 className={terminal ? 'mx-auto mb-3' : 'mx-auto mb-3 text-slate-300'}
                 style={terminal ? { color: 'var(--t-text-muted)' } : undefined}

@@ -39,19 +39,16 @@ def _current_user():
     return db.session.get(User, uid)
 
 
-# ── POST /api/jobs/<job_id>/applications ─────────────────────────────────────
-@applications_bp.post("/api/jobs/<int:job_id>/applications")
-@jwt_required()
-def apply_to_job(job_id):
+def _current_candidate_profile():
     user = _current_user()
     if not user or not user.is_active:
-        return _err("用户不存在", 404)
+        return None, _err("用户不存在", 404)
     if user.role != "candidate":
-        return _err("仅候选人账号可以投递岗位", 403)
+        return None, _err("仅候选人账号可以操作岗位", 403)
 
     profile = Candidate.query.filter_by(user_id=user.id).first()
     if not profile:
-        return _err(
+        return None, _err(
             "请先完善候选人档案", 422,
             error_code="profile_incomplete",
             missing=["profile"],
@@ -65,17 +62,87 @@ def apply_to_job(job_id):
         else is_candidate_profile_complete(profile)
     )
     if not is_complete:
-        return _err(
+        return None, _err(
             "请先完善候选人档案", 422,
             error_code="profile_incomplete",
             missing=get_missing_profile_fields(profile),
         )
+    return profile, None
 
+
+def _published_job(job_id):
     job = db.session.get(Job, job_id)
     if not job:
-        return _err("岗位不存在", 404)
+        return None, _err("岗位不存在", 404)
     if job.status != "published":
-        return _err("该岗位未发布或已下线，无法投递", 400)
+        return None, _err("该岗位未发布或已下线，无法操作", 400)
+    return job, None
+
+
+# ── POST /api/jobs/<job_id>/saved ────────────────────────────────────────────
+@applications_bp.post("/api/jobs/<int:job_id>/saved")
+@jwt_required()
+def save_job(job_id):
+    # Saving only requires a candidate role — no profile completeness check.
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role != "candidate":
+        return _err("仅候选人账号可以收藏岗位", 403)
+
+    profile = Candidate.query.filter_by(user_id=user.id).first()
+    if not profile:
+        return _err(
+            "请先创建候选人档案", 422,
+            error_code="profile_incomplete",
+            missing=["profile"],
+        )
+
+    job, err = _published_job(job_id)
+    if err:
+        return err
+
+    existing = JobApplication.query.filter_by(
+        job_id=job.id, candidate_id=profile.id,
+    ).first()
+    if existing:
+        # A submitted/viewed/shortlisted application is stronger than a save.
+        # A withdrawn record can be saved again.
+        if existing.status == "withdrawn":
+            existing.status = "saved"
+            existing.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
+        return jsonify({
+            "success": True,
+            "duplicate": True,
+            "application": existing.to_dict(),
+        }), 200
+
+    app_row = JobApplication(
+        job_id=job.id,
+        candidate_id=profile.id,
+        employer_id=job.company_id,
+        status="saved",
+    )
+    db.session.add(app_row)
+    db.session.commit()
+
+    return jsonify({"success": True, "application": app_row.to_dict()}), 201
+
+
+# ── POST /api/jobs/<job_id>/applications ─────────────────────────────────────
+@applications_bp.post("/api/jobs/<int:job_id>/applications")
+@jwt_required()
+def apply_to_job(job_id):
+    profile, err = _current_candidate_profile()
+    if err:
+        return err
+
+    job, err = _published_job(job_id)
+    if err:
+        if err[1] == 400:
+            return _err("该岗位未发布或已下线，无法投递", 400)
+        return err
 
     # Idempotent: same candidate re-applying to same job returns the
     # existing record so the front-end button can settle on "已投递".
@@ -84,7 +151,7 @@ def apply_to_job(job_id):
     ).first()
     if existing:
         # Re-applying after withdrawal flips the status back to submitted.
-        if existing.status == "withdrawn":
+        if existing.status in ("saved", "withdrawn"):
             existing.status = "submitted"
             existing.updated_at = datetime.now(timezone.utc)
             db.session.commit()
@@ -234,7 +301,7 @@ def update_application_status(application_id):
     if not new_status:
         return _err("缺少 status 字段", 400)
 
-    VALID_STATUSES = {"submitted", "viewed", "shortlisted", "rejected", "withdrawn"}
+    VALID_STATUSES = {"saved", "submitted", "viewed", "shortlisted", "rejected", "withdrawn"}
     if new_status not in VALID_STATUSES:
         return _err(f"非法 status: {new_status}", 400)
 
@@ -273,6 +340,7 @@ def update_application_status(application_id):
 
     # ── State machine validation ─────────────────────────────────────────────
     ALLOWED_TRANSITIONS = {
+        "saved":       {"withdrawn"},
         "submitted":   {"viewed", "shortlisted", "rejected", "withdrawn"},
         "viewed":      {"shortlisted", "rejected", "withdrawn"},
         "shortlisted": {"rejected", "withdrawn"},

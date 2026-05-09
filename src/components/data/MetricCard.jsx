@@ -10,6 +10,7 @@
  * trend     { value: string | number, direction: 'up' | 'down' | 'neutral' }
  *           Optional trend indicator shown bottom-left
  * icon      ReactNode         Optional icon rendered top-right
+ * compact   boolean           Slightly flatter card density
  * className string            Extra utility classes
  */
 
@@ -25,13 +26,15 @@ export default function MetricCard({
   helper,
   trend,
   icon,
+  compact = false,
   className = '',
 }) {
   const trendStyle = trend ? TREND_STYLES[trend.direction ?? 'neutral'] : null
+  const densityClass = compact ? 'gap-2 px-4 py-2.5' : 'gap-3 px-5 py-4'
 
   return (
     <div
-      className={`relative flex flex-col justify-between gap-3 rounded-[var(--t-radius-lg)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] px-5 py-4 shadow-[var(--t-shadow-panel)] transition-colors duration-[var(--t-transition)] hover:bg-[var(--t-bg-hover)] ${className}`}
+      className={`relative flex flex-col justify-between rounded-[var(--t-radius-lg)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] shadow-[var(--t-shadow-panel)] transition-colors duration-[var(--t-transition)] hover:bg-[var(--t-bg-hover)] ${densityClass} ${className}`}
     >
       {/* ── Top row: label + icon ── */}
       <div className="flex items-start justify-between gap-2">

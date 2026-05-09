@@ -28,7 +28,7 @@ export default function AreaSidebar({
 }) {
   return (
     <aside
-      className="flex h-full w-[210px] shrink-0 flex-col border-r border-[var(--t-border)]"
+      className="flex h-full shrink-0 flex-col border-r border-[var(--t-border)]"
       style={{ background: '#0e1521' }}
     >
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-3">
@@ -59,7 +59,7 @@ export default function AreaSidebar({
                 />
               )}
               <MapPin size={13} className="shrink-0 opacity-70" />
-              <span className="min-w-0 truncate font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] uppercase tracking-wider">
+              <span className="whitespace-nowrap font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] uppercase tracking-wider">
                 {a.label}
               </span>
             </button>

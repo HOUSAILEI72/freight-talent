@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, startTransition } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   MessageSquare, Send, Loader2, FolderOpen, AlertCircle,
-  ChevronLeft, Briefcase, CheckCircle, XCircle, Hourglass,
+  Briefcase, CheckCircle, XCircle, Hourglass,
+  EyeOff, Trash2,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { conversationsApi } from '../../api/conversations'
@@ -49,16 +50,75 @@ function InvBadge({ status, terminal = false }) {
   )
 }
 
+// ── 右键菜单 ──────────────────────────────────────────────────────────────────
+function ContextMenu({ x, y, terminal, onHide, onDelete, onClose }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handle(e) {
+      if (ref.current && !ref.current.contains(e.target)) onClose()
+    }
+    // 只监听 mousedown 关闭，不监听 contextmenu——
+    // 否则触发菜单的右键事件会冒泡到 document 立刻把菜单关掉。
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [onClose])
+
+  const menuStyle = {
+    position: 'fixed',
+    top: y,
+    left: x,
+    zIndex: 9999,
+    minWidth: 160,
+    borderRadius: 6,
+    overflow: 'hidden',
+    ...(terminal
+      ? { background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }
+      : { background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }
+    ),
+  }
+
+  const itemBase = {
+    display: 'flex', alignItems: 'center', gap: 8,
+    width: '100%', padding: '8px 14px',
+    fontSize: 13, cursor: 'pointer', border: 'none', background: 'transparent',
+    textAlign: 'left',
+  }
+
+  return (
+    <div ref={ref} style={menuStyle} onClick={(e) => e.stopPropagation()}>
+      <button
+        style={{ ...itemBase, color: terminal ? 'var(--t-text-secondary)' : '#475569' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = terminal ? 'var(--t-bg-hover)' : '#f1f5f9' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+        onClick={() => { onHide(); onClose() }}
+      >
+        <EyeOff size={14} />不显示此对话
+      </button>
+      <div style={{ height: 1, background: terminal ? 'var(--t-border-subtle)' : '#e2e8f0', margin: '2px 0' }} />
+      <button
+        style={{ ...itemBase, color: terminal ? 'var(--t-danger)' : '#ef4444' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = terminal ? 'var(--t-danger-muted)' : '#fef2f2' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+        onClick={() => { onDelete(); onClose() }}
+      >
+        <Trash2 size={14} />删除对话
+      </button>
+    </div>
+  )
+}
+
 // ── 会话列表项（含未读角标）────────────────────────────────────────────────────
-function ConvItem({ conv, isActive, onClick, myRole, terminal = false }) {
+function ConvItem({ conv, isActive, onClick, onContextMenu, myRole, terminal = false, unreadCount }) {
   const label   = myRole === 'employer' ? conv.candidate_name : conv.company_name
   const subtext = conv.job_title
-  const unread  = conv.unread_count ?? 0
+  const unread  = unreadCount != null ? unreadCount : (conv.unread_count ?? 0)
 
   if (terminal) {
     return (
       <button
         onClick={onClick}
+        onContextMenu={onContextMenu}
         className="w-full text-left px-4 py-3.5 transition-colors relative"
         style={{
           background: isActive ? 'var(--t-bg-active)' : 'transparent',
@@ -106,17 +166,7 @@ function ConvItem({ conv, isActive, onClick, myRole, terminal = false }) {
               )}
             </div>
             <p className="text-xs truncate mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{subtext}</p>
-            {conv.latest_message ? (
-              <p
-                className={`text-xs truncate mt-1 ${unread > 0 ? 'font-medium' : ''}`}
-                style={{ color: unread > 0 ? 'var(--t-text)' : 'var(--t-text-secondary)' }}
-              >
-                {conv.latest_message}
-              </p>
-            ) : (
-              <p className="text-xs truncate mt-1 italic" style={{ color: 'var(--t-text-muted)' }}>暂无消息</p>
-            )}
-          </div>
+                      </div>
         </div>
       </button>
     )
@@ -125,6 +175,7 @@ function ConvItem({ conv, isActive, onClick, myRole, terminal = false }) {
   return (
     <button
       onClick={onClick}
+      onContextMenu={onContextMenu}
       className={`w-full text-left px-4 py-3.5 border-b border-slate-100 transition-colors ${
         isActive ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-slate-50'
       }`}
@@ -152,13 +203,6 @@ function ConvItem({ conv, isActive, onClick, myRole, terminal = false }) {
             )}
           </div>
           <p className="text-xs text-slate-400 truncate mt-0.5">{subtext}</p>
-          {conv.latest_message ? (
-            <p className={`text-xs truncate mt-1 ${unread > 0 ? 'text-slate-700 font-medium' : 'text-slate-500'}`}>
-              {conv.latest_message}
-            </p>
-          ) : (
-            <p className="text-xs text-slate-300 truncate mt-1 italic">暂无消息</p>
-          )}
         </div>
       </div>
     </button>
@@ -361,8 +405,259 @@ function Bubble({ msg, isMine, onRetry, terminal = false }) {
   )
 }
 
+// ── 岗位选择下拉（消息面板 header 内用）───────────────────────────────────────
+function JobSelector({ threads, activeId, onSelect, terminal }) {
+  const [open, setOpen]       = useState(false)
+  const [q, setQ]             = useState('')
+  const [fnFilter, setFnFilter] = useState('')
+  const [areaFilter, setAreaFilter] = useState('')
+  const [pos, setPos]          = useState({ top: 0, left: 0 })
+  const ref = useRef(null)
+  const triggerRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [open])
+
+  function toggle() {
+    if (!open && triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 4, left: r.left })
+    }
+    setOpen(v => !v)
+  }
+
+  // 关闭时清空搜索词和筛选
+  useEffect(() => { if (!open) { setQ(''); setFnFilter(''); setAreaFilter('') } }, [open])
+
+  const activeThread = threads.find(t => t.id === activeId)
+
+  // 提取所有 function / area 选项
+  const functions = useMemo(() => {
+    const set = new Map()
+    for (const t of threads) {
+      const code = t.function_code
+      const name = t.function_name || code
+      if (code && !set.has(code)) set.set(code, name)
+    }
+    return [...set.entries()].map(([code, name]) => ({ code, name }))
+  }, [threads])
+
+  const areas = useMemo(() => {
+    const set = new Map()
+    for (const t of threads) {
+      const key = t.province || t.city_name
+      const label = t.city_name || t.province
+      if (key && !set.has(key)) set.set(key, label)
+    }
+    return [...set.entries()].map(([code, name]) => ({ code, name }))
+  }, [threads])
+
+  // 过滤
+  const filtered = useMemo(() => {
+    let list = threads
+    if (q.trim()) {
+      const kw = q.trim().toLowerCase()
+      list = list.filter(t => (t.job_title || '').toLowerCase().includes(kw))
+    }
+    if (fnFilter) list = list.filter(t => t.function_code === fnFilter)
+    if (areaFilter) list = list.filter(t => t.province === areaFilter || t.city_name === areaFilter)
+    return list
+  }, [threads, q, fnFilter, areaFilter])
+
+  const inputBg    = terminal ? { background: 'var(--t-bg-input)', borderColor: 'var(--t-border)', color: 'var(--t-text)' } : undefined
+  const chipBase   = terminal
+    ? 'px-2 py-0.5 text-[10px] rounded-full border whitespace-nowrap cursor-pointer transition-colors'
+    : 'px-2 py-0.5 text-[10px] rounded-full border whitespace-nowrap cursor-pointer transition-colors'
+  const itemBase   = terminal
+    ? 'w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors'
+    : 'w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors'
+
+  return (
+    <div className="inline-flex" ref={ref}>
+      {/* 触发器 —— 显眼的可点击下拉按钮 */}
+      <button
+        type="button"
+        ref={triggerRef}
+        onClick={toggle}
+        className={terminal
+          ? 'text-xs flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors'
+          : 'text-xs flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors'}
+        style={terminal ? {
+          color: open ? 'var(--t-text)' : 'var(--t-text-secondary)',
+          borderColor: open ? 'var(--t-primary)' : 'var(--t-border)',
+          background: open ? 'var(--t-primary-muted)' : 'transparent',
+          cursor: 'pointer',
+        } : {
+          color: open ? '#1e40af' : '#475569',
+          borderColor: open ? '#3b82f6' : '#cbd5e1',
+          background: open ? '#eff6ff' : '#fff',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          if (open) return
+          if (terminal) {
+            e.currentTarget.style.borderColor = 'var(--t-text-muted)'
+            e.currentTarget.style.color = 'var(--t-text)'
+            e.currentTarget.style.background = 'var(--t-bg-hover)'
+          } else {
+            e.currentTarget.style.borderColor = '#94a3b8'
+            e.currentTarget.style.background = '#f8fafc'
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (open) return
+          if (terminal) {
+            e.currentTarget.style.borderColor = 'var(--t-border)'
+            e.currentTarget.style.color = 'var(--t-text-secondary)'
+            e.currentTarget.style.background = 'transparent'
+          } else {
+            e.currentTarget.style.borderColor = '#cbd5e1'
+            e.currentTarget.style.color = '#475569'
+            e.currentTarget.style.background = '#fff'
+          }
+        }}
+      >
+        <Briefcase size={11} className="flex-shrink-0 opacity-60" />
+        <span className="truncate max-w-[160px]">{activeThread?.job_title || '—'}</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" className="flex-shrink-0 opacity-50" style={{ transform: open ? 'rotate(180deg)' : undefined }}>
+          <path d="M2 3.5 L5 6.5 L8 3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </button>
+
+      {/* 下拉面板（fixed 定位，不受父容器 overflow:hidden 影响） */}
+      {open && (
+        <div
+          className={terminal
+            ? 'fixed z-[9999] rounded-lg overflow-hidden min-w-[260px]'
+            : 'fixed z-[9999] rounded-lg border border-slate-200 bg-white shadow-xl overflow-hidden min-w-[260px]'}
+          style={{
+            top: pos.top,
+            left: pos.left,
+            ...(terminal ? {
+              background: 'var(--t-bg-elevated)',
+              border: '1px solid var(--t-border)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+            } : {}),
+          }}
+        >
+          {/* 搜索框 */}
+          <div className="p-2">
+            <input
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              placeholder="搜索岗位..."
+              className={terminal
+                ? 'w-full px-2.5 py-1.5 text-xs rounded-lg focus:outline-none'
+                : 'w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'}
+              style={inputBg}
+            />
+          </div>
+
+          {/* 筛选 chip 行 */}
+          {(functions.length > 1 || areas.length > 1) && (
+            <div className="px-2 pb-1 space-y-1.5">
+              {functions.length > 1 && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-[10px] text-slate-400 flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : undefined}>职能</span>
+                  <button
+                    type="button"
+                    onClick={() => setFnFilter('')}
+                    className={chipBase}
+                    style={!fnFilter ? (terminal ? { borderColor: 'var(--t-primary)', background: 'var(--t-primary-muted)', color: 'var(--t-primary)' } : { borderColor: '#3b82f6', background: '#eff6ff', color: '#3b82f6' }) : (terminal ? { borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' } : { borderColor: '#e2e8f0', color: '#94a3b8' })}
+                  >全部</button>
+                  {functions.map(f => (
+                    <button
+                      key={f.code}
+                      type="button"
+                      onClick={() => setFnFilter(v => v === f.code ? '' : f.code)}
+                      className={chipBase}
+                      style={fnFilter === f.code ? (terminal ? { borderColor: 'var(--t-primary)', background: 'var(--t-primary-muted)', color: 'var(--t-primary)' } : { borderColor: '#3b82f6', background: '#eff6ff', color: '#3b82f6' }) : (terminal ? { borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' } : { borderColor: '#e2e8f0', color: '#94a3b8' })}
+                    >{f.name}</button>
+                  ))}
+                </div>
+              )}
+              {areas.length > 1 && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-[10px] text-slate-400 flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : undefined}>地区</span>
+                  <button
+                    type="button"
+                    onClick={() => setAreaFilter('')}
+                    className={chipBase}
+                    style={!areaFilter ? (terminal ? { borderColor: 'var(--t-primary)', background: 'var(--t-primary-muted)', color: 'var(--t-primary)' } : { borderColor: '#3b82f6', background: '#eff6ff', color: '#3b82f6' }) : (terminal ? { borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' } : { borderColor: '#e2e8f0', color: '#94a3b8' })}
+                  >全部</button>
+                  {areas.map(a => (
+                    <button
+                      key={a.code}
+                      type="button"
+                      onClick={() => setAreaFilter(v => v === a.code ? '' : a.code)}
+                      className={chipBase}
+                      style={areaFilter === a.code ? (terminal ? { borderColor: 'var(--t-primary)', background: 'var(--t-primary-muted)', color: 'var(--t-primary)' } : { borderColor: '#3b82f6', background: '#eff6ff', color: '#3b82f6' }) : (terminal ? { borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' } : { borderColor: '#e2e8f0', color: '#94a3b8' })}
+                    >{a.name}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 分隔线 */}
+          <div style={{ height: 1, background: terminal ? 'var(--t-border-subtle)' : '#e2e8f0' }} />
+
+          {/* 岗位列表 */}
+          <div className="max-h-[220px] overflow-y-auto py-1 terminal-scrollbar">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-4 text-xs text-center text-slate-400" style={terminal ? { color: 'var(--t-text-muted)' } : undefined}>
+                无匹配岗位
+              </p>
+            ) : filtered.map(t => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => { onSelect(t.id); setOpen(false) }}
+                className={itemBase}
+                style={terminal ? {
+                  color: t.id === activeId ? 'var(--t-text)' : 'var(--t-text-secondary)',
+                  background: t.id === activeId ? 'var(--t-bg-active)' : 'transparent',
+                } : {
+                  color: t.id === activeId ? '#1e293b' : '#475569',
+                  background: t.id === activeId ? '#eff6ff' : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (t.id === activeId) return
+                  e.currentTarget.style.background = terminal ? 'var(--t-bg-hover)' : '#f8fafc'
+                }}
+                onMouseLeave={(e) => {
+                  if (t.id === activeId) return
+                  e.currentTarget.style.background = 'transparent'
+                }}
+              >
+                {t.id === activeId ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0" style={{ color: terminal ? 'var(--t-primary)' : '#3b82f6' }}>
+                    <path d="M2 6 L5 9 L10 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <span className="w-3 flex-shrink-0" />
+                )}
+                <span className="truncate flex-1">{t.job_title}</span>
+                {t.invitation_status && (
+                  <span className="flex-shrink-0 text-[10px] opacity-60" style={terminal ? { color: 'var(--t-text-muted)' } : undefined}>
+                    {t.invitation_status === 'accepted' ? '已接受' : t.invitation_status === 'declined' ? '已婉拒' : '待回复'}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── 消息面板 ──────────────────────────────────────────────────────────────────
-function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionStatus, onConversationUpdated, terminal = false }) {
+function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionStatus, onConversationUpdated, terminal = false, threads = [], onSwitchThread }) {
   const [thread,      setThread]      = useState(null)
   const [messages,    setMessages]    = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -728,12 +1023,22 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
             </p>
             {thread?.invitation_status && <InvBadge status={thread.invitation_status} terminal={terminal} />}
           </div>
-          <p
-            className={terminal ? 'text-xs' : 'text-xs text-slate-400'}
-            style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
-          >
-            {thread?.job_title}
-          </p>
+          {/* 岗位选择下拉 */}
+          {threads.length > 0 ? (
+            <JobSelector
+              threads={threads}
+              activeId={threadId}
+              onSelect={(id) => onSwitchThread?.(id)}
+              terminal={terminal}
+            />
+          ) : (
+            <p
+              className={terminal ? 'text-xs' : 'text-xs text-slate-400'}
+              style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
+            >
+              {thread?.job_title}
+            </p>
+          )}
         </div>
       </div>
 
@@ -852,7 +1157,7 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
 }
 
 // ── 主页面 ────────────────────────────────────────────────────────────────────
-export default function Messages({ terminal = false, basePath = '/messages', backPath = '/employer/dashboard' }) {
+export default function Messages({ terminal = false, basePath = '/messages' }) {
   const { threadId: paramThreadId } = useParams()
   const navigate  = useNavigate()
   const { user }  = useAuth()
@@ -862,8 +1167,44 @@ export default function Messages({ terminal = false, basePath = '/messages', bac
   const [listError,     setListError]     = useState('')
   const [activeId,      setActiveId]      = useState(paramThreadId ? Number(paramThreadId) : null)
 
+  // 右键菜单
+  const [ctxMenu, setCtxMenu] = useState(null) // { x, y, convId }
+
+  // hidden: 不显示（新消息到达自动重现）；deleted: 删除（永久隐藏直到手动清除）
+  const storageKey = user?.id ? `msg_hidden_${user.id}` : null
+  const deletedKey = user?.id ? `msg_deleted_${user.id}` : null
+
+  const [hiddenIds,  setHiddenIds]  = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(`msg_hidden_${user?.id}`) ?? '[]')) }
+    catch { return new Set() }
+  })
+  const [deletedIds, setDeletedIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(`msg_deleted_${user?.id}`) ?? '[]')) }
+    catch { return new Set() }
+  })
+
   // Socket
   const { socket, connectionStatus } = useSocket(!!user)
+
+  // 持久化 hiddenIds / deletedIds 到 localStorage
+  useEffect(() => {
+    if (storageKey) localStorage.setItem(storageKey, JSON.stringify([...hiddenIds]))
+  }, [hiddenIds, storageKey])
+  useEffect(() => {
+    if (deletedKey) localStorage.setItem(deletedKey, JSON.stringify([...deletedIds]))
+  }, [deletedIds, deletedKey])
+
+  function hideConv(convId) {
+    setHiddenIds(prev => new Set([...prev, convId]))
+    if (activeId === convId) setActiveId(null)
+  }
+
+  function deleteConv(convId) {
+    if (!window.confirm('确定删除此对话？删除后将不再显示，已有消息不会被清除。')) return
+    setDeletedIds(prev => new Set([...prev, convId]))
+    setHiddenIds(prev => { const next = new Set(prev); next.delete(convId); return next })
+    if (activeId === convId) setActiveId(null)
+  }
 
   const activeIdRef = useRef(activeId)
   useEffect(() => { activeIdRef.current = activeId }, [activeId])
@@ -954,6 +1295,13 @@ export default function Messages({ terminal = false, basePath = '/messages', bac
   useEffect(() => {
     if (!socket) return
     const onConversationUpdated = (data) => {
+      // 新消息到达时，将该对话从"不显示"列表移除（deleted 的不受影响）
+      if (data.sender_user_id !== user?.id) {
+        setHiddenIds(prev => {
+          if (!prev.has(data.thread_id)) return prev
+          const next = new Set(prev); next.delete(data.thread_id); return next
+        })
+      }
       setConversations(prev => {
         const updated = prev.map(c => {
           if (c.id !== data.thread_id) return c
@@ -990,9 +1338,51 @@ export default function Messages({ terminal = false, basePath = '/messages', bac
     )
   }, [])
 
-  function handleSelect(conv) {
-    setActiveId(conv.id)
-    navigate(`${basePath}/${conv.id}`)
+  // ── 按对方 user 分组合并 ──────────────────────────────────────────────────
+  const grouped = useMemo(() => {
+    if (!user || user.role === 'admin') {
+      return conversations.map(c => ({
+        key: String(c.id),
+        peer: c,
+        threads: [c],
+        totalUnread: c.unread_count ?? 0,
+      }))
+    }
+    const map = new Map()
+    for (const c of conversations) {
+      const gk = user.role === 'employer' ? `c_${c.candidate_id}` : `e_${c.employer_id}`
+      if (!map.has(gk)) map.set(gk, [])
+      map.get(gk).push(c)
+    }
+    return [...map.entries()].map(([key, threads]) => {
+      const sorted = threads.sort((a, b) =>
+        (b.latest_message_at ?? '') > (a.latest_message_at ?? '') ? 1 : -1)
+      // 同一 job_id 只保留最新一条 thread
+      const seen = new Set()
+      const deduped = sorted.filter(t => {
+        if (seen.has(t.job_id)) return false
+        seen.add(t.job_id)
+        return true
+      })
+      return {
+        key,
+        peer: deduped[0],
+        threads: deduped,
+        totalUnread: deduped.reduce((s, t) => s + (t.unread_count ?? 0), 0),
+      }
+    }).sort((a, b) =>
+      (b.peer.latest_message_at ?? '') > (a.peer.latest_message_at ?? '') ? 1 : -1)
+  }, [conversations, user])
+
+  const activeGroup = useMemo(
+    () => grouped.find(g => g.threads.some(t => t.id === activeId)) ?? null,
+    [grouped, activeId],
+  )
+
+  function handleSelect(group) {
+    const tid = group.peer.id
+    setActiveId(tid)
+    navigate(`${basePath}/${tid}`)
   }
 
   return (
@@ -1003,23 +1393,21 @@ export default function Messages({ terminal = false, basePath = '/messages', bac
           : 'max-w-6xl mx-auto px-4 py-6'
       }
       style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
+      onClick={() => ctxMenu && setCtxMenu(null)}
     >
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          terminal={terminal}
+          onHide={() => hideConv(ctxMenu.convId)}
+          onDelete={() => deleteConv(ctxMenu.convId)}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
       <ConnectionBanner status={connectionStatus} terminal={terminal} />
 
       <div className="mb-4 flex items-center gap-2">
-        <button
-          onClick={() => terminal ? navigate(backPath) : navigate(-1)}
-          className={
-            terminal
-              ? 'flex items-center gap-1 text-sm transition-colors'
-              : 'flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700'
-          }
-          style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}
-          onMouseEnter={(e) => { if (terminal) e.currentTarget.style.color = 'var(--t-text)' }}
-          onMouseLeave={(e) => { if (terminal) e.currentTarget.style.color = 'var(--t-text-secondary)' }}
-        >
-          <ChevronLeft size={15} />返回
-        </button>
         <h1
           className={
             terminal
@@ -1107,16 +1495,25 @@ export default function Messages({ terminal = false, basePath = '/messages', bac
                 </p>
               </div>
             )}
-            {conversations.map(conv => (
-              <ConvItem
-                key={conv.id}
-                conv={conv}
-                isActive={conv.id === activeId}
-                onClick={() => handleSelect(conv)}
-                myRole={user?.role}
-                terminal={terminal}
-              />
-            ))}
+            {grouped
+              .filter(g => !g.threads.every(t => hiddenIds.has(t.id) || deletedIds.has(t.id)))
+              .map(g => (
+                <ConvItem
+                  key={g.key}
+                  conv={g.peer}
+                  isActive={g.threads.some(t => t.id === activeId)}
+                  onClick={() => handleSelect(g)}
+                  unreadCount={g.totalUnread}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setCtxMenu({ x: e.clientX, y: e.clientY, convId: g.peer.id })
+                  }}
+                  myRole={user?.role}
+                  terminal={terminal}
+                />
+              ))
+            }
           </div>
         </div>
 
@@ -1125,6 +1522,8 @@ export default function Messages({ terminal = false, basePath = '/messages', bac
           <MessagePanel
             key={activeId}
             threadId={activeId}
+            threads={activeGroup?.threads ?? []}
+            onSwitchThread={(tid) => { setActiveId(tid); navigate(`${basePath}/${tid}`) }}
             myUserId={user?.id}
             myRole={user?.role}
             onRead={handleThreadRead}

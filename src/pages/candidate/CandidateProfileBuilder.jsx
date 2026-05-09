@@ -263,6 +263,8 @@ export default function CandidateProfileBuilder({ terminal = false }) {
     if (!functionCode)                   return '请选择业务方向'
     if (isManagementStr !== 'yes' && isManagementStr !== 'no') return '请选择是否管理岗位'
 
+    if (csMin !== '' && !/^\d+$/.test(csMin)) return '当前薪资 min 必须为纯数字'
+    if (csMax !== '' && !/^\d+$/.test(csMax)) return '当前薪资 max 必须为纯数字'
     if (csMin !== '' && csMax !== '' && Number(csMin) > Number(csMax)) {
       return '当前薪资 min 不能大于 max'
     }
@@ -281,6 +283,8 @@ export default function CandidateProfileBuilder({ terminal = false }) {
       const r = workRows[i]
       if (!r.company_name.trim()) return `工作经历 #${i + 1}：公司名称不能为空`
       if (!r.title.trim())        return `工作经历 #${i + 1}：职位不能为空`
+      if (r.salary_min !== '' && !/^\d+$/.test(r.salary_min)) return `工作经历 #${i + 1}：薪资 min 必须为纯数字`
+      if (r.salary_max !== '' && !/^\d+$/.test(r.salary_max)) return `工作经历 #${i + 1}：薪资 max 必须为纯数字`
       if (r.salary_min !== '' && r.salary_max !== '' && Number(r.salary_min) > Number(r.salary_max)) {
         return `工作经历 #${i + 1}：薪资 min 不能大于 max`
       }
@@ -616,13 +620,13 @@ export default function CandidateProfileBuilder({ terminal = false }) {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className={helperClass} style={helperStyle}>min（元/月）</label>
-                  <input className={inputClass} style={inputStyle} type="number" min="0"
-                    value={csMin} onChange={e => setCsMin(e.target.value)} placeholder="如 18000" />
+                  <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
+                    value={csMin} onChange={e => setCsMin(e.target.value.replace(/\D/g, ''))} placeholder="如 18000" />
                 </div>
                 <div>
                   <label className={helperClass} style={helperStyle}>max（元/月）</label>
-                  <input className={inputClass} style={inputStyle} type="number" min="0"
-                    value={csMax} onChange={e => setCsMax(e.target.value)} placeholder="如 25000" />
+                  <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
+                    value={csMax} onChange={e => setCsMax(e.target.value.replace(/\D/g, ''))} placeholder="如 25000" />
                 </div>
                 <div>
                   <label className={helperClass} style={helperStyle}>薪资月数</label>
@@ -750,15 +754,15 @@ export default function CandidateProfileBuilder({ terminal = false }) {
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className={helperClass} style={helperStyle}>薪资 min</label>
-                      <input className={inputClass} style={inputStyle} type="number" min="0"
+                      <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
                         value={r.salary_min}
-                        onChange={e => updateWorkRow(i, { salary_min: e.target.value })} />
+                        onChange={e => updateWorkRow(i, { salary_min: e.target.value.replace(/\D/g, '') })} />
                     </div>
                     <div>
                       <label className={helperClass} style={helperStyle}>薪资 max</label>
-                      <input className={inputClass} style={inputStyle} type="number" min="0"
+                      <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
                         value={r.salary_max}
-                        onChange={e => updateWorkRow(i, { salary_max: e.target.value })} />
+                        onChange={e => updateWorkRow(i, { salary_max: e.target.value.replace(/\D/g, '') })} />
                     </div>
                     <div>
                       <label className={helperClass} style={helperStyle}>薪资月数</label>

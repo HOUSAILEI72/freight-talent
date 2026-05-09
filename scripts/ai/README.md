@@ -2,6 +2,13 @@
 
 ## 1. 选择模型
 
+官方 Claude：
+
+```
+source scripts/ai/use_model.sh official
+claude
+```
+
 DeepSeek：
 
 ```

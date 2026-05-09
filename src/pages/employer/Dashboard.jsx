@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Users, Database, TrendingUp } from 'lucide-react'
+import { Users, Database, TrendingUp, Inbox, Briefcase, Heart } from 'lucide-react'
 import TerminalLayout from '../../components/terminal/TerminalLayout'
 import FunctionRail, { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 import AreaSidebar, { DEFAULT_AREAS } from '../../components/terminal/AreaSidebar'
@@ -13,7 +13,7 @@ const DEFAULT_FUNCTION = 'ALL'
 const DEFAULT_AREA = 'Global'
 
 /**
- * Phase A/B note (ACE-Talent Terminal):
+ * Phase A/B note (Logistics Talent Terminal):
  * - Visual shell only — IconRail / FunctionRail / AreaSidebar / Chart / ActionBar
  * - Function & Area lists currently use front-end constants (DEFAULT_FUNCTIONS / DEFAULT_AREAS)
  * - Chart still calls the existing real API (employerDashboardApi.getChart) when filters
@@ -71,8 +71,15 @@ export default function Dashboard() {
     return bars
   }, [chart])
   const total = chart?.total ?? 0
+  const stats = chart?.stats ?? {}
+  const applicationsCount = stats.applications_received ?? 0
+  const jobsCount = stats.jobs ?? 0
+  const interestedCount = stats.interested ?? 0
 
   const subtitle = `FUNC=${selectedFunction} / AREA=${selectedArea}`
+  const filterHelper = selectedFunction === DEFAULT_FUNCTION && selectedArea === DEFAULT_AREA
+    ? 'ALL FUNCTIONS / GLOBAL'
+    : subtitle
   const updatedAt = chart?.updated_at
     ? new Date(chart.updated_at).toLocaleString('zh-CN')
     : '—'
@@ -119,22 +126,50 @@ export default function Dashboard() {
 
         {/* Body — metrics row + chart panel + action bar */}
         <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
-          {/* Metric strip */}
+          {/* Metric strip — Row 1: filterable */}
           <div className="grid shrink-0 grid-cols-3 gap-4">
             <MetricCard
-              label="Candidates"
+              compact
+              label="JOBS"
+              value={chartLoading ? '—' : jobsCount}
+              helper={filterHelper}
+              icon={<Briefcase size={14} />}
+            />
+            <MetricCard
+              compact
+              label="APPLICATIONS"
+              value={chartLoading ? '—' : applicationsCount}
+              helper={filterHelper}
+              icon={<Inbox size={14} />}
+            />
+            <MetricCard
+              compact
+              label="INTERESTED"
+              value={chartLoading ? '—' : interestedCount}
+              helper={filterHelper}
+              icon={<Heart size={14} />}
+            />
+          </div>
+
+          {/* Metric strip — Row 2 */}
+          <div className="grid shrink-0 grid-cols-3 gap-4">
+            <MetricCard
+              compact
+              label="CANDIDATES"
               value={chartLoading ? '—' : total}
-              helper={subtitle}
+              helper={filterHelper}
               icon={<Users size={14} />}
             />
             <MetricCard
-              label="Functions"
+              compact
+              label="FUNCTIONS"
               value={DEFAULT_FUNCTIONS.length - 1}
               helper={selectedFunction === DEFAULT_FUNCTION ? 'ALL' : selectedFunction}
               icon={<Database size={14} />}
             />
             <MetricCard
-              label="Areas"
+              compact
+              label="AREAS"
               value={DEFAULT_AREAS.length - 1}
               helper={selectedArea}
               icon={<TrendingUp size={14} />}

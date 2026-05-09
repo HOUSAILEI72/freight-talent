@@ -1,25 +1,27 @@
 import { useNavigate } from 'react-router-dom'
-import { Briefcase, Users } from 'lucide-react'
+import { Briefcase, Users, Wrench, UserSearch, UsersRound } from 'lucide-react'
 
 /**
  * TerminalActionBar
- * Phase 1 · Two primary CTAs below the chart panel.
+ * Phase 1 · Primary CTAs below the chart panel.
  *
  * Routes:
  *  - 发布岗位 → /employer/jobs/new
  *  - 候选人池 → /employer/candidates
  */
 
-function ActionButton({ icon, label, hint, onClick, primary = false }) {
+function ActionButton({ icon, label, hint, onClick, primary = false, disabled = false }) {
   const IconComponent = icon
   const base =
     'group inline-flex h-11 items-center gap-2.5 rounded-[var(--t-radius)] border px-4 text-left transition-colors duration-[var(--t-transition)]'
-  const styles = primary
+  const styles = disabled
+    ? 'cursor-not-allowed border-[var(--t-border)] bg-[var(--t-bg-elevated)] text-[color:var(--t-text-muted)] opacity-70'
+    : primary
     ? 'border-[color:var(--t-primary)] bg-[color:var(--t-primary)] text-white hover:bg-[color:var(--t-primary-hover)]'
     : 'border-[var(--t-border)] bg-[var(--t-bg-elevated)] text-[color:var(--t-text)] hover:bg-[var(--t-bg-hover)]'
 
   return (
-    <button type="button" onClick={onClick} className={`${base} ${styles}`}>
+    <button type="button" onClick={onClick} disabled={disabled} className={`${base} ${styles}`}>
       <IconComponent size={16} className="shrink-0" />
       <span className="flex flex-col leading-tight">
         <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold uppercase tracking-wider">
@@ -55,6 +57,24 @@ export default function TerminalActionBar({ actions }) {
       hint: 'BROWSE · CANDIDATES',
       href: '/employer/candidates',
     },
+    {
+      icon: Wrench,
+      label: '辅助工具包',
+      hint: 'TOOLS',
+      disabled: true,
+    },
+    {
+      icon: UserSearch,
+      label: '猎头服务',
+      hint: 'HEADHUNTING',
+      disabled: true,
+    },
+    {
+      icon: UsersRound,
+      label: '团队猎头服务',
+      hint: 'TEAM SEARCH',
+      disabled: true,
+    },
   ]
 
   return (
@@ -68,7 +88,8 @@ export default function TerminalActionBar({ actions }) {
           label={item.label}
           hint={item.hint}
           primary={item.primary}
-          onClick={item.onClick ?? (() => navigate(item.href))}
+          disabled={item.disabled}
+          onClick={item.onClick ?? (item.href ? () => navigate(item.href) : undefined)}
         />
       ))}
     </div>

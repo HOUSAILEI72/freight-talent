@@ -1,9 +1,9 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import {
   Bell,
   LogOut,
-  Ship,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { getRoleHome } from '../../router/roleHome'
@@ -27,6 +27,8 @@ const ROLE_LABEL = { employer: '企业', candidate: '候选人', admin: '管理�
 function IconRail({ activeId = 'dashboard', navItems = EMPLOYER_ICON_NAV }) {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [hoveredId, setHoveredId] = useState(null)
+
   return (
     <aside
       className="flex h-full w-[60px] shrink-0 flex-col items-center justify-between border-r border-[var(--t-border)] py-3"
@@ -37,10 +39,10 @@ function IconRail({ activeId = 'dashboard', navItems = EMPLOYER_ICON_NAV }) {
         <button
           type="button"
           onClick={() => navigate(user ? getRoleHome(user.role) : '/')}
-          className="flex h-9 w-9 items-center justify-center rounded-[var(--t-radius)] bg-[color:var(--t-primary)] text-white shadow-[var(--t-shadow-panel)]"
-          title="ACE-Talent"
+          className="flex h-9 w-9 items-center justify-center"
+          title="Logistics Talent"
         >
-          <Ship size={16} />
+          <img src="/logo-white.svg" alt="Logistics Talent" className="h-8 w-8" />
         </button>
 
         <div className="my-2 h-px w-6 bg-[var(--t-border)]" />
@@ -53,7 +55,8 @@ function IconRail({ activeId = 'dashboard', navItems = EMPLOYER_ICON_NAV }) {
               key={item.id}
               type="button"
               onClick={() => navigate(item.href)}
-              title={item.label}
+              onMouseEnter={() => setHoveredId(item.id)}
+              onMouseLeave={() => setHoveredId(null)}
               className={`group relative flex h-9 w-9 items-center justify-center rounded-[var(--t-radius)] transition-colors duration-[var(--t-transition)] ${
                 active
                   ? 'bg-[var(--t-bg-active)] text-[color:var(--t-text)]'
@@ -64,6 +67,14 @@ function IconRail({ activeId = 'dashboard', navItems = EMPLOYER_ICON_NAV }) {
                 <span className="absolute left-0 top-1.5 h-6 w-0.5 rounded-r bg-[color:var(--t-primary)]" />
               )}
               <Icon size={16} />
+              {hoveredId === item.id && (
+                <span
+                  className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-[var(--t-radius-sm)] bg-[var(--t-bg-active)] px-2 py-1 text-[length:var(--t-text-xs)] text-[color:var(--t-text)] shadow-lg"
+                  style={{ zIndex: 100 }}
+                >
+                  {item.label}
+                </span>
+              )}
             </button>
           )
         })}
@@ -94,7 +105,7 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
     >
       <div className="flex items-center gap-3 min-w-0">
         <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] font-bold uppercase tracking-[0.18em] text-[color:var(--t-chart-cyan)]">
-          ACE-TALENT
+          ACE×
         </span>
         <span className="text-[color:var(--t-text-muted)]">·</span>
         <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] uppercase tracking-[0.16em] text-[color:var(--t-text-secondary)]">

@@ -9,6 +9,7 @@ from app.models.junction_tags import JobTag
 jobs_bp = Blueprint("jobs", __name__, url_prefix="/api/jobs")
 
 VALID_STATUSES = {"draft", "published", "paused", "closed"}
+VALID_DEGREE_REQUIREMENTS = {"不限", "高中/中专", "大专", "本科", "硕士", "博士"}
 
 
 def _err(msg, code=400):
@@ -118,6 +119,35 @@ def create_job():
     else:
         return _err("工作城市不能为空")
 
+    experience_required = (data.get("experience_required") or "").strip() or None
+    if location_code_raw and not experience_required:
+        return _err("经验要求不能为空")
+    if experience_required:
+        exp_text = experience_required.replace(" ", "")
+        if exp_text.endswith("年以上"):
+            exp_num_text = exp_text[:-3]
+        elif exp_text.endswith("年"):
+            exp_num_text = exp_text[:-1]
+        else:
+            return _err("经验要求必须是 0-30 年之间")
+        try:
+            exp_years = int(exp_num_text)
+        except (ValueError, TypeError):
+            return _err("经验要求必须是 0-30 年之间")
+        if exp_years < 0 or exp_years > 30:
+            return _err("经验要求必须是 0-30 年之间")
+        experience_required = f"{exp_years}年"
+
+    degree_required = (data.get("degree_required") or "").strip() or None
+    if location_code_raw and not degree_required:
+        return _err("学历要求不能为空")
+    if degree_required and degree_required not in VALID_DEGREE_REQUIREMENTS:
+        return _err("学历要求不在可选范围内")
+
+    address = (data.get("address") or "").strip() or None
+    if address and len(address) > 200:
+        return _err("详细地址不能超过 200 个字符")
+
     # description: 旧 PostJob 必填；新版改为非必填（Phase D 表单不收集）
     description = (data.get("description") or "").strip()
     if not location_code_raw and not description:
@@ -183,6 +213,18 @@ def create_job():
     is_management_role = data.get("is_management_role")
     if is_management_role is not None and not isinstance(is_management_role, bool):
         return _err("is_management_role 必须为布尔值")
+
+    management_headcount = None
+    raw_management_headcount = data.get("management_headcount")
+    if is_management_role:
+        if raw_management_headcount is None or str(raw_management_headcount).strip() == "":
+            return _err("预计管理人数不能为空")
+        raw_management_headcount_text = str(raw_management_headcount).strip()
+        if not raw_management_headcount_text.isdigit():
+            return _err("预计管理人数必须为纯数字")
+        management_headcount = int(raw_management_headcount_text)
+        if management_headcount <= 0 or management_headcount > 9999:
+            return _err("预计管理人数必须是 1-9999 之间的数字")
 
     knowledge_arr,  k_err = _validate_tags(data.get("knowledge_requirements"),  "knowledge_requirements")
     if k_err: return _err(k_err)
@@ -261,8 +303,8 @@ def create_job():
         salary_min=salary_min,
         salary_max=salary_max,
         salary_label=salary_label,
-        experience_required=(data.get("experience_required") or "").strip() or None,
-        degree_required=(data.get("degree_required") or "").strip() or None,
+        experience_required=experience_required,
+        degree_required=degree_required,
         headcount=headcount,
         description=description or "",
         requirements=(data.get("requirements") or "").strip() or None,
@@ -277,12 +319,14 @@ def create_job():
         location_name=location_dict["location_name"] if location_dict else None,
         location_path=location_dict["location_path"] if location_dict else None,
         location_type=location_dict["location_type"] if location_dict else None,
+        address=address,
         business_area_code=location_dict["business_area_code"] if location_dict else None,
         business_area_name=location_dict["business_area_name"] if location_dict else None,
         # Phase C function / management / skill / salary
         function_code=function_code,
         function_name=function_name,
         is_management_role=is_management_role,
+        management_headcount=management_headcount,
         knowledge_requirements=knowledge_arr,
         hard_skill_requirements=hard_skill_arr,
         soft_skill_requirements=soft_skill_arr,
@@ -353,6 +397,7 @@ def public_jobs():
                 Job.city.ilike(like),
                 Job.location_name.ilike(like),
                 Job.location_path.ilike(like),
+                Job.address.ilike(like),
                 Job.function_name.ilike(like),
             )
         )

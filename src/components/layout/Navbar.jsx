@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Ship, Bell, Menu, X, LogOut } from 'lucide-react'
+import { Bell, Menu, X, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { conversationsApi } from '../../api/conversations'
@@ -89,12 +89,10 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Ship size={16} className="text-white" />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="font-bold text-slate-800 text-sm">ACE-Talent</span>
-              <span className="text-[10px] text-slate-400 font-medium tracking-wide">货代精准招聘平台</span>
+            <img src="/logo.svg" alt="ACE-Talent" className="h-9 w-auto" />
+            <div className="flex flex-col gap-0.5">
+              <span className="font-bold text-slate-800 text-sm leading-none">ACE-Talent</span>
+              <span className="text-[10px] text-slate-400 font-medium leading-none tracking-wide">Access Career Everywhere</span>
             </div>
           </Link>
 

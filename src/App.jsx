@@ -34,12 +34,15 @@ const TERMINAL_PREFIXES = [
   '/candidate/profile/builder',
 ]
 
+const FULLSCREEN_ROUTES = ['/login']
+
 export default function App() {
   const location = useLocation()
   const hideFooter = location.pathname.startsWith('/admin')
   const isTerminal = TERMINAL_PREFIXES.some((p) => location.pathname.startsWith(p))
+  const isFullscreen = FULLSCREEN_ROUTES.includes(location.pathname)
 
-  if (isTerminal) {
+  if (isTerminal || isFullscreen) {
     return (
       <>
         <ScrollToTop />

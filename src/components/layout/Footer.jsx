@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { Ship } from 'lucide-react'
 
 export function Footer() {
   return (
@@ -7,11 +6,12 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="flex flex-col md:flex-row justify-between gap-8">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center">
-                <Ship size={14} className="text-white" />
+            <div className="flex items-center gap-2 mb-2">
+              <img src="/logo-white.svg" alt="ACE-Talent" className="h-9 w-auto" />
+              <div className="flex flex-col gap-0.5">
+                <span className="text-white font-bold text-sm leading-none">ACE-Talent</span>
+                <span className="text-[10px] text-slate-400 font-medium leading-none tracking-wide">Access Career Everywhere</span>
               </div>
-              <span className="text-white font-semibold text-sm">ACE-Talent</span>
             </div>
             <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
               货代行业垂直人才撮合平台，精准连接优质候选人与头部货代企业。
@@ -44,7 +44,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-slate-800 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-2">
-          <p className="text-xs text-slate-600">© 2026 ACE-Talent. 专注货代行业人才匹配。</p>
+          <p className="text-xs text-slate-600">© 2026 ACE × Logistics Talent. 专注货代行业人才匹配。</p>
           <p className="text-xs text-slate-700">沪ICP备2026XXXXXX号</p>
         </div>
       </div>

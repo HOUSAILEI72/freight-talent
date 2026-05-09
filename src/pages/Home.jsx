@@ -61,7 +61,7 @@ export default function Home() {
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
               找到下一个
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400"> 精准匹配 </span>
-              的货代人才
+              的<br className="hidden sm:block" />货代人才
             </h1>
 
             <p className="text-slate-300 text-lg md:text-xl leading-relaxed mb-10 max-w-2xl">
@@ -138,7 +138,7 @@ export default function Home() {
       <section className="bg-white border-y border-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-14">
           <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-slate-800">为什么选择 ACE-Talent</h2>
+            <h2 className="text-2xl font-bold text-slate-800">为什么选择 Logistics Talent</h2>
             <p className="text-slate-500 mt-2">专为货代行业设计，不是通用招聘平台的简单复制</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -171,7 +171,7 @@ export default function Home() {
           {/* 真实候选人数据由登录后的候选人池页展示，首页引导注册 */}
           <div className="card p-8 text-center text-slate-400 col-span-full">
             <p className="font-medium text-slate-600 mb-2">注册后查看完整候选人档案</p>
-            <p className="text-sm">无论你是正在寻找机会的货代从业者，还是急需优质人才的货代企业，ACE-Talent 都能精准匹配。</p>
+            <p className="text-sm">无论你是正在寻找机会的货代从业者，还是急需优质人才的货代企业，Logistics Talent 都能精准匹配。</p>
           </div>
         </div>
       </section>

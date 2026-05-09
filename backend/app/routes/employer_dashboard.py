@@ -9,8 +9,12 @@ from datetime import datetime, timezone, timedelta
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import func as sa_func, or_
 
 from app.extensions import db
+from app.models.invitation import Invitation
+from app.models.job import Job
+from app.models.job_application import JobApplication
 from app.models.user import User
 
 
@@ -212,6 +216,73 @@ def _time_series_bars(function_value, region_value, granularity):
     }
 
 
+def _apply_job_filters(query, function_value, region_value):
+    """Apply the dashboard Function/Area filters to Job-backed metrics."""
+    if function_value != ALL_VALUE:
+        query = query.filter(or_(
+            Job.function_code == function_value,
+            Job.business_type == function_value,
+        ))
+
+    if region_value != ALL_VALUE:
+        query = query.filter(Job.business_area_code == region_value)
+
+    return query
+
+
+def _count_employer_jobs(employer_id, function_value, region_value):
+    try:
+        query = db.session.query(sa_func.count(Job.id)).filter(Job.company_id == employer_id)
+        query = _apply_job_filters(query, function_value, region_value)
+        return int(query.scalar() or 0)
+    except Exception:
+        return 0
+
+
+def _count_received_applications(employer_id, function_value, region_value):
+    try:
+        query = (
+            db.session.query(sa_func.count(JobApplication.id))
+            .join(Job, Job.id == JobApplication.job_id)
+            .filter(JobApplication.employer_id == employer_id)
+        )
+        query = _apply_job_filters(query, function_value, region_value)
+        return int(query.scalar() or 0)
+    except Exception:
+        return 0
+
+
+def _count_interested_candidates(employer_id, function_value, region_value):
+    """Count distinct candidates who applied OR accepted an invitation from this employer."""
+    try:
+        # Candidates who submitted applications to this employer's jobs
+        applied = (
+            db.session.query(JobApplication.candidate_id)
+            .join(Job, Job.id == JobApplication.job_id)
+            .filter(JobApplication.employer_id == employer_id)
+        )
+        applied = _apply_job_filters(applied, function_value, region_value)
+
+        # Candidates who accepted invitations from this employer
+        invited = (
+            db.session.query(Invitation.candidate_id)
+            .join(Job, Job.id == Invitation.job_id)
+            .filter(
+                Invitation.employer_id == employer_id,
+                Invitation.status == 'accepted',
+            )
+        )
+        invited = _apply_job_filters(invited, function_value, region_value)
+
+        union_query = applied.union(invited)
+        count = db.session.query(sa_func.count(sa_func.distinct(
+            union_query.subquery().c.candidate_id
+        ))).scalar()
+        return int(count or 0)
+    except Exception:
+        return 0
+
+
 @employer_dashboard_bp.get("/dashboard-filters")
 @jwt_required()
 def dashboard_filters():
@@ -248,7 +319,7 @@ def dashboard_filters():
 @employer_dashboard_bp.get("/dashboard-chart")
 @jwt_required()
 def dashboard_chart():
-    _, err = _current_employer()
+    user, err = _current_employer()
     if err:
         return err
 
@@ -267,6 +338,11 @@ def dashboard_chart():
         granularity = 'day'
 
     result = _time_series_bars(function_value, region_value, granularity)
+    stats = {
+        "applications_received": _count_received_applications(user.id, function_value, region_value),
+        "jobs": _count_employer_jobs(user.id, function_value, region_value),
+        "interested": _count_interested_candidates(user.id, function_value, region_value),
+    }
 
     return jsonify({
         "success": True,
@@ -275,5 +351,6 @@ def dashboard_chart():
         "granularity": granularity,
         "bars": result["bars"],
         "total": result["total"],
+        "stats": stats,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     })

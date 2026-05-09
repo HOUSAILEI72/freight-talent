@@ -18,7 +18,7 @@ class JobApplication(db.Model):
 
     status = db.Column(
         db.Enum(
-            "submitted", "viewed", "shortlisted", "rejected", "withdrawn",
+            "saved", "submitted", "viewed", "shortlisted", "rejected", "withdrawn",
             name="job_application_status",
         ),
         nullable=False,

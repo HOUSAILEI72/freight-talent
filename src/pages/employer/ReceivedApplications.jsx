@@ -7,6 +7,7 @@ import { applicationsApi } from '../../api/applications'
 
 const STATUS_OPTIONS = [
   { value: '', label: '全部' },
+  { value: 'saved', label: '已收藏' },
   { value: 'submitted', label: '待查看' },
   { value: 'viewed', label: '已查看' },
   { value: 'shortlisted', label: '候选名单' },
@@ -16,6 +17,7 @@ const STATUS_OPTIONS = [
 
 function StatusChip({ status, terminal }) {
   const configs = {
+    saved: { icon: Star, label: '已收藏', color: terminal ? 'var(--t-warning)' : 'text-amber-600 bg-amber-50' },
     submitted: { icon: CheckCircle, label: '待查看', color: terminal ? 'var(--t-chart-blue)' : 'text-blue-600 bg-blue-50' },
     viewed: { icon: Eye, label: '已查看', color: terminal ? 'var(--t-primary)' : 'text-indigo-600 bg-indigo-50' },
     shortlisted: { icon: Star, label: '候选名单', color: terminal ? 'var(--t-success)' : 'text-green-600 bg-green-50' },
@@ -28,8 +30,8 @@ function StatusChip({ status, terminal }) {
   if (terminal) {
     return (
       <span
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
-        style={{ color: cfg.color, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)' }}
+        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium"
+        style={{ color: cfg.color, background: 'var(--t-bg-elevated)', border: `1px solid ${cfg.color}`, borderRadius: 'var(--t-radius-sm)' }}
       >
         <Icon size={12} /> {cfg.label}
       </span>
@@ -64,7 +66,7 @@ function ApplicationCard({ app, terminal, onUpdateStatus, updating }) {
     ...(c.soft_skill_tags || []),
   ].slice(0, 5)
 
-  const canOperate = !['rejected', 'withdrawn'].includes(app.status)
+  const canOperate = !['saved', 'rejected', 'withdrawn'].includes(app.status)
   const actions = []
   if (app.status === 'submitted') {
     actions.push({ label: '标记已查看', nextStatus: 'viewed' })
@@ -131,13 +133,17 @@ function ApplicationCard({ app, terminal, onUpdateStatus, updating }) {
       {allTags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {allTags.map((tag, idx) => (
-            <span
-              key={idx}
-              className={terminal ? 'px-2 py-0.5 rounded text-[11px]' : 'px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700'}
-              style={terminal ? { background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', border: '1px solid var(--t-border-subtle)' } : undefined}
-            >
-              {tag}
-            </span>
+            terminal ? (
+              <span
+                key={idx}
+                className="font-mono text-xs px-2 py-0.5"
+                style={{ background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}
+              >
+                {tag}
+              </span>
+            ) : (
+              <span key={idx} className="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">{tag}</span>
+            )
           ))}
         </div>
       )}

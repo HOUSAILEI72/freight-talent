@@ -5,7 +5,7 @@ import Messages from '../messages/Messages'
 export default function TerminalCandidateMessages() {
   return (
     <TerminalLayout title="MESSAGES" activeIconId="messages" navItems={CANDIDATE_ICON_NAV}>
-      <Messages terminal basePath="/candidate/messages" backPath="/candidate/home" />
+      <Messages terminal basePath="/candidate/messages" />
     </TerminalLayout>
   )
 }

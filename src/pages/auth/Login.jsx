@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Ship, AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { getRoleHome } from '../../router/roleHome'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
@@ -137,17 +137,30 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex">
+    <div className="min-h-screen flex">
       {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex-col justify-center px-16 relative overflow-hidden">
+      <div
+        className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex-col justify-center px-16 relative overflow-hidden cursor-pointer"
+        role="link"
+        tabIndex={0}
+        aria-label="返回首页"
+        onClick={() => navigate('/')}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            navigate('/')
+          }
+        }}
+      >
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-700/10 rounded-full blur-3xl" />
         <div className="relative">
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-              <Ship size={20} className="text-white" />
+            <img src="/logo-white.svg" alt="ACE-Talent" className="h-14 w-auto" />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-white text-2xl font-bold tracking-tight leading-none">ACE-Talent</span>
+              <span className="text-sm text-slate-400 font-medium leading-none">Access Career Everywhere</span>
             </div>
-            <span className="text-white text-xl font-bold">ACE-Talent</span>
           </div>
           <h2 className="text-3xl font-bold text-white mb-4">货代行业<br />精准人才撮合平台</h2>
           <p className="text-slate-400 leading-relaxed mb-8">
@@ -235,7 +248,7 @@ export default function Login() {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                {tab === 'candidate' ? '手机号 / 邮箱' : '邮箱'}
+                邮箱
               </label>
               <input
                 type="email"

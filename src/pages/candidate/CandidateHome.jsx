@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Briefcase, Database, Send, Tags, TrendingUp, FileText } from 'lucide-react'
+import { Briefcase, Database, Send, Tags, TrendingUp, FileText, Building2, SquareDashed } from 'lucide-react'
 import TerminalLayout from '../../components/terminal/TerminalLayout'
 import FunctionRail, { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 import AreaSidebar, { DEFAULT_AREAS } from '../../components/terminal/AreaSidebar'
@@ -9,6 +9,7 @@ import MetricCard from '../../components/data/MetricCard'
 import { CANDIDATE_ICON_NAV } from '../../components/terminal/navItems'
 import { useAuth } from '../../context/AuthContext'
 import { jobsApi } from '../../api/jobs'
+import { applicationsApi } from '../../api/applications'
 
 const DEFAULT_FUNCTION = 'ALL'
 const DEFAULT_AREA = 'Global'
@@ -91,6 +92,8 @@ export default function CandidateHome() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [updatedAt, setUpdatedAt] = useState('—')
+  const [applications, setApplications] = useState([])
+  const [applicationsLoading, setApplicationsLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
@@ -108,6 +111,25 @@ export default function CandidateHome() {
       })
       .finally(() => {
         if (alive) setLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    applicationsApi
+      .getMyApplications()
+      .then((res) => {
+        if (!alive) return
+        setApplications(res.data?.applications ?? [])
+      })
+      .catch(() => {
+        if (alive) setApplications([])
+      })
+      .finally(() => {
+        if (alive) setApplicationsLoading(false)
       })
     return () => {
       alive = false
@@ -172,6 +194,26 @@ export default function CandidateHome() {
     return uniqueAreas.size
   }, [jobs])
 
+  const appliedJobCount = useMemo(() => {
+    const ids = new Set(
+      applications
+        .filter((item) => item && !['saved', 'withdrawn'].includes(item.status))
+        .map((item) => item.job_id)
+        .filter(Boolean)
+    )
+    return ids.size
+  }, [applications])
+
+  const savedCompanyCount = useMemo(() => {
+    const companies = new Set(
+      applications
+        .filter((item) => item?.status === 'saved')
+        .map((item) => item.employer_id ?? item.job?.company_name)
+        .filter(Boolean)
+    )
+    return companies.size
+  }, [applications])
+
   const subtitle = `FUNC=${selectedFunction} / AREA=${selectedArea}`
   const displayName = user?.name || 'Candidate'
 
@@ -212,22 +254,49 @@ export default function CandidateHome() {
         <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
           <div className="grid shrink-0 grid-cols-3 gap-4">
             <MetricCard
+              compact
               label="Jobs"
               value={loading ? '—' : filteredJobs.length}
               helper={subtitle}
               icon={<Briefcase size={14} />}
             />
             <MetricCard
+              compact
               label="Functions"
               value={DEFAULT_FUNCTIONS.length - 1}
               helper={selectedFunction === DEFAULT_FUNCTION ? 'ALL' : selectedFunction}
               icon={<Database size={14} />}
             />
             <MetricCard
+              compact
               label="Areas"
               value={areaCoverage || DEFAULT_AREAS.length - 1}
               helper={selectedArea}
               icon={<TrendingUp size={14} />}
+            />
+          </div>
+
+          <div className="grid shrink-0 grid-cols-3 gap-4">
+            <MetricCard
+              compact
+              label="Applied Jobs"
+              value={applicationsLoading ? '—' : appliedJobCount}
+              helper="SUBMITTED POSITIONS"
+              icon={<Send size={14} />}
+            />
+            <MetricCard
+              compact
+              label="Saved Companies"
+              value={applicationsLoading ? '—' : savedCompanyCount}
+              helper="UNIQUE EMPLOYERS"
+              icon={<Building2 size={14} />}
+            />
+            <MetricCard
+              compact
+              label="Reserved"
+              value="—"
+              helper="Coming Soon"
+              icon={<SquareDashed size={14} />}
             />
           </div>
 
