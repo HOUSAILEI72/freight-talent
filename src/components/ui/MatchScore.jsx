@@ -1,15 +1,15 @@
-export function MatchScore({ score, size = 'md' }) {
+export function MatchScore({ score, size = 'md', terminal = false }) {
   const radius = size === 'lg' ? 36 : 28
   const stroke = size === 'lg' ? 5 : 4
   const circumference = 2 * Math.PI * radius
   const progress = (score / 100) * circumference
   const svgSize = (radius + stroke) * 2
 
-  const color =
-    score >= 85 ? '#10b981' :
-    score >= 70 ? '#2563eb' :
-    score >= 55 ? '#f59e0b' : '#ef4444'
+  const color = terminal
+    ? (score >= 85 ? 'var(--t-success)' : score >= 70 ? 'var(--t-chart-blue)' : score >= 55 ? 'var(--t-warning)' : 'var(--t-danger)')
+    : (score >= 85 ? '#10b981' : score >= 70 ? '#2563eb' : score >= 55 ? '#f59e0b' : '#ef4444')
 
+  const trackColor = terminal ? 'var(--t-border)' : '#e2e8f0'
   const textSize = size === 'lg' ? 'text-2xl' : 'text-base'
 
   return (
@@ -20,7 +20,7 @@ export function MatchScore({ score, size = 'md' }) {
           cy={svgSize / 2}
           r={radius}
           fill="none"
-          stroke="#e2e8f0"
+          stroke={trackColor}
           strokeWidth={stroke}
         />
         <circle

@@ -14,6 +14,7 @@ export function ChartTagSelector({
   value = {},
   onChange,
   placeholder = '按分类筛选（同类 OR，跨类 AND）',
+  terminal = false,
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -112,6 +113,154 @@ export function ChartTagSelector({
   }
 
   // ── 渲染 ──────────────────────────────────────────────────────────────────
+
+  if (terminal) {
+    return (
+      <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+        {/* 触发区 */}
+        <div
+          onClick={() => setOpen(true)}
+          style={{
+            minHeight: 36, width: '100%', borderRadius: 'var(--t-radius-sm)',
+            border: '1px solid var(--t-border)', padding: '6px 10px',
+            display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
+            cursor: 'pointer', background: 'var(--t-bg-input)',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--t-primary)' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--t-border)' }}
+        >
+          {totalSelected === 0 ? (
+            <span style={{ fontSize: 12, color: 'var(--t-text-muted)', flex: 1 }}>{placeholder}</span>
+          ) : (
+            Object.entries(value).flatMap(([cat, ids]) =>
+              ids.map(id => (
+                <span
+                  key={id}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '2px 8px', borderRadius: 9999, fontSize: 11, fontWeight: 500,
+                    color: 'var(--t-chart-blue)', background: 'rgba(96,165,250,0.12)',
+                    border: '1px solid rgba(96,165,250,0.3)',
+                  }}
+                >
+                  <span style={{ color: 'var(--t-text-muted)', marginRight: 2 }}>{cat} ·</span>
+                  {nameMap[id] ?? id}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); removeTag(cat, id) }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))
+            )
+          )}
+          <ChevronDown size={13} style={{ color: 'var(--t-text-muted)', flexShrink: 0, marginLeft: 'auto' }} />
+        </div>
+
+        {/* 下拉面板 */}
+        {open && (
+          <div style={{
+            position: 'absolute', zIndex: 50, marginTop: 4, width: '100%',
+            background: 'var(--t-bg-elevated)', borderRadius: 'var(--t-radius)',
+            border: '1px solid var(--t-border)', boxShadow: 'var(--t-shadow-panel)',
+            maxHeight: 320, overflowY: 'auto',
+          }}>
+            {/* 搜索框 */}
+            <div style={{
+              position: 'sticky', top: 0, background: 'var(--t-bg-elevated)',
+              borderBottom: '1px solid var(--t-border)', padding: '8px 12px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--t-text-muted)' }}>
+                <Search size={13} />
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="搜索标签..."
+                  style={{
+                    flex: 1, outline: 'none', background: 'transparent',
+                    border: 'none', fontSize: 12, color: 'var(--t-text)',
+                  }}
+                />
+                {totalSelected > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onChange({})}
+                    style={{ fontSize: 11, color: 'var(--t-text-muted)', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--t-danger)' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--t-text-muted)' }}
+                  >
+                    清除全部
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 分类列表 */}
+            {Object.keys(tagsByCat).sort().map(cat => {
+              const tags = tagsByCat[cat]
+              const state = catState(cat)
+              return (
+                <div key={cat}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '6px 12px', background: 'var(--t-bg-panel)',
+                    borderBottom: '1px solid var(--t-border)',
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{cat}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(cat)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        fontSize: 11, padding: '2px 8px', borderRadius: 'var(--t-radius-sm)',
+                        border: `1px solid ${state !== 'none' ? 'var(--t-primary)' : 'var(--t-border)'}`,
+                        background: state === 'all' ? 'var(--t-primary)' : 'transparent',
+                        color: state !== 'none' ? 'var(--t-primary)' : 'var(--t-text-muted)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {state === 'all' ? <Check size={10} /> : state === 'some' ? <Minus size={10} /> : null}
+                      全选
+                    </button>
+                  </div>
+
+                  {tags.map(tag => {
+                    const selected = (value[cat] ?? []).includes(tag.id)
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        style={{
+                          width: '100%', textAlign: 'left', padding: '7px 20px',
+                          fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          background: selected ? 'rgba(96,165,250,0.08)' : 'transparent',
+                          color: selected ? 'var(--t-chart-blue)' : 'var(--t-text-secondary)',
+                          border: 'none', cursor: 'pointer',
+                        }}
+                        onMouseEnter={e => { if (!selected) e.currentTarget.style.background = 'var(--t-bg-hover)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = selected ? 'rgba(96,165,250,0.08)' : 'transparent' }}
+                      >
+                        {tag.name}
+                        {selected && <Check size={11} style={{ color: 'var(--t-chart-blue)', flexShrink: 0 }} />}
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            })}
+
+            {Object.keys(tagsByCat).length === 0 && (
+              <p style={{ padding: '16px 12px', fontSize: 12, color: 'var(--t-text-muted)', textAlign: 'center' }}>暂无标签</p>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div ref={containerRef} className="relative w-full">
