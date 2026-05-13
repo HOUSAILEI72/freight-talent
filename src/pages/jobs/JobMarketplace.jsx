@@ -14,6 +14,91 @@ import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 
 const FUNCTION_OPTIONS = DEFAULT_FUNCTIONS.filter(f => f.key !== 'ALL')
 
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+const COMMISSION_BONUS_PERIODS = [
+  { value: 'not_applicable', label: '不适用' },
+  { value: 'monthly',        label: '月度' },
+  { value: 'quarterly',      label: '季度' },
+  { value: 'semi_annual',    label: '半年度' },
+]
+function splitTokens(str) {
+  if (!str) return []
+  // Handle arrays directly (e.g. knowledge_requirements from backend)
+  if (Array.isArray(str)) return str.map(s => String(s).trim()).filter(Boolean)
+  const parts = String(str).split(/[,，、\n\r;；]+/).map(s => s.trim()).filter(Boolean)
+  const seen = new Set(); const out = []
+  for (const p of parts) { if (!seen.has(p)) { seen.add(p); out.push(p) } }
+  return out
+}
+function formatThousand(val) {
+  if (!val) return ''
+  const n = parseInt(String(val).replace(/,/g, ''), 10)
+  return Number.isNaN(n) ? String(val) : n.toLocaleString('en-US')
+}
+
+// ── read-only field sub-components ───────────────────────────────────────────
+function ReadField({ label, value, empty = '—' }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.18em]" style={{ color: 'var(--t-text-muted)' }}>
+        {label}
+      </span>
+      <div
+        className="min-h-[28px] rounded-[var(--t-radius)] px-2 py-1.5 font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] leading-snug"
+        style={{ background: 'var(--t-bg-input,var(--t-bg-elevated))', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)' }}
+      >
+        {value || empty}
+      </div>
+    </div>
+  )
+}
+function ReadChips({ label, value, empty = '—' }) {
+  const tokens = splitTokens(value)
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.18em]" style={{ color: 'var(--t-text-muted)' }}>
+        {label}
+      </span>
+      {tokens.length === 0 ? (
+        <div
+          className="min-h-[28px] rounded-[var(--t-radius)] px-2 py-1.5 font-[var(--t-font-mono)] text-[length:var(--t-text-sm)]"
+          style={{ background: 'var(--t-bg-input,var(--t-bg-elevated))', border: '1px solid var(--t-border)', color: 'var(--t-text-muted)' }}
+        >
+          {empty}
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-1">
+          {tokens.map((t, i) => (
+            <span
+              key={i}
+              className="font-[var(--t-font-mono)] text-[10px] px-2 py-0.5 rounded-[var(--t-radius-sm)]"
+              style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)' }}
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+function ReadTextarea({ label, value, empty = '—' }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.18em]" style={{ color: 'var(--t-text-muted)' }}>
+        {label}
+      </span>
+      <div
+        className="rounded-[var(--t-radius)] px-2 py-1.5 font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] leading-relaxed whitespace-pre-line"
+        style={{ background: 'var(--t-bg-input,var(--t-bg-elevated))', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)', minHeight: '80px' }}
+      >
+        {value || empty}
+      </div>
+    </div>
+  )
+}
+
 // ── 右侧详情面板 ──────────────────────────────────────────────────────────────
 function JobDetailPanel({ job, terminal = false }) {
   const tagsByCat = job.tags_by_category || {}
@@ -25,113 +110,132 @@ function JobDetailPanel({ job, terminal = false }) {
     '—'
   const fullLocation = job.address ? `${baseLocation} · ${job.address}` : baseLocation
 
-  const titleColor  = terminal ? { color: 'var(--t-text)' } : undefined
-  const subColor    = terminal ? { color: 'var(--t-text-secondary)' } : undefined
-  const mutedColor  = terminal ? { color: 'var(--t-text-muted)' } : undefined
-  const accentColor = terminal ? { color: 'var(--t-chart-blue)' } : undefined
+  if (terminal) {
+    const commissionLabel = COMMISSION_BONUS_PERIODS.find(p => p.value === job.commission_bonus_period)?.label ?? job.commission_bonus_period ?? '—'
+    const salaryText = (job.salary_min || job.salary_max)
+      ? `${formatThousand(job.salary_min) || '?'} – ${formatThousand(job.salary_max) || '?'}`
+      : (job.salary_label || '面议')
 
+    return (
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        {/* Header */}
+        <div className="shrink-0 px-5 py-4 border-b" style={{ borderColor: 'var(--t-border-subtle)' }}>
+          <div className="font-[var(--t-font-mono)] text-[length:var(--t-text-base)] font-bold" style={{ color: 'var(--t-text)' }}>
+            {job.title}
+          </div>
+          <div className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
+            {job.company_name ?? '—'} · {fullLocation}
+          </div>
+          <div className="font-[var(--t-font-mono)] text-[11px] mt-1 uppercase tracking-wide font-semibold" style={{ color: 'var(--t-primary,var(--t-chart-blue))' }}>
+            {salaryText}
+          </div>
+        </div>
+
+        {/* Three-column body */}
+        <div className="flex-1 min-h-0 grid grid-cols-3 gap-px" style={{ background: 'var(--t-border-subtle)' }}>
+          {/* Col 1 — Basic info */}
+          <div className="flex flex-col gap-3 p-4 overflow-y-auto terminal-scrollbar" style={{ background: 'var(--t-bg-panel)' }}>
+            <div className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.2em] font-semibold" style={{ color: 'var(--t-text-muted)' }}>
+              BASIC INFO
+            </div>
+            <ReadField label="FUNCTION" value={job.function_name ?? job.business_type} />
+            <ReadField label="LOCATION" value={fullLocation} />
+            <ReadField label="EXP REQUIRED" value={job.experience_required} />
+            <ReadField label="MIN EDUCATION" value={job.degree_required} />
+            <ReadField label="EMPLOYMENT TYPE" value={job.employment_type} />
+            <ReadField
+              label="MANAGEMENT ROLE"
+              value={job.is_management_role
+                ? `管理岗${job.management_headcount ? ` · ${job.management_headcount} 人` : ''}`
+                : '非管理岗'}
+            />
+            <ReadField label="TAGS" value={Object.values(tagsByCat).flat().join('、') || null} />
+            <div className="mt-auto pt-3 border-t font-[var(--t-font-mono)] text-[9px]" style={{ borderColor: 'var(--t-border-subtle)', color: 'var(--t-text-muted)' }}>
+              发布于 {job.created_at?.slice(0, 10) ?? '—'}
+            </div>
+          </div>
+
+          {/* Col 2 — Description */}
+          <div className="flex flex-col gap-3 p-4 overflow-y-auto terminal-scrollbar" style={{ background: 'var(--t-bg-panel)' }}>
+            <div className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.2em] font-semibold" style={{ color: 'var(--t-text-muted)' }}>
+              JOB DESCRIPTION
+            </div>
+            <ReadTextarea label="DESCRIPTION" value={job.description} />
+            <ReadChips label="KNOWLEDGE REQ" value={job.knowledge_requirements} />
+            <ReadChips label="HARD SKILLS" value={job.hard_skill_requirements} />
+            <ReadChips label="SOFT SKILLS" value={job.soft_skill_requirements} />
+          </div>
+
+          {/* Col 3 — Compensation */}
+          <div className="flex flex-col gap-3 p-4 overflow-y-auto terminal-scrollbar" style={{ background: 'var(--t-bg-panel)' }}>
+            <div className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.2em] font-semibold" style={{ color: 'var(--t-text-muted)' }}>
+              COMPENSATION
+            </div>
+            <ReadField label="SALARY MIN (¥/mo)" value={formatThousand(job.salary_min)} />
+            <ReadField label="SALARY MAX (¥/mo)" value={formatThousand(job.salary_max)} />
+            <ReadField label="SALARY MONTHS" value={job.salary_months ? `${job.salary_months} 个月` : null} />
+            <ReadField label="COMMISSION PERIOD" value={commissionLabel} />
+            <ReadField label="COMMISSION AMOUNT" value={job.commission_bonus_amount ? `${job.commission_bonus_amount}` : null} />
+            <ReadField
+              label="YEAR-END BONUS"
+              value={job.has_year_end_bonus
+                ? `有${job.year_end_bonus_months ? ` · ${job.year_end_bonus_months} 个月` : ''}`
+                : job.has_year_end_bonus === false ? '无' : null}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── non-terminal (light) branch ───────────────────────────────────────────
   return (
     <div className="p-5 space-y-5">
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-start gap-3">
-        <div
-          className={
-            terminal
-              ? 'w-10 h-10 rounded flex items-center justify-center font-bold text-sm flex-shrink-0'
-              : 'w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0'
-          }
-          style={terminal
-            ? { background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }
-            : undefined}
-        >
+        <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
           {(job.company_name ?? job.title ?? '?')[0]}
         </div>
         <div>
-          <h2 className={terminal ? 'text-sm font-semibold' : 'text-lg font-bold text-slate-800'} style={titleColor}>
-            {job.title}
-          </h2>
-          <p className={terminal ? 'text-xs mt-0.5' : 'text-sm text-slate-500 mt-0.5'} style={subColor}>
-            {job.company_name ?? '—'} · {fullLocation}
-          </p>
-          <p className={terminal ? 'text-sm font-semibold mt-1' : 'text-base font-bold text-blue-600 mt-1'} style={accentColor}>
-            {job.salary_label ?? '面议'}
-          </p>
+          <h2 className="text-lg font-bold text-slate-800">{job.title}</h2>
+          <p className="text-sm text-slate-500 mt-0.5">{job.company_name ?? '—'} · {fullLocation}</p>
+          <p className="text-base font-bold text-blue-600 mt-1">{job.salary_label ?? '面议'}</p>
         </div>
       </div>
 
-      {/* ── 基本信息格 ── */}
-      {terminal ? (
-        <div className="grid grid-cols-2 gap-px" style={{ background: 'var(--t-border-subtle)' }}>
-          {[
-            { label: 'LOCATION', value: fullLocation },
-            { label: 'SALARY',   value: job.salary_label ?? '面议' },
-            { label: 'EXP REQ',  value: job.experience_required ?? '不限' },
-            { label: 'MIN EDU',  value: job.degree_required ?? '不限' },
-            { label: 'ROLE',     value: job.is_management_role ? `管理岗${job.management_headcount ? ` · ${job.management_headcount}人` : ''}` : '非管理岗' },
-            { label: 'HC',       value: job.headcount ? `${job.headcount} 人` : '—' },
-            { label: 'URGENCY',  value: job.urgency_level === 1 ? '紧急' : job.urgency_level === 3 ? '不急' : '正常' },
-            { label: 'TYPE',     value: job.employment_type ?? '—' },
-          ].map(item => (
-            <div key={item.label} className="px-3 py-2" style={{ background: 'var(--t-bg-panel)' }}>
-              <p className="font-mono text-xs uppercase tracking-widest mb-0.5" style={mutedColor}>{item.label}</p>
-              <p className="text-sm" style={subColor}>{item.value}</p>
+      {/* 基本信息格 */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { icon: MapPin,        label: '工作地点', value: fullLocation },
+          { icon: Briefcase,     label: '薪资范围', value: job.salary_label ?? '面议' },
+          { icon: Clock,         label: '经验要求', value: job.experience_required ?? '不限' },
+          { icon: GraduationCap, label: '最低学历', value: job.degree_required ?? '不限' },
+          { icon: Users, label: '管理属性', value: job.is_management_role ? `管理岗${job.management_headcount ? ` · ${job.management_headcount} 人` : ''}` : '非管理岗' },
+          { icon: Users, label: '招聘人数', value: job.headcount ? `${job.headcount} 人` : '—' },
+          { icon: Zap,   label: '紧急程度', value: job.urgency_level === 1 ? '紧急' : job.urgency_level === 3 ? '不急' : '正常' },
+          { icon: Briefcase, label: '应聘类型', value: job.employment_type ?? '—' },
+        ].map(item => (
+          <div key={item.label} className="bg-slate-50 rounded-xl px-3 py-2.5">
+            <div className="flex items-center gap-1.5 mb-1">
+              <item.icon size={12} className="text-slate-400" />
+              <p className="text-[10px] text-slate-400">{item.label}</p>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { icon: MapPin,        label: '工作地点', value: fullLocation },
-            { icon: Briefcase,     label: '薪资范围', value: job.salary_label ?? '面议' },
-            { icon: Clock,         label: '经验要求', value: job.experience_required ?? '不限' },
-            { icon: GraduationCap, label: '最低学历', value: job.degree_required ?? '不限' },
-            { icon: Users, label: '管理属性', value: job.is_management_role ? `管理岗${job.management_headcount ? ` · ${job.management_headcount} 人` : ''}` : '非管理岗' },
-            { icon: Users, label: '招聘人数', value: job.headcount ? `${job.headcount} 人` : '—' },
-            { icon: Zap,   label: '紧急程度', value: job.urgency_level === 1 ? '紧急' : job.urgency_level === 3 ? '不急' : '正常' },
-            { icon: Briefcase, label: '应聘类型', value: job.employment_type ?? '—' },
-          ].map(item => (
-            <div key={item.label} className="bg-slate-50 rounded-xl px-3 py-2.5">
-              <div className="flex items-center gap-1.5 mb-1">
-                <item.icon size={12} className="text-slate-400" />
-                <p className="text-[10px] text-slate-400">{item.label}</p>
-              </div>
-              <p className="text-sm font-semibold text-slate-700">{item.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
+            <p className="text-sm font-semibold text-slate-700">{item.value}</p>
+          </div>
+        ))}
+      </div>
 
-      {/* ── 标签 ── */}
+      {/* 标签 */}
       {Object.keys(tagsByCat).length > 0 && (
-        <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
-          <p
-            className={terminal ? 'font-mono text-xs uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
-            style={terminal ? mutedColor : titleColor}
-          >
-            {terminal ? 'TAGS' : '标签'}
-          </p>
+        <div>
+          <p className="text-sm font-semibold text-slate-800 mb-2">标签</p>
           <div className="space-y-2">
             {Object.entries(tagsByCat).map(([cat, names]) => (
               <div key={cat}>
-                <p
-                  className={terminal ? 'font-mono text-xs uppercase tracking-widest mb-1' : 'text-xs text-slate-400 mb-1'}
-                  style={mutedColor}
-                >
-                  {cat}
-                </p>
+                <p className="text-xs text-slate-400 mb-1">{cat}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {names.map((n, i) => (
-                    terminal ? (
-                      <span
-                        key={i}
-                        className="font-mono text-xs px-2 py-0.5"
-                        style={{ color: 'var(--t-text-secondary)', background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}
-                      >
-                        {n}
-                      </span>
-                    ) : (
-                      <span key={i} className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 border border-blue-100 rounded-full">{n}</span>
-                    )
+                    <span key={i} className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 border border-blue-100 rounded-full">{n}</span>
                   ))}
                 </div>
               </div>
@@ -140,45 +244,29 @@ function JobDetailPanel({ job, terminal = false }) {
         </div>
       )}
 
-      {/* ── 岗位职责 ── */}
+      {/* 岗位职责 */}
       {job.description && (
-        <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
-          <p
-            className={terminal ? 'font-mono text-xs uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
-            style={terminal ? mutedColor : titleColor}
-          >
-            {terminal ? 'JOB DESC' : '岗位职责'}
-          </p>
-          <p className={terminal ? 'text-sm leading-relaxed whitespace-pre-line' : 'text-sm text-slate-600 leading-relaxed whitespace-pre-line'} style={subColor}>
-            {job.description}
-          </p>
+        <div>
+          <p className="text-sm font-semibold text-slate-800 mb-2">岗位职责</p>
+          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{job.description}</p>
         </div>
       )}
 
-      {/* ── 任职要求 ── */}
+      {/* 任职要求 */}
       {job.requirements && (
-        <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
-          <p
-            className={terminal ? 'font-mono text-xs uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
-            style={terminal ? mutedColor : titleColor}
-          >
-            {terminal ? 'REQUIREMENTS' : '任职要求'}
-          </p>
-          <p className={terminal ? 'text-sm leading-relaxed whitespace-pre-line' : 'text-sm text-slate-600 leading-relaxed whitespace-pre-line'} style={subColor}>
-            {job.requirements}
-          </p>
+        <div>
+          <p className="text-sm font-semibold text-slate-800 mb-2">任职要求</p>
+          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{job.requirements}</p>
         </div>
       )}
 
-      <p
-        className={terminal ? 'text-[11px] pt-2 border-t' : 'text-xs text-slate-400 pt-2 border-t border-slate-100'}
-        style={terminal ? { color: 'var(--t-text-muted)', borderColor: 'var(--t-border-subtle)' } : undefined}
-      >
+      <p className="text-xs text-slate-400 pt-2 border-t border-slate-100">
         发布于 {job.created_at?.slice(0, 10) ?? '—'}
       </p>
     </div>
   )
 }
+
 
 // ── 主页面 ────────────────────────────────────────────────────────────────────
 export default function JobMarketplace({ terminal = false, showNewJobButton = false, canApply = false }) {
@@ -873,16 +961,16 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
 
       {/* ── 右栏详情 ── */}
       <div
-        className="flex-1 overflow-y-auto"
+        className={terminal ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : 'flex-1 overflow-y-auto'}
         style={terminal ? { background: 'var(--t-bg)' } : undefined}
       >
         {selected ? (
-          <>
+          <div className={terminal ? 'flex flex-col flex-1 min-h-0 overflow-hidden' : 'contents'}>
             {canApply && applyError && (
               <div
                 className={
                   terminal
-                    ? 'mx-6 mt-4 flex items-center gap-2 px-3 py-2 rounded-lg border text-sm'
+                    ? 'shrink-0 mx-6 mt-4 flex items-center gap-2 px-3 py-2 rounded-lg border text-sm'
                     : 'mx-6 mt-4 flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm'
                 }
                 style={
@@ -898,7 +986,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
               job={selected}
               terminal={terminal}
             />
-          </>
+          </div>
         ) : (
           <div
             className={terminal ? 'h-full flex items-center justify-center' : 'h-full flex items-center justify-center text-slate-400'}
