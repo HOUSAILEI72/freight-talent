@@ -53,4 +53,9 @@ export const jobsApi = {
   getAreaFilters() {
     return client.get('/jobs/area-filters')
   },
+
+  /** PATCH /api/jobs/:id/status — employer closes/reopens own job */
+  updateStatus(jobId, status) {
+    return client.patch(`/jobs/${jobId}/status`, { status })
+  },
 }

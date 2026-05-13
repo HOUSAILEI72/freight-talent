@@ -558,6 +558,31 @@ def my_jobs():
     return jsonify({"success": True, "jobs": [j.to_dict() for j in jobs]})
 
 
+@jobs_bp.patch("/<int:job_id>/status")
+@jwt_required()
+def update_job_status(job_id):
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("employer", "admin"):
+        return _err("无权操作", 403)
+
+    job = db.session.get(Job, job_id)
+    if not job:
+        return _err("岗位不存在", 404)
+    if user.role == "employer" and job.company_id != user.id:
+        return _err("无权操作该岗位", 403)
+
+    data = request.get_json(silent=True) or {}
+    new_status = (data.get("status") or "").strip()
+    if new_status not in ("published", "closed", "paused"):
+        return _err("status 只允许 published / closed / paused")
+
+    job.status = new_status
+    db.session.commit()
+    return jsonify({"success": True, "job": job.to_dict()})
+
+
 @jobs_bp.get("/<int:job_id>")
 @jwt_required()
 def get_job(job_id):

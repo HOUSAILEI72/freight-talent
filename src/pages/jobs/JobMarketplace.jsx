@@ -112,7 +112,7 @@ function ReadTextarea({ label, value, empty = '—' }) {
 }
 
 // ── 右侧详情面板 ──────────────────────────────────────────────────────────────
-function JobDetailPanel({ job, terminal = false }) {
+function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChange }) {
   const tagsByCat = job.tags_by_category || {}
   const baseLocation =
     job.location_path ||
@@ -126,6 +126,7 @@ function JobDetailPanel({ job, terminal = false }) {
     const commissionLabel = COMMISSION_BONUS_PERIODS.find(p => p.value === job.commission_bonus_period)?.label ?? job.commission_bonus_period ?? '—'
     const tagsByCat = job.tags_by_category || {}
     const allTags = Object.values(tagsByCat).flat()
+    const isClosed = job.status === 'closed'
 
     // PostJob-matching style tokens
     const cardClass = 'p-4 space-y-3 rounded-[var(--t-radius-lg)] border flex flex-col min-h-0'
@@ -140,8 +141,20 @@ function JobDetailPanel({ job, terminal = false }) {
       >
         {/* Header row */}
         <div className="flex items-start justify-between mb-3 flex-shrink-0">
-          <div>
-            <h1 className="text-base font-semibold" style={{ color: 'var(--t-text)' }}>{job.title}</h1>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-semibold truncate" style={{ color: 'var(--t-text)' }}>{job.title}</h1>
+              {isClosed && (
+                <span style={{
+                  flexShrink: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em',
+                  padding: '2px 7px', borderRadius: 'var(--t-radius-sm)',
+                  background: 'var(--t-danger-muted)', color: 'var(--t-danger)',
+                  border: '1px solid var(--t-danger)', textTransform: 'uppercase',
+                }}>
+                  CLOSED
+                </span>
+              )}
+            </div>
             <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
               {job.company_name ?? '—'}
               {job.created_at ? ` · 发布于 ${job.created_at.slice(0, 10)}` : ''}
@@ -153,6 +166,31 @@ function JobDetailPanel({ job, terminal = false }) {
               </p>
             )}
           </div>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => onStatusChange?.(job, isClosed ? 'published' : 'closed')}
+              style={{
+                flexShrink: 0, marginLeft: 12,
+                padding: '5px 14px', fontSize: 12, fontWeight: 600,
+                borderRadius: 'var(--t-radius-sm)', cursor: 'pointer',
+                border: isClosed
+                  ? '1px solid var(--t-success)'
+                  : '1px solid var(--t-danger)',
+                color: isClosed ? 'var(--t-success)' : 'var(--t-danger)',
+                background: isClosed ? 'var(--t-success-muted)' : 'var(--t-danger-muted)',
+                letterSpacing: '0.05em',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.opacity = '0.8'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.opacity = '1'
+              }}
+            >
+              {isClosed ? '重新发布' : '关闭岗位'}
+            </button>
+          )}
         </div>
 
         {/* 3-column grid — same proportions as PostJob */}
@@ -340,6 +378,16 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
   // Derived sets for quick membership checks (used in render)
   const appliedJobIds = useMemo(() => new Set(appliedJobMap.keys()), [appliedJobMap])
   const savedJobIds   = useMemo(() => new Set(savedJobMap.keys()),   [savedJobMap])
+
+  function handleStatusChange(job, newStatus) {
+    jobsApi.updateStatus(job.id, newStatus)
+      .then(res => {
+        const updated = res.data.job
+        setJobs(prev => prev.map(j => j.id === updated.id ? { ...j, status: updated.status } : j))
+        setSelected(prev => prev?.id === updated.id ? { ...prev, status: updated.status } : prev)
+      })
+      .catch(() => {})
+  }
 
   function fetchJobs(filters, targetPage = 1) {
     setLoading(true)
@@ -831,7 +879,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                 key={job.id}
                 onClick={() => setSelected(job)}
                 className={rowClass}
-                style={rowStyle}
+                style={{ ...rowStyle, position: 'relative' }}
                 onMouseEnter={(e) => {
                   if (terminal && !isSelected) e.currentTarget.style.background = 'var(--t-bg-hover)'
                 }}
@@ -839,6 +887,18 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                   if (terminal && !isSelected) e.currentTarget.style.background = 'transparent'
                 }}
               >
+                {terminal && job.status === 'closed' && (
+                  <span style={{
+                    position: 'absolute', top: 6, right: 6,
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.12em',
+                    padding: '2px 5px', borderRadius: 'var(--t-radius-sm)',
+                    background: 'var(--t-danger-muted)', color: 'var(--t-danger)',
+                    border: '1px solid var(--t-danger)', textTransform: 'uppercase',
+                    pointerEvents: 'none', lineHeight: 1.4,
+                  }}>
+                    CLOSED
+                  </span>
+                )}
                 <div className="flex items-center gap-3">
                   {/* 公司头像 */}
                   <div
@@ -1027,6 +1087,8 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
             <JobDetailPanel
               job={selected}
               terminal={terminal}
+              canManage={showNewJobButton}
+              onStatusChange={handleStatusChange}
             />
           </div>
         ) : (
