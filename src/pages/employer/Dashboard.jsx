@@ -111,19 +111,23 @@ const DEFAULT_FUNCTION = 'ALL'
 const DEFAULT_AREA = 'China'
 const SHOW_SECONDARY_METRICS = false
 
-// Full area catalogue — hidden entries kept for future expansion / stats.
+// Full area catalogue — all entries available; visibility driven by live DB data.
 const DASHBOARD_AREA_OPTIONS = [
-  { key: 'China',      label: 'CHINA',       short: 'CN', hidden: false },
-  { key: 'East China', label: 'EAST CHINA',  short: 'EC', hidden: true },
-  { key: 'North China',label: 'NORTH CHINA', short: 'NC', hidden: true },
-  { key: 'South China',label: 'SOUTH CHINA', short: 'SC', hidden: true },
-  { key: 'West China', label: 'WEST CHINA',  short: 'WC', hidden: true },
-  { key: 'Hong Kong',  label: 'HONG KONG',   short: 'HK', hidden: true },
-  { key: 'Taiwan',     label: 'TAIWAN',      short: 'TW', hidden: true },
-  { key: 'Macau',      label: 'MACAU',       short: 'MO', hidden: true },
+  { key: 'China',          label: 'CHINA',          short: 'CN', code: 'GREAT_CHINA' },
+  { key: 'East China',     label: 'EAST CHINA',     short: 'EC', code: 'EAST_CHINA' },
+  { key: 'North China',    label: 'NORTH CHINA',    short: 'NC', code: 'NORTH_CHINA' },
+  { key: 'South China',    label: 'SOUTH CHINA',    short: 'SC', code: 'SOUTH_CHINA' },
+  { key: 'Central China',  label: 'CENTRAL CHINA',  short: 'CC', code: 'CENTRAL_CHINA' },
+  { key: 'West China',     label: 'WEST CHINA',     short: 'WC', code: 'WEST_CHINA' },
+  { key: 'Hong Kong',      label: 'HONG KONG',      short: 'HK', code: 'HONG_KONG' },
+  { key: 'Taiwan',         label: 'TAIWAN',         short: 'TW', code: 'TAIWAN' },
+  { key: 'Macau',          label: 'MACAU',          short: 'MO', code: 'MACAU' },
+  { key: 'Southeast Asia', label: 'SE ASIA',        short: 'SEA', code: 'SOUTHEAST_ASIA' },
+  { key: 'Northeast Asia', label: 'NE ASIA',        short: 'NEA', code: 'NORTHEAST_ASIA' },
+  { key: 'Europe',         label: 'EUROPE',         short: 'EU', code: 'EUROPE' },
+  { key: 'North America',  label: 'N. AMERICA',     short: 'NA', code: 'NORTH_AMERICA' },
+  { key: 'Middle East',    label: 'MIDDLE EAST',    short: 'ME', code: 'MIDDLE_EAST' },
 ]
-
-const VISIBLE_DASHBOARD_AREAS = DASHBOARD_AREA_OPTIONS.filter(a => !a.hidden)
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -136,11 +140,18 @@ export default function Dashboard() {
   const [trendSummary, setTrendSummary] = useState(null)
   const [trendLoading, setTrendLoading] = useState(false)
   const [hasSubscription, setHasSubscription] = useState(null)
+  const [liveFilters, setLiveFilters] = useState({ functions: [], regions: [] })
 
   useEffect(() => {
     subscriptionsApi.getMySubscription()
       .then(res => setHasSubscription(res.data.has_active))
       .catch(() => setHasSubscription(false))
+  }, [])
+
+  useEffect(() => {
+    employerDashboardApi.getFilters()
+      .then(res => setLiveFilters(res.data))
+      .catch(() => {})
   }, [])
 
   function handleFunctionChange(val) {
@@ -206,6 +217,20 @@ export default function Dashboard() {
     }
   }, [selectedFunction, selectedArea])
 
+  // Filter sidebar lists to only show entries that have live DB data.
+  // Always include ALL (functions) and China (areas) as the default "all" option.
+  const visibleFunctions = useMemo(() => {
+    if (!liveFilters.functions?.length) return DEFAULT_FUNCTIONS
+    const liveSet = new Set(liveFilters.functions)
+    return DEFAULT_FUNCTIONS.filter(f => f.key === 'ALL' || liveSet.has(f.key))
+  }, [liveFilters.functions])
+
+  const visibleAreas = useMemo(() => {
+    if (!liveFilters.regions?.length) return DASHBOARD_AREA_OPTIONS.slice(0, 1)
+    const liveSet = new Set(liveFilters.regions)
+    return DASHBOARD_AREA_OPTIONS.filter(a => a.key === 'China' || liveSet.has(a.code))
+  }, [liveFilters.regions])
+
   const chartBars = useMemo(() => {
     const bars = chart?.bars ?? []
     const staleShape = bars.some((item) => item?.period == null && item?.period_label == null)
@@ -241,7 +266,7 @@ export default function Dashboard() {
       <AreaRail
         value={selectedArea}
         onChange={handleAreaChange}
-        areas={VISIBLE_DASHBOARD_AREAS}
+        areas={visibleAreas}
         hasSubscription={hasSubscription}
       />
 
@@ -249,7 +274,7 @@ export default function Dashboard() {
       <FunctionSidebar
         value={selectedFunction}
         onChange={handleFunctionChange}
-        functions={DEFAULT_FUNCTIONS}
+        functions={visibleFunctions}
         hasSubscription={hasSubscription}
       />
 
@@ -338,14 +363,14 @@ export default function Dashboard() {
             <MetricCard
               compact
               label="FUNCTIONS"
-              value={DEFAULT_FUNCTIONS.length - 1}
+              value={visibleFunctions.length - 1}
               helper={selectedFunction === DEFAULT_FUNCTION ? 'ALL' : selectedFunction}
               icon={<Database size={14} />}
             />
             <MetricCard
               compact
               label="AREAS"
-              value={VISIBLE_DASHBOARD_AREAS.length}
+              value={visibleAreas.length}
               helper={selectedArea}
               icon={<TrendingUp size={14} />}
             />
