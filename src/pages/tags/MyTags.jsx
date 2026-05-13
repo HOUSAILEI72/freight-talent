@@ -310,10 +310,21 @@ export default function MyTags({ terminal = false }) {
     >
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">标签申请</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            浏览所有可用标签；如果缺少需要的标签，可以提交申请，管理员通过后即可使用。
-          </p>
+          {terminal ? (
+            <>
+              <h1 style={{ fontSize: 16, fontWeight: 600, color: 'var(--t-text)', fontFamily: 'var(--t-font-mono)' }}>标签申请</h1>
+              <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginTop: 4 }}>
+                浏览所有可用标签；如果缺少需要的标签，可以提交申请，管理员通过后即可使用。
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-xl font-semibold text-slate-800">标签申请</h1>
+              <p className="text-sm text-slate-500 mt-1">
+                浏览所有可用标签；如果缺少需要的标签，可以提交申请，管理员通过后即可使用。
+              </p>
+            </>
+          )}
         </div>
         {!showForm && (
           terminal ? (
@@ -354,34 +365,34 @@ export default function MyTags({ terminal = false }) {
 
       {/* 我的申请 */}
       {myTags.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-slate-800">我的申请</h2>
-            <div className="flex gap-3 text-xs text-slate-500">
-              {activeCount > 0 && <span>已通过 {activeCount}</span>}
-              {pendingCount > 0 && <span>审批中 {pendingCount}</span>}
-              {rejectedCount > 0 && <span>已拒绝 {rejectedCount}</span>}
+        terminal ? (
+          <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)', fontFamily: 'var(--t-font-mono)' }}>我的申请</h2>
+              <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
+                {activeCount > 0 && <span style={{ color: 'var(--t-success)' }}>已通过 {activeCount}</span>}
+                {pendingCount > 0 && <span style={{ color: 'var(--t-warning)' }}>审批中 {pendingCount}</span>}
+                {rejectedCount > 0 && <span style={{ color: 'var(--t-danger)' }}>已拒绝 {rejectedCount}</span>}
+              </div>
             </div>
-          </div>
-          <div className="space-y-2">
-            {myTags.map(t => (
-              terminal ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {myTags.map(t => (
                 <div
                   key={t.id}
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 12, padding: 12,
                     borderRadius: 'var(--t-radius-sm)',
                     border: '1px solid var(--t-border)',
-                    background: 'var(--t-bg-panel)',
+                    background: 'var(--t-bg-elevated)',
                     cursor: 'default',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'var(--t-bg-hover)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--t-bg-panel)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--t-bg-elevated)' }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>{t.category}</span>
-                      <span style={{ color: 'var(--t-text-muted)' }}>·</span>
+                      <span style={{ color: 'var(--t-border)' }}>·</span>
                       <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--t-text)' }}>{t.name}</span>
                       <StatusBadge status={t.status} terminal />
                     </div>
@@ -397,7 +408,21 @@ export default function MyTags({ terminal = false }) {
                     </p>
                   </div>
                 </div>
-              ) : (
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white border border-slate-200 rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-slate-800">我的申请</h2>
+              <div className="flex gap-3 text-xs text-slate-500">
+                {activeCount > 0 && <span>已通过 {activeCount}</span>}
+                {pendingCount > 0 && <span>审批中 {pendingCount}</span>}
+                {rejectedCount > 0 && <span>已拒绝 {rejectedCount}</span>}
+              </div>
+            </div>
+            <div className="space-y-2">
+              {myTags.map(t => (
                 <div key={t.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 hover:bg-slate-50">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -418,42 +443,47 @@ export default function MyTags({ terminal = false }) {
                     </p>
                   </div>
                 </div>
-              )
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* 全部 active 标签浏览 */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-slate-800">所有可用标签</h2>
-          <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="搜索..."
-              className="pl-7 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 outline-none focus:border-blue-400 w-44"
-            />
+      {terminal ? (
+        <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)', fontFamily: 'var(--t-font-mono)' }}>所有可用标签</h2>
+            <div style={{ position: 'relative' }}>
+              <Search size={12} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-text-muted)', pointerEvents: 'none' }} />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="搜索..."
+                style={{
+                  paddingLeft: 26, paddingRight: 10, paddingTop: 5, paddingBottom: 5,
+                  fontSize: 12, borderRadius: 'var(--t-radius-sm)',
+                  border: '1px solid var(--t-border)', background: 'var(--t-bg-input)',
+                  color: 'var(--t-text)', outline: 'none', width: 160,
+                }}
+              />
+            </div>
           </div>
-        </div>
-        {loading ? (
-          <div className="flex items-center gap-2 text-slate-400 py-8 justify-center">
-            <Loader2 size={14} className="animate-spin" /> 加载中...
-          </div>
-        ) : Object.keys(grouped).length === 0 ? (
-          <p className="text-center text-sm text-slate-400 py-8">
-            {activeTags.length === 0 ? '标签库为空，可以提交申请' : '没有匹配的标签'}
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {Object.entries(grouped).sort(([a],[b]) => a.localeCompare(b)).map(([cat, tags]) => (
-              <div key={cat}>
-                <p className="text-xs font-semibold text-slate-400 mb-2">{cat}（{tags.length}）</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {tags.map(t => (
-                    terminal ? (
+          {loading ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--t-text-muted)', padding: '32px 0', justifyContent: 'center', fontSize: 12 }}>
+              <Loader2 size={13} className="animate-spin" /> 加载中...
+            </div>
+          ) : Object.keys(grouped).length === 0 ? (
+            <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--t-text-muted)', padding: '32px 0' }}>
+              {activeTags.length === 0 ? '标签库为空，可以提交申请' : '没有匹配的标签'}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {Object.entries(grouped).sort(([a],[b]) => a.localeCompare(b)).map(([cat, tags]) => (
+                <div key={cat}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{cat}（{tags.length}）</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {tags.map(t => (
                       <span key={t.id} style={{
                         padding: '3px 10px', fontSize: 11, borderRadius: 9999,
                         background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)',
@@ -461,18 +491,53 @@ export default function MyTags({ terminal = false }) {
                       }}>
                         {t.name}
                       </span>
-                    ) : (
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold text-slate-800">所有可用标签</h2>
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="搜索..."
+                className="pl-7 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 outline-none focus:border-blue-400 w-44"
+              />
+            </div>
+          </div>
+          {loading ? (
+            <div className="flex items-center gap-2 text-slate-400 py-8 justify-center">
+              <Loader2 size={14} className="animate-spin" /> 加载中...
+            </div>
+          ) : Object.keys(grouped).length === 0 ? (
+            <p className="text-center text-sm text-slate-400 py-8">
+              {activeTags.length === 0 ? '标签库为空，可以提交申请' : '没有匹配的标签'}
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(grouped).sort(([a],[b]) => a.localeCompare(b)).map(([cat, tags]) => (
+                <div key={cat}>
+                  <p className="text-xs font-semibold text-slate-400 mb-2">{cat}（{tags.length}）</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map(t => (
                       <span key={t.id} className="px-2.5 py-1 text-xs bg-slate-100 text-slate-700 rounded-full">
                         {t.name}
                       </span>
-                    )
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
