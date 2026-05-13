@@ -107,7 +107,7 @@
 | Phase 4 | 管理后台统计（替换 mock stats） | **完成** |
 | Phase 5 | 生产加固（迁移脚本、限流、日志、HTTPS） | **进行中（限流+迁移完成）** |
 | Phase 6 | 动态标签体系 + 候选人隐私字段 + 统一导入工作流 | **完成** |
-| Phase 7 | 企业 Dashboard Freightos Terminal 风格改造 | **进行中（A/B/D 路由壳层完成；E 视觉精修进行中）** |
+| Phase 7 | 企业 Dashboard Freightos Terminal 风格改造 | **完成（7-A/B/C/D/E/F/G 全部完成）** |
 
 ### Phase 7 子阶段
 
