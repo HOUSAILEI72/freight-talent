@@ -55,64 +55,64 @@ console.log('-- 12 fixture cases --')
   const built = buildLocationObject(REMOTE_LOCATION)
   check('2.  Remote', built?.location_code === 'REMOTE' && built?.business_area_code === 'REMOTE')
 }
-// 3. Great China / 全国
+// 0全国
 {
   const built = buildLocationObject(CN_MAINLAND_ALL_LOCATION)
-  check('3.  Great China / 全国', built?.location_code === 'CN_MAINLAND_ALL' && built?.business_area_code === 'GREAT_CHINA' && built?.location_path === 'Great China/全国')
+  check('3.  China / 全国', built?.location_code === 'CN_MAINLAND_ALL' && built?.business_area_code === 'GREAT_CHINA' && built?.location_path === 'China/全国')
 }
-// 4. Great China / 上海市 (province-level direct municipality)
+// 0上海市 (province-level direct municipality)
 {
   const sh = findProv('310000')
   const built = buildLocationObject(buildMainlandLocation(sh, []))
-  check('4.  Great China / 上海市', sh && built?.location_code === '310000' && built?.business_area_code === 'EAST_CHINA' && built?.location_path === 'Great China/上海市')
+  check('4.  China / 上海市', sh && built?.location_code === '310000' && built?.business_area_code === 'EAST_CHINA' && built?.location_path === 'China/上海市')
 }
-// 5. Great China / 上海市 / 浦东新区  (310115 area under direct municipality)
+// 0上海市 / 浦东新区  (310115 area under direct municipality)
 {
   const sh   = findProv('310000')
   const area = findArea(sh, '310115')
   const built = area && buildLocationObject(buildMainlandLocation(area, [sh]))
-  check('5.  Great China / 上海市 / 浦东新区',
-    built?.location_code === '310115' && built?.business_area_code === 'EAST_CHINA' && built?.location_path === 'Great China/上海市/浦东新区')
+  check('5.  China / 上海市 / 浦东新区',
+    built?.location_code === '310115' && built?.business_area_code === 'EAST_CHINA' && built?.location_path === 'China/上海市/浦东新区')
 }
-// 6. Great China / 广东省 / 深圳市
+// 0广东省 / 深圳市
 {
   const gd = findProv('440000')
   const sz = findCity(gd, '440300')
   const built = sz && buildLocationObject(buildMainlandLocation(sz, [gd]))
-  check('6.  Great China / 广东省 / 深圳市',
-    built?.location_code === '440300' && built?.business_area_code === 'SOUTH_CHINA' && built?.location_path === 'Great China/广东省/深圳市')
+  check('6.  China / 广东省 / 深圳市',
+    built?.location_code === '440300' && built?.business_area_code === 'SOUTH_CHINA' && built?.location_path === 'China/广东省/深圳市')
 }
-// 7. Great China / 北京市
+// 0北京市
 {
   const bj = findProv('110000')
   const built = buildLocationObject(buildMainlandLocation(bj, []))
-  check('7.  Great China / 北京市', built?.location_code === '110000' && built?.business_area_code === 'NORTH_CHINA')
+  check('7.  China / 北京市', built?.location_code === '110000' && built?.business_area_code === 'NORTH_CHINA')
 }
-// 8. Great China / 四川省 / 成都市
+// 0四川省 / 成都市
 {
   const sc = findProv('510000')
   const cd = findCity(sc, '510100')
   const built = cd && buildLocationObject(buildMainlandLocation(cd, [sc]))
-  check('8.  Great China / 四川省 / 成都市',
-    built?.location_code === '510100' && built?.business_area_code === 'WEST_CHINA' && built?.location_path === 'Great China/四川省/成都市')
+  check('8.  China / 四川省 / 成都市',
+    built?.location_code === '510100' && built?.business_area_code === 'WEST_CHINA' && built?.location_path === 'China/四川省/成都市')
 }
-// 9. Great China / 河南省 / 郑州市
+// 0河南省 / 郑州市
 {
   const ha = findProv('410000')
   const zz = findCity(ha, '410100')
   const built = zz && buildLocationObject(buildMainlandLocation(zz, [ha]))
-  check('9.  Great China / 河南省 / 郑州市',
-    built?.location_code === '410100' && built?.business_area_code === 'CENTRAL_CHINA' && built?.location_path === 'Great China/河南省/郑州市')
+  check('9.  China / 河南省 / 郑州市',
+    built?.location_code === '410100' && built?.business_area_code === 'CENTRAL_CHINA' && built?.location_path === 'China/河南省/郑州市')
 }
 // 10. Hong Kong
 {
   const built = buildLocationObject(HK_LOCATION)
-  check('10. Hong Kong', built?.location_code === 'HK' && built?.business_area_code === 'HONG_KONG' && built?.location_path === 'Hong Kong')
+  check('10. Hong Kong', built?.location_code === 'HK' && built?.business_area_code === 'HONG_KONG' && built?.location_path === 'China/Hong Kong')
 }
 // 11. Taiwan
 {
   const built = buildLocationObject(TW_LOCATION)
-  check('11. Taiwan', built?.location_code === 'TW' && built?.business_area_code === 'TAIWAN' && built?.location_path === 'Taiwan')
+  check('11. Taiwan', built?.location_code === 'TW' && built?.business_area_code === 'TAIWAN' && built?.location_path === 'China/Taiwan')
 }
 // 12. Overseas / Germany
 {
@@ -167,12 +167,12 @@ expectHit('Remote',         h => h.code === 'REMOTE',          'Remote')
   const hk81 = searchRegion('810000', 100).find(h => h.code === '810000')
   check('search "810000" must NOT match (use HK instead)', !hk81)
   const mo82 = searchRegion('820000', 100).find(h => h.code === '820000')
-  check('search "820000" must NOT match (Macau unsupported)', !mo82)
+  check('search "820000" must NOT match (use MO instead)', !mo82)
 }
 
 // ── Tree integrity ────────────────────────────────────────────────────────
 console.log('\n-- tree integrity --')
-check('TOP_LEVEL_GROUPS has 6 entries',  TOP_LEVEL_GROUPS.length === 6)
+check('TOP_LEVEL_GROUPS has 4 entries',  TOP_LEVEL_GROUPS.length === 4)
 check('MAINLAND_TREE has 31 provinces',  MAINLAND_TREE.length === 31)
 check('上海市 has 0 children of type=city (direct municipality)',
   findProv('310000')?.children.every(c => c.type === 'area'))

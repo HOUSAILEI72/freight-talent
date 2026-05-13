@@ -94,7 +94,7 @@ def main() -> int:
     payload_ok = {
         "location_code": "440305",
         "location_name": "南山区",
-        "location_path": "Great China/广东省/深圳市/南山区",
+        "location_path": "China/广东省/深圳市/南山区",
         "location_type": "mainland_china",
         "business_area_code": "MUST_BE_OVERWRITTEN",  # client lie
         "business_area_name": "MUST_BE_OVERWRITTEN",

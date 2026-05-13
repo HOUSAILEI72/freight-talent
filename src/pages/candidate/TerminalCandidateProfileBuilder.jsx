@@ -1,11 +1,5 @@
-import TerminalLayout from '../../components/terminal/TerminalLayout'
-import { CANDIDATE_ICON_NAV } from '../../components/terminal/navItems'
-import CandidateProfileBuilder from './CandidateProfileBuilder'
+import { Navigate } from 'react-router-dom'
 
 export default function TerminalCandidateProfileBuilder() {
-  return (
-    <TerminalLayout title="RESUME" activeIconId="resume" navItems={CANDIDATE_ICON_NAV}>
-      <CandidateProfileBuilder terminal />
-    </TerminalLayout>
-  )
+  return <Navigate to="/candidate/profile/me?tab=edit" replace />
 }

@@ -15,7 +15,7 @@
  *                                           44 / 45 / 46
  *                                           50 / 51 / 52 / 53 / 54
  *                                           61 / 62 / 63 / 64 / 65)
- *   - exclude prefixes 71 (台湾) / 81 (香港) / 82 (澳门)
+ *   - exclude prefixes 71 (台湾) / 81 (香港) / 82 (澳门) — use HK/TW/MO codes instead
  *
  * Output rows preserve `code`, `name`, `province`, `city`, `area`. Rationale:
  *   - the back-end whitelists location codes by lookup; we don't need

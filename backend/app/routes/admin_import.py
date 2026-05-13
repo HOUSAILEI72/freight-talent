@@ -551,8 +551,11 @@ def _commit_tags_and_junction(batch_id: int, import_type: str,
     并在 job_tags / candidate_tags 中链接到对应行的实体。
     返回 (新建 tag 数, junction 链接数)。
     """
-    junction_table = "job_tags" if import_type == "job" else "candidate_tags"
-    fk_col         = "job_id"   if import_type == "job" else "candidate_id"
+    _JUNCTION = {
+        "job":    ("job_tags",        "job_id"),
+        "resume": ("candidate_tags",  "candidate_id"),
+    }
+    junction_table, fk_col = _JUNCTION[import_type]
 
     staging = db.session.query(ImportBatchTag).filter_by(batch_id=batch_id).all()
     if not staging:
@@ -710,11 +713,11 @@ def confirm_import(batch_id):
             logger.exception("chart cache flush failed (non-fatal)")
     except Exception as exc:
         db.session.rollback()
-        logger.exception("confirm failed: batch_id=%d type=%s",
-                         batch_id, batch.import_type)
+        logger.exception("confirm failed: batch_id=%d type=%s exc=%s",
+                         batch_id, batch.import_type, exc)
         return jsonify({
             "success": False,
-            "message": f"导入写入失败：{exc}",
+            "message": "导入写入失败，请检查数据格式后重试",
             "batch_id": batch_id,
         }), 500
 

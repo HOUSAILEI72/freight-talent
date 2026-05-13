@@ -63,14 +63,19 @@ class Job(db.Model):
     # ── Phase C: Salary structure ──
     salary_months         = db.Column(db.Integer, nullable=True)
     average_bonus_percent = db.Column(db.Float, nullable=True)
+    commission_bonus_period = db.Column(db.String(20), nullable=True)   # not_applicable / monthly / quarterly / semi_annual
+    commission_bonus_amount = db.Column(db.Float, nullable=True)
     has_year_end_bonus    = db.Column(db.Boolean, nullable=True)
     year_end_bonus_months = db.Column(db.Float, nullable=True)
+
+    employment_type = db.Column(db.String(20), nullable=True)  # 全职 / 兼职 / 实习生
 
     # 状态
     status = db.Column(
         db.Enum("draft", "published", "paused", "closed", name="job_status"),
         nullable=False,
         default="published",
+        index=True,
     )
 
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -122,8 +127,11 @@ class Job(db.Model):
             "soft_skill_requirements": self.soft_skill_requirements or [],
             "salary_months": self.salary_months,
             "average_bonus_percent": self.average_bonus_percent,
+            "commission_bonus_period": self.commission_bonus_period,
+            "commission_bonus_amount": self.commission_bonus_amount,
             "has_year_end_bonus": self.has_year_end_bonus,
             "year_end_bonus_months": self.year_end_bonus_months,
+            "employment_type": self.employment_type,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

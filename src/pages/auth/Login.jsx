@@ -77,8 +77,8 @@ export default function Login() {
       const res = await authApi.sendCode({ email: form.email.trim().toLowerCase(), role: tab })
       setCodeSent(true)
       setCountdown(60)
-      // Development mode: auto-fill code if returned
-      if (res.data?.code) {
+      // Development mode only: auto-fill code if returned (never in production)
+      if (import.meta.env.DEV && res.data?.code) {
         setCode(res.data.code)
       }
     } catch (err) {
@@ -116,13 +116,21 @@ export default function Login() {
         user = userData
       }
 
-      // 登录成功后回跳到 next 参数指定的页面（防止 open redirect）
+      // 登录成功后回跳到 next 参数指定的页面（allowlist 防 open redirect）
+      const ALLOWED_NEXT_PATHS = [
+        '/jobs', '/candidates', '/messages', '/tags',
+        '/employer/dashboard', '/employer/jobs', '/employer/candidates',
+        '/employer/messages', '/employer/tags', '/employer/jobs/new',
+        '/employer/pricing', '/employer/settings',
+        '/candidate/home', '/candidate/jobs', '/candidate/messages',
+        '/candidate/tags', '/candidate/invitations', '/candidate/settings',
+        '/candidate/profile/me', '/candidate/applications',
+        '/admin/overview', '/admin/import', '/admin/approvals',
+      ]
       const next = searchParams.get('next')
-      if (next && next.startsWith('/') && !next.startsWith('//')) {
-        // 验证 next 是站内路径且用户角色允许访问
-        // 简单实现：如果 next 包含角色前缀，检查是否匹配
+      if (next && ALLOWED_NEXT_PATHS.some((p) => next === p || next.startsWith(p + '/'))) {
         const roleHome = getRoleHome(user.role)
-        if (next.startsWith(`/${user.role}/`) || next === roleHome) {
+        if (next.startsWith(`/${user.role}/`) || next === roleHome || next.startsWith('/admin/')) {
           navigate(next)
           return
         }

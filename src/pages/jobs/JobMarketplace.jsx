@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   MapPin, Briefcase, Clock, Search, X,
@@ -9,6 +9,7 @@ import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
 import TerminalPageSurface from '../../components/terminal/TerminalPageSurface'
 import RegionSelector from '../../components/RegionSelector'
+import Pagination from '../../components/ui/Pagination'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 
 const FUNCTION_OPTIONS = DEFAULT_FUNCTIONS.filter(f => f.key !== 'ALL')
@@ -65,10 +66,11 @@ function JobDetailPanel({ job, terminal = false }) {
             { label: 'LOCATION', value: fullLocation },
             { label: 'SALARY',   value: job.salary_label ?? '面议' },
             { label: 'EXP REQ',  value: job.experience_required ?? '不限' },
-            { label: 'DEGREE',   value: job.degree_required ?? '不限' },
+            { label: 'MIN EDU',  value: job.degree_required ?? '不限' },
             { label: 'ROLE',     value: job.is_management_role ? `管理岗${job.management_headcount ? ` · ${job.management_headcount}人` : ''}` : '非管理岗' },
             { label: 'HC',       value: job.headcount ? `${job.headcount} 人` : '—' },
             { label: 'URGENCY',  value: job.urgency_level === 1 ? '紧急' : job.urgency_level === 3 ? '不急' : '正常' },
+            { label: 'TYPE',     value: job.employment_type ?? '—' },
           ].map(item => (
             <div key={item.label} className="px-3 py-2" style={{ background: 'var(--t-bg-panel)' }}>
               <p className="font-mono text-xs uppercase tracking-widest mb-0.5" style={mutedColor}>{item.label}</p>
@@ -82,10 +84,11 @@ function JobDetailPanel({ job, terminal = false }) {
             { icon: MapPin,        label: '工作地点', value: fullLocation },
             { icon: Briefcase,     label: '薪资范围', value: job.salary_label ?? '面议' },
             { icon: Clock,         label: '经验要求', value: job.experience_required ?? '不限' },
-            { icon: GraduationCap, label: '学历要求', value: job.degree_required ?? '不限' },
+            { icon: GraduationCap, label: '最低学历', value: job.degree_required ?? '不限' },
             { icon: Users, label: '管理属性', value: job.is_management_role ? `管理岗${job.management_headcount ? ` · ${job.management_headcount} 人` : ''}` : '非管理岗' },
             { icon: Users, label: '招聘人数', value: job.headcount ? `${job.headcount} 人` : '—' },
             { icon: Zap,   label: '紧急程度', value: job.urgency_level === 1 ? '紧急' : job.urgency_level === 3 ? '不急' : '正常' },
+            { icon: Briefcase, label: '应聘类型', value: job.employment_type ?? '—' },
           ].map(item => (
             <div key={item.label} className="bg-slate-50 rounded-xl px-3 py-2.5">
               <div className="flex items-center gap-1.5 mb-1">
@@ -188,6 +191,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
   const [q, setQ]                 = useState('')
   const [location, setLocation]   = useState(null)  // RegionSelector value
   const [functionCode, setFunctionCode] = useState('')
+  const [employmentType, setEmploymentType] = useState('')
   const [savedFilter, setSavedFilter] = useState('all')
   const [appliedFilter, setAppliedFilter] = useState('all')
 
@@ -198,25 +202,32 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
   const [applyingJobId, setApplyingJobId] = useState(null)
   const [savingJobId,   setSavingJobId]   = useState(null)
   const [applyError,    setApplyError]    = useState('')
+  const [page, setPage]                   = useState(1)
+  const [totalPages, setTotalPages]       = useState(1)
+  const [total, setTotal]                 = useState(0)
+  const lastFiltersRef                    = useRef({})
 
   // Derived sets for quick membership checks (used in render)
   const appliedJobIds = useMemo(() => new Set(appliedJobMap.keys()), [appliedJobMap])
   const savedJobIds   = useMemo(() => new Set(savedJobMap.keys()),   [savedJobMap])
 
-  function fetchJobs(filters) {
+  function fetchJobs(filters, targetPage = 1) {
     setLoading(true)
     setError('')
-    jobsApi.getPublicJobs(filters)
+    jobsApi.getPublicJobs({ ...filters, page: targetPage, page_size: 20 })
       .then(res => {
         const list = res.data.jobs
         setJobs(list)
+        setPage(res.data.page ?? targetPage)
+        setTotalPages(res.data.total_pages ?? 1)
+        setTotal(res.data.total ?? 0)
         if (list.length > 0 && !selected) setSelected(list[0])
       })
       .catch(err => setError(err.response?.data?.message ?? '加载岗位失败，请刷新重试'))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchJobs({}) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchJobs({}, 1) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // CAND-4: hydrate jobId→appId maps on mount so button state survives refresh.
   useEffect(() => {
@@ -352,40 +363,61 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
     }
   }
 
-  function buildFilters(nextLocation = location, nextQ = q, nextFn = functionCode) {
+  function buildFilters(nextLocation = location, nextQ = q, nextFn = functionCode, nextEt = employmentType) {
     return {
       ...(nextQ ? { q: nextQ } : {}),
       ...(nextLocation?.location_code ? { location_code: nextLocation.location_code } : {}),
       ...(nextFn ? { function_code: nextFn } : {}),
+      ...(nextEt ? { employment_type: nextEt } : {}),
     }
   }
 
   function handleSearch(e) {
     e.preventDefault()
     setSelected(null)
-    fetchJobs(buildFilters())
+    const f = buildFilters()
+    lastFiltersRef.current = f
+    fetchJobs(f, 1)
   }
 
   function handleReset() {
-    setQ(''); setLocation(null); setFunctionCode(''); setSavedFilter('all'); setAppliedFilter('all')
+    setQ(''); setLocation(null); setFunctionCode(''); setEmploymentType(''); setSavedFilter('all'); setAppliedFilter('all')
     setSelected(null)
-    fetchJobs({})
+    lastFiltersRef.current = {}
+    fetchJobs({}, 1)
   }
 
   function handleLocationChange(loc) {
     setLocation(loc)
     setSelected(null)
-    fetchJobs(buildFilters(loc, q, functionCode))
+    const f = buildFilters(loc, q, functionCode)
+    lastFiltersRef.current = f
+    fetchJobs(f, 1)
   }
 
   function handleFunctionChange(code) {
     setFunctionCode(code)
     setSelected(null)
-    fetchJobs(buildFilters(location, q, code))
+    const f = buildFilters(location, q, code, employmentType)
+    lastFiltersRef.current = f
+    fetchJobs(f, 1)
+  }
+
+  function handleEmploymentTypeChange(et) {
+    setEmploymentType(et)
+    setSelected(null)
+    const f = buildFilters(location, q, functionCode, et)
+    lastFiltersRef.current = f
+    fetchJobs(f, 1)
+  }
+
+  function handlePageChange(p) {
+    setSelected(null)
+    fetchJobs(lastFiltersRef.current, p)
   }
 
   const hasStatusFilter = canApply && (savedFilter !== 'all' || appliedFilter !== 'all')
-  const hasFilter = q || !!location?.location_code || !!functionCode || hasStatusFilter
+  const hasFilter = q || !!location?.location_code || !!functionCode || !!employmentType || hasStatusFilter
 
   const inner = (
     <>
@@ -482,6 +514,29 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                 <option key={f.key} value={f.key}>{f.label}</option>
               ))}
             </select>
+            <select
+              value={employmentType}
+              onChange={(e) => handleEmploymentTypeChange(e.target.value)}
+              className={
+                terminal
+                  ? 'w-full px-2 py-1.5 text-xs rounded-lg border'
+                  : 'w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
+              }
+              style={
+                terminal
+                  ? {
+                      background: 'var(--t-bg-input)',
+                      borderColor: 'var(--t-border)',
+                      color: employmentType ? 'var(--t-text)' : 'var(--t-text-muted)',
+                    }
+                  : undefined
+              }
+            >
+              <option value="">应聘类型（全部）</option>
+              <option value="全职">全职</option>
+              <option value="兼职">兼职</option>
+              <option value="实习生">实习生</option>
+            </select>
             {canApply && (
               <div className="grid grid-cols-2 gap-2">
                 <select
@@ -573,7 +628,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
               className={terminal ? 'text-xs mt-2' : 'text-xs text-slate-400 mt-2'}
               style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
             >
-              共 {visibleJobs.length} 个岗位{hasFilter ? `（已筛选 / 全部 ${jobs.length}）` : ''}
+              共 {total} 个岗位{hasFilter ? '（已筛选）' : ''}
             </p>
           )}
         </div>
@@ -808,6 +863,12 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
             )
           })}
         </div>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          terminal={terminal}
+        />
       </div>
 
       {/* ── 右栏详情 ── */}

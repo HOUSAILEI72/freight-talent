@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { authApi } from '../api/auth'
 
-const AuthContext = createContext(null)
+export const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -31,6 +31,12 @@ export function AuthProvider({ children }) {
     const handler = () => setUser(null)
     window.addEventListener('auth:session-expired', handler)
     return () => window.removeEventListener('auth:session-expired', handler)
+  }, [])
+
+  useEffect(() => {
+    const handler = (e) => setUser(e.detail)
+    window.addEventListener('auth:user-updated', handler)
+    return () => window.removeEventListener('auth:user-updated', handler)
   }, [])
 
   const login = useCallback(async ({ email, password, role }) => {

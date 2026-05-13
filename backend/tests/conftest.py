@@ -6,10 +6,17 @@ JWT_SECRET_KEY 通过环境变量注入测试值。
 """
 import os
 import pytest
+from dotenv import load_dotenv
 
-# 测试时不需要 Redis / 真实 DB
+# 测试加载本地 .env，确保 TEST_DB_PASSWORD 可用
+load_dotenv()
+
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-pytest-only-32chars!!")
 os.environ.setdefault("FLASK_ENV", "development")
+os.environ.setdefault("TEST_DB_USER", "root")
+os.environ.setdefault("TEST_DB_HOST", "127.0.0.1")
+# TEST_DB_PASSWORD 从 .env 的 DB_PASSWORD 继承（不写死在源码中）
+os.environ.setdefault("TEST_DB_PASSWORD", os.getenv("DB_PASSWORD", ""))
 
 
 class _TestConfig:
@@ -17,7 +24,13 @@ class _TestConfig:
     TESTING = True
     DEBUG = False
     # Use real MySQL with a test database
-    SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:Zyk0416,@127.0.0.1/freight_talent_test?charset=utf8mb4"
+    _TEST_DB_USER = os.getenv("TEST_DB_USER", "root")
+    _TEST_DB_PASS = os.getenv("TEST_DB_PASSWORD", "")
+    _TEST_DB_HOST = os.getenv("TEST_DB_HOST", "127.0.0.1")
+    SQLALCHEMY_DATABASE_URI = (
+        f"mysql+pymysql://{_TEST_DB_USER}:{_TEST_DB_PASS}@{_TEST_DB_HOST}/"
+        f"freight_talent_test?charset=utf8mb4"
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = "test-secret-key-for-pytest-only-32chars!!"
     JWT_ACCESS_TOKEN_EXPIRES = False    # 测试中 token 不过期
@@ -35,7 +48,13 @@ def app():
     from sqlalchemy import create_engine, text
 
     # Create test database if not exists
-    engine = create_engine("mysql+pymysql://root:Zyk0416,@127.0.0.1/?charset=utf8mb4")
+    _TEST_DB_USER2 = os.getenv("TEST_DB_USER", "root")
+    _TEST_DB_PASS2 = os.getenv("TEST_DB_PASSWORD", "")
+    _TEST_DB_HOST2 = os.getenv("TEST_DB_HOST", "127.0.0.1")
+    engine = create_engine(
+        f"mysql+pymysql://{_TEST_DB_USER2}:{_TEST_DB_PASS2}@{_TEST_DB_HOST2}/"
+        f"?charset=utf8mb4"
+    )
     with engine.connect() as conn:
         conn.execute(text("CREATE DATABASE IF NOT EXISTS freight_talent_test"))
         conn.commit()
@@ -55,6 +74,7 @@ def app():
         from app.models.import_models import FieldRegistry, ImportBatch, ImportBatchRow, ImportBatchTag
         from app.models.tag import Tag, TagNote
         from app.models.junction_tags import CandidateTag, JobTag
+        from app.models.subscription import Subscription  # noqa: F401
 
         # Drop all tables and recreate for clean test environment
         db.drop_all()

@@ -111,17 +111,33 @@ def compute_employer_fit(job, candidate) -> dict:
     breakdown['experience_match'] = exp_score
 
     # 4. degree_certificate_match (8)
+    # 候选人学历等级映射（从高到低）
+    _DEGREE_RANK = {'博士': 6, '硕士': 5, '本科': 4, '大专': 3, '高中': 2, '初中及以下': 1}
     deg_score = 0
     job_degree = getattr(job, 'degree_required', None)
     cand_edu = getattr(candidate, 'education', None)
-    if not job_degree:
+    if not job_degree or job_degree == '不限':
         deg_score = 4
     elif cand_edu:
-        if any(kw in cand_edu for kw in ['硕士', '研究生', 'Master']):
-            deg_score = 8
+        # 把候选人 education 字段映射到等级
+        cand_rank = 0
+        if any(kw in cand_edu for kw in ['博士', 'PhD', 'Doctor']):
+            cand_rank = _DEGREE_RANK['博士']
+        elif any(kw in cand_edu for kw in ['硕士', '研究生', 'Master']):
+            cand_rank = _DEGREE_RANK['硕士']
         elif any(kw in cand_edu for kw in ['本科', '学士', 'Bachelor']):
-            deg_score = 6
+            cand_rank = _DEGREE_RANK['本科']
         elif any(kw in cand_edu for kw in ['大专', '专科']):
+            cand_rank = _DEGREE_RANK['大专']
+        elif any(kw in cand_edu for kw in ['高中', '中专', '职高']):
+            cand_rank = _DEGREE_RANK['高中']
+        else:
+            cand_rank = _DEGREE_RANK['初中及以下']
+
+        job_rank = _DEGREE_RANK.get(job_degree, 0)
+        if cand_rank >= job_rank:
+            deg_score = 8
+        elif cand_rank == job_rank - 1:
             deg_score = 4
     if getattr(candidate, 'certificates', None):
         deg_score = min(deg_score + 2, 8)

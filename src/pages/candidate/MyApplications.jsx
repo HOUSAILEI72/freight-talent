@@ -6,6 +6,7 @@ import {
   CheckCircle, Eye, Star, XCircle, RotateCcw, Trash2,
 } from 'lucide-react'
 import { applicationsApi } from '../../api/applications'
+import { useToast } from '../../components/ui/Toast'
 
 /**
  * CAND-8B — Candidate "My Applications" page.
@@ -189,6 +190,7 @@ function Cell({ icon: Icon, label, value, terminal, accentValue }) {
 }
 
 export default function MyApplications({ terminal = false }) {
+  const toast = useToast()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
@@ -245,7 +247,7 @@ export default function MyApplications({ terminal = false }) {
         message: err.message,
       })
       const msg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.detail || '撤回失败，请重试'
-      alert(msg)
+      toast.show(msg, 'error')
     } finally {
       setWithdrawing(null)
     }

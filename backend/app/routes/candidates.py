@@ -132,6 +132,11 @@ def update_me():
         except (ValueError, TypeError):
             return _err("出生年份格式不正确")
 
+    VALID_GENDER = {'male', 'female'}
+    gender_val = data.get("gender") or None
+    if gender_val is not None and gender_val not in VALID_GENDER:
+        return _err("gender 只能是 male / female")
+
     salary_label = (data.get("expected_salary_label") or "").strip() or None
     salary_min, salary_max = _parse_salary(salary_label)
     if salary_min and salary_max and salary_min > salary_max:
@@ -327,6 +332,8 @@ def update_me():
     profile.experience_years = exp
     if age_val is not None:
         profile.age = age_val
+    if "gender" in data:
+        profile.gender = gender_val
     profile.education = (data.get("education") or "").strip() or None
     profile.english_level = (data.get("english_level") or "").strip() or None
     profile.summary = (data.get("summary") or "").strip() or None
@@ -478,7 +485,13 @@ def list_candidates():
     if user.role not in ("employer", "admin"):
         return _err("仅企业或管理员账号可查看候选人列表", 403)
 
-    candidates_list = list_candidates_with_filters(
+    try:
+        page      = max(1, int(request.args.get("page", 1)))
+        page_size = max(1, min(int(request.args.get("page_size", 20)), 100))
+    except (ValueError, TypeError):
+        page, page_size = 1, 20
+
+    result = list_candidates_with_filters(
         avail_param=request.args.get("availability_status", "open").strip(),
         city=request.args.get("city", "").strip(),
         business_type=request.args.get("business_type", "").strip(),
@@ -489,7 +502,12 @@ def list_candidates():
         q=request.args.get("q", "").strip(),
         tag_ids_raw=request.args.get("tag_ids", "").strip(),
         tag_groups_raw=request.args.get("tag_groups", "").strip(),
+        gender=request.args.get("gender", "").strip(),
+        page=page,
+        page_size=page_size,
     )
+
+    candidates_list = result["items"]
 
     # 候选人池列表：admin 看全私；employer 仅订阅覆盖的候选人开放隐私（Phase 8）。
     # 解锁规则：active subscription 且 function_code + business_area_code 双命中。
@@ -513,7 +531,10 @@ def list_candidates():
     return jsonify({
         "success": True,
         "candidates": out,
-        "total": len(candidates_list),
+        "total": result["total"],
+        "page": result["page"],
+        "page_size": result["page_size"],
+        "total_pages": result["total_pages"],
     })
 
 

@@ -220,15 +220,28 @@ export default function UploadResume({ terminal = false }) {
       <div className="flex items-center gap-2 mb-10">
         {STEPS.map((s, i) => (
           <div key={s} className="flex items-center gap-2">
-            <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold ${
-              i < step ? 'bg-emerald-500 text-white' :
-              i === step ? 'bg-blue-600 text-white' :
-              'bg-slate-100 text-slate-400'
-            }`}>
+            <div
+              className="flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold"
+              style={terminal ? {
+                background: i < step ? 'var(--t-success)' : i === step ? 'var(--t-primary)' : 'var(--t-bg-elevated)',
+                color: i < step || i === step ? '#fff' : 'var(--t-text-muted)',
+                border: `1px solid ${i < step ? 'var(--t-success)' : i === step ? 'var(--t-primary)' : 'var(--t-border)'}`,
+              } : undefined}
+              className={terminal ? 'flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold' : `flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold ${
+                i < step ? 'bg-emerald-500 text-white' :
+                i === step ? 'bg-blue-600 text-white' :
+                'bg-slate-100 text-slate-400'
+              }`}
+            >
               {i < step ? <CheckCircle size={14} /> : i + 1}
             </div>
-            <span className={`text-sm ${i === step ? 'font-semibold text-slate-800' : 'text-slate-400'}`}>{s}</span>
-            {i < STEPS.length - 1 && <ChevronRight size={14} className="text-slate-300 mx-1" />}
+            <span
+              className={terminal ? 'text-sm' : `text-sm ${i === step ? 'font-semibold text-slate-800' : 'text-slate-400'}`}
+              style={terminal ? { fontWeight: i === step ? 600 : 400, color: i === step ? 'var(--t-text)' : 'var(--t-text-muted)' } : undefined}
+            >{s}</span>
+            {i < STEPS.length - 1 && (
+              <ChevronRight size={14} className="mx-1" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#cbd5e1' }} />
+            )}
           </div>
         ))}
       </div>
@@ -252,35 +265,63 @@ export default function UploadResume({ terminal = false }) {
 
           {/* 已有简历提示 */}
           {existingProfile?.resume_file_name && (
-            <div className="mb-5 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText size={18} className="text-emerald-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-emerald-800">已有简历：{existingProfile.resume_file_name}</p>
-                  <p className="text-xs text-emerald-600">
-                    上传于 {existingProfile.resume_uploaded_at?.slice(0, 10) ?? '—'}
-                  </p>
+            terminal ? (
+              <div style={{
+                marginBottom: 20, padding: 16,
+                background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.3)',
+                borderRadius: 'var(--t-radius)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <FileText size={18} style={{ color: 'var(--t-success)', flexShrink: 0 }} />
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--t-success)' }}>已有简历：{existingProfile.resume_file_name}</p>
+                    <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginTop: 2 }}>
+                      上传于 {existingProfile.resume_uploaded_at?.slice(0, 10) ?? '—'}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Button size="sm" variant="secondary" onClick={goDirectToEdit}>直接编辑档案</Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="secondary" onClick={goDirectToEdit}>
-                  直接编辑档案
-                </Button>
+            ) : (
+              <div className="mb-5 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText size={18} className="text-emerald-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-emerald-800">已有简历：{existingProfile.resume_file_name}</p>
+                    <p className="text-xs text-emerald-600">
+                      上传于 {existingProfile.resume_uploaded_at?.slice(0, 10) ?? '—'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={goDirectToEdit}>
+                    直接编辑档案
+                  </Button>
+                </div>
               </div>
-            </div>
+            )
           )}
 
           {/* 上传区域 */}
           <div
-            className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer ${
+            className={terminal ? 'border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer' : `border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer ${
               dragging ? 'border-blue-400 bg-blue-50' :
               uploading ? 'border-blue-300 bg-blue-50/50' :
               'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
             }`}
+            style={terminal ? {
+              borderColor: dragging ? 'var(--t-primary)' : uploading ? 'var(--t-border-focus)' : 'var(--t-border)',
+              background: dragging ? 'var(--t-primary-muted)' : uploading ? 'rgba(37,99,235,0.06)' : 'transparent',
+            } : undefined}
             onDragOver={e => { e.preventDefault(); if (!uploading) setDragging(true) }}
             onDragLeave={() => setDragging(false)}
             onDrop={uploading ? undefined : handleDrop}
             onClick={() => !uploading && document.getElementById('file-input').click()}
+            onMouseEnter={terminal && !dragging && !uploading ? e => { e.currentTarget.style.background = 'var(--t-bg-elevated)' } : undefined}
+            onMouseLeave={terminal && !dragging && !uploading ? e => { e.currentTarget.style.background = 'transparent' } : undefined}
           >
             <input
               id="file-input"
@@ -413,7 +454,7 @@ export default function UploadResume({ terminal = false }) {
                 value={location}
                 onChange={setLocation}
                 terminal={terminal}
-                placeholder="请选择所在地区（中国大陆 / 香港 / 台湾 / 海外 / Global / Remote）"
+                placeholder="请选择所在地区（中国大陆 / 香港 / 台湾 / 澳门 / 海外 / Global / Remote）"
               />
               {location?.location_path && (
                 <p className="mt-1 text-xs text-slate-400">
@@ -458,15 +499,32 @@ export default function UploadResume({ terminal = false }) {
 
           {/* 上传文件状态 */}
           {uploadedFile && (
-            <div className="mb-5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
-              <FileText size={16} className="text-emerald-600 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-emerald-800">{uploadedFile.name}</p>
-                <p className="text-xs text-emerald-600">
-                  上传于 {uploadedFile.uploaded_at?.slice(0, 10) ?? '—'}
-                </p>
+            terminal ? (
+              <div style={{
+                marginBottom: 20, padding: 12,
+                background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.3)',
+                borderRadius: 'var(--t-radius)',
+                display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+                <FileText size={16} style={{ color: 'var(--t-success)', flexShrink: 0 }} />
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--t-success)' }}>{uploadedFile.name}</p>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginTop: 2 }}>
+                    上传于 {uploadedFile.uploaded_at?.slice(0, 10) ?? '—'}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="mb-5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
+                <FileText size={16} className="text-emerald-600 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-emerald-800">{uploadedFile.name}</p>
+                  <p className="text-xs text-emerald-600">
+                    上传于 {uploadedFile.uploaded_at?.slice(0, 10) ?? '—'}
+                  </p>
+                </div>
+              </div>
+            )
           )}
 
           {/* 标签 */}
@@ -522,11 +580,19 @@ export default function UploadResume({ terminal = false }) {
       {/* ── Step 3：发布成功 ── */}
       {step === 3 && (
         <div className="text-center py-16">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={32} className="text-emerald-500" />
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={terminal
+              ? { background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)' }
+              : { background: '#f0fdf4' }}
+          >
+            <CheckCircle size={32} style={terminal ? { color: 'var(--t-success)' } : { color: '#22c55e' }} />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">档案已发布！</h2>
-          <p className="text-slate-500">正在跳转到你的候选人档案页...</p>
+          <h2
+            className="text-2xl font-bold mb-2"
+            style={terminal ? { color: 'var(--t-text)' } : { color: '#1e293b' }}
+          >档案已发布！</h2>
+          <p style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#64748b' }}>正在跳转到你的候选人档案页...</p>
         </div>
       )}
     </div>

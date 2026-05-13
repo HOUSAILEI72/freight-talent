@@ -27,7 +27,7 @@ from typing import Optional
 BUSINESS_AREAS: dict[str, dict[str, str]] = {
     "GLOBAL":        {"code": "GLOBAL",        "name": "Global"},
     "REMOTE":        {"code": "REMOTE",        "name": "Remote"},
-    "GREAT_CHINA":   {"code": "GREAT_CHINA",   "name": "Great China"},
+    "GREAT_CHINA":   {"code": "GREAT_CHINA",   "name": "China"},
     "EAST_CHINA":    {"code": "EAST_CHINA",    "name": "East China"},
     "NORTH_CHINA":   {"code": "NORTH_CHINA",   "name": "North China"},
     "SOUTH_CHINA":   {"code": "SOUTH_CHINA",   "name": "South China"},
@@ -35,6 +35,7 @@ BUSINESS_AREAS: dict[str, dict[str, str]] = {
     "CENTRAL_CHINA": {"code": "CENTRAL_CHINA", "name": "Central China"},
     "HONG_KONG":     {"code": "HONG_KONG",     "name": "Hong Kong"},
     "TAIWAN":        {"code": "TAIWAN",        "name": "Taiwan"},
+    "MACAU":         {"code": "MACAU",         "name": "Macau"},
     "OVERSEAS":      {"code": "OVERSEAS",      "name": "Overseas"},
 }
 
@@ -169,8 +170,8 @@ def is_mainland_china_code(location_code: Optional[str]) -> bool:
 
 def is_allowed_special_location_code(code: Optional[str]) -> bool:
     """True iff `code` is one of the special non-numeric location codes the
-    system accepts (Global / Remote / mainland aggregate / HK / TW)."""
-    return code in {"GLOBAL", "REMOTE", "CN_MAINLAND_ALL", "HK", "TW"}
+    system accepts (Global / Remote / mainland aggregate / HK / TW / MO)."""
+    return code in {"GLOBAL", "REMOTE", "CN_MAINLAND_ALL", "HK", "TW", "MO"}
 
 
 def is_known_overseas_country_code(code: Optional[str]) -> bool:
@@ -202,6 +203,7 @@ def get_business_area_by_location_code(location_code: Optional[str]) -> Optional
     if location_code == "CN_MAINLAND_ALL": return BUSINESS_AREAS["GREAT_CHINA"]
     if location_code == "HK":              return BUSINESS_AREAS["HONG_KONG"]
     if location_code == "TW":              return BUSINESS_AREAS["TAIWAN"]
+    if location_code == "MO":              return BUSINESS_AREAS["MACAU"]
 
     if is_known_overseas_country_code(location_code):
         return BUSINESS_AREAS["OVERSEAS"]
@@ -272,7 +274,7 @@ def location_filter_clause(column, business_area_column, location_code: str):
         city, including its districts and the city-level row itself).
       - Mainland area-level code (e.g. ``310101``): exact match.
       - ``CN_MAINLAND_ALL``: match every row whose ``business_area_code`` is
-        one of the mainland buckets (Great China / East / North / South /
+        one of the mainland buckets (China / East / North / South /
         West / Central). This is the only branch that goes through
         ``business_area_column``.
       - ``GLOBAL`` / ``REMOTE`` / ``HK`` / ``TW`` / overseas country code:

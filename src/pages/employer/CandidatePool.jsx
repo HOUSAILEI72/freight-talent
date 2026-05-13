@@ -244,10 +244,12 @@ function CandidateDetailPanel({
                     style={{ color: 'var(--t-text-muted)', background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}
                   >
                     {candidate.is_management_role ? 'MGT' : 'IC'}
+                    {candidate.is_management_role && candidate.management_headcount != null ? ` ×${candidate.management_headcount}` : ''}
                   </span>
                 ) : (
                   <span className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-700">
                     {candidate.is_management_role ? '管理岗位' : '非管理岗位'}
+                    {candidate.is_management_role && candidate.management_headcount != null ? `（${candidate.management_headcount} 人）` : ''}
                   </span>
                 )
               )}
@@ -420,9 +422,11 @@ function CandidateDetailPanel({
                 || (w.start_month || w.end_month
                   ? `${w.start_month || '?'} – ${w.end_month || '至今'}`
                   : '—')
-              const salaryRange = (w.salary_min != null || w.salary_max != null)
-                ? `${w.salary_min ?? '—'} ~ ${w.salary_max ?? '—'}`
-                : null
+              const salaryRange = w.salary != null
+                ? String(w.salary)
+                : (w.salary_min != null || w.salary_max != null)
+                  ? `${w.salary_min ?? '—'} ~ ${w.salary_max ?? '—'}`
+                  : null
               const yebText = w.has_year_end_bonus
                 ? (w.year_end_bonus_months != null ? `${w.year_end_bonus_months} 月` : '有')
                 : (w.has_year_end_bonus === false ? '无' : null)

@@ -9,7 +9,7 @@ from app.models.junction_tags import JobTag
 jobs_bp = Blueprint("jobs", __name__, url_prefix="/api/jobs")
 
 VALID_STATUSES = {"draft", "published", "paused", "closed"}
-VALID_DEGREE_REQUIREMENTS = {"不限", "高中/中专", "大专", "本科", "硕士", "博士"}
+VALID_DEGREE_REQUIREMENTS = {"不限", "初中及以下", "高中", "大专", "本科", "硕士", "博士"}
 
 
 def _err(msg, code=400):
@@ -83,6 +83,13 @@ def create_job():
     if user.role not in ("employer", "admin"):
         return _err("只有企业账号可以发布岗位", 403)
 
+    # Phase 8: employer must have active subscription to post jobs.
+    if user.role == "employer":
+        from app.utils.subscription_access import subscription_gate
+        _, sub_err = subscription_gate(user.id)
+        if sub_err:
+            return sub_err
+
     data = request.get_json(silent=True) or {}
 
     # 必填校验
@@ -123,20 +130,23 @@ def create_job():
     if location_code_raw and not experience_required:
         return _err("经验要求不能为空")
     if experience_required:
-        exp_text = experience_required.replace(" ", "")
-        if exp_text.endswith("年以上"):
-            exp_num_text = exp_text[:-3]
-        elif exp_text.endswith("年"):
-            exp_num_text = exp_text[:-1]
-        else:
-            return _err("经验要求必须是 0-30 年之间")
-        try:
-            exp_years = int(exp_num_text)
-        except (ValueError, TypeError):
-            return _err("经验要求必须是 0-30 年之间")
-        if exp_years < 0 or exp_years > 30:
-            return _err("经验要求必须是 0-30 年之间")
-        experience_required = f"{exp_years}年"
+        VALID_EXP = frozenset({"不限", "1年以内", "1-3年", "3-5年", "5-10年", "10年以上"})
+        if experience_required not in VALID_EXP:
+            # 兼容旧值：尝试解析 X年 / X年以上 格式
+            exp_text = experience_required.replace(" ", "")
+            if exp_text.endswith("年以上"):
+                exp_num_text = exp_text[:-3]
+            elif exp_text.endswith("年"):
+                exp_num_text = exp_text[:-1]
+            else:
+                return _err("无效的经验要求，请选择：不限、1年以内、1-3年、3-5年、5-10年")
+            try:
+                exp_years = int(exp_num_text)
+            except (ValueError, TypeError):
+                return _err("无效的经验要求，请选择：不限、1年以内、1-3年、3-5年、5-10年")
+            if exp_years < 0 or exp_years > 30:
+                return _err("经验要求年数必须在 0-30 之间")
+            experience_required = f"{exp_years}年"
 
     degree_required = (data.get("degree_required") or "").strip() or None
     if location_code_raw and not degree_required:
@@ -251,6 +261,19 @@ def create_job():
         if average_bonus_percent < 0 or average_bonus_percent > 100:
             return _err("average_bonus_percent 必须在 0-100 之间")
 
+    commission_bonus_period = (data.get("commission_bonus_period") or "").strip() or None
+    if commission_bonus_period and commission_bonus_period not in ("not_applicable", "monthly", "quarterly", "semi_annual"):
+        return _err("commission_bonus_period 必须是 not_applicable / monthly / quarterly / semi_annual")
+
+    commission_bonus_amount = data.get("commission_bonus_amount")
+    if commission_bonus_amount is not None:
+        try:
+            commission_bonus_amount = float(commission_bonus_amount)
+        except (ValueError, TypeError):
+            return _err("commission_bonus_amount 格式不正确")
+        if commission_bonus_amount <= 0 or commission_bonus_amount > 99999999:
+            return _err("commission_bonus_amount 必须在 0-99999999 之间")
+
     has_year_end_bonus = data.get("has_year_end_bonus")
     if has_year_end_bonus is not None and not isinstance(has_year_end_bonus, bool):
         return _err("has_year_end_bonus 必须为布尔值")
@@ -270,7 +293,7 @@ def create_job():
         year_end_bonus_months = None
 
     # ── Compatibility: derive legacy province / city_name / district from
-    # location_path "Great China/广东省/深圳市/南山区" so existing list
+    # location_path "China/广东省/深圳市/南山区" so existing list
     # filters keep working until Phase D removes them. ────────────────────
     legacy_province = (data.get("province") or "").strip() or None
     legacy_city_nm  = (data.get("city_name") or "").strip() or None
@@ -278,9 +301,9 @@ def create_job():
 
     if location_dict and location_dict["location_type"] == "mainland_china":
         path = location_dict["location_path"] or ""
-        # path is like "Great China/X" or "Great China/X/Y" or "Great China/X/Y/Z"
+        # path is like "China/X" or "China/X/Y" or "China/X/Y/Z"
         parts = [p for p in path.split("/") if p]
-        if parts and parts[0] == "Great China":
+        if parts and parts[0] == "China":
             sub = parts[1:]
             if not legacy_province and len(sub) >= 1: legacy_province = sub[0]
             if not legacy_city_nm  and len(sub) >= 2: legacy_city_nm  = sub[1]
@@ -292,6 +315,13 @@ def create_job():
     job_type_val = (data.get("job_type") or "").strip() or None
     if not job_type_val and is_management_role is not None:
         job_type_val = "管理" if is_management_role else "非管理"
+
+    VALID_EMPLOYMENT_TYPES = frozenset({"全职", "兼职", "实习生"})
+    employment_type = (data.get("employment_type") or "").strip() or None
+    if location_code_raw and not employment_type:
+        return _err("请选择应聘类型")
+    if employment_type and employment_type not in VALID_EMPLOYMENT_TYPES:
+        return _err("应聘类型只能是：全职、兼职、实习生")
 
     job = Job(
         company_id=user.id,
@@ -332,8 +362,11 @@ def create_job():
         soft_skill_requirements=soft_skill_arr,
         salary_months=salary_months,
         average_bonus_percent=average_bonus_percent,
+        commission_bonus_period=commission_bonus_period,
+        commission_bonus_amount=commission_bonus_amount,
         has_year_end_bonus=has_year_end_bonus,
         year_end_bonus_months=year_end_bonus_months,
+        employment_type=employment_type,
     )
     db.session.add(job)
     db.session.flush()  # 获取 job.id
@@ -371,6 +404,7 @@ def public_jobs():
     location_code_filter = request.args.get("location_code", "").strip()
     q = request.args.get("q", "").strip()
     tag_ids_raw = request.args.get("tag_ids", "").strip()
+    employment_type_filter = request.args.get("employment_type", "").strip()
 
     if city:
         query = query.filter(Job.city == city)
@@ -382,6 +416,8 @@ def public_jobs():
         query = query.filter(Job.function_code == function_code)
     if business_area_code:
         query = query.filter(Job.business_area_code == business_area_code)
+    if employment_type_filter:
+        query = query.filter(Job.employment_type == employment_type_filter)
     if location_code_filter:
         from app.utils.business_area import location_filter_clause
         clause = location_filter_clause(
@@ -427,7 +463,18 @@ def public_jobs():
             )
             query = query.filter(sub.exists())
 
-    jobs_list = query.order_by(Job.created_at.desc()).all()
+    ordered = query.order_by(Job.created_at.desc())
+
+    try:
+        page      = max(1, int(request.args.get("page", 1)))
+        page_size = max(1, min(int(request.args.get("page_size", 20)), 500))
+    except (ValueError, TypeError):
+        page, page_size = 1, 20
+
+    total = ordered.count()
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = min(page, total_pages)
+    jobs_list = ordered.offset((page - 1) * page_size).limit(page_size).all()
 
     # 注入按分类聚合的标签（含 pending）
     tag_map = _load_job_tags_by_category([j.id for j in jobs_list])
@@ -441,7 +488,10 @@ def public_jobs():
     return jsonify({
         "success": True,
         "jobs": out,
-        "total": len(jobs_list),
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
     })
 
 
@@ -548,6 +598,13 @@ def match_job(job_id):
     if user.role not in ("employer", "admin"):
         return _err("仅企业或管理员可查看匹配结果", 403)
 
+    # Phase 8: employer must have active subscription to run match.
+    if user.role == "employer":
+        from app.utils.subscription_access import subscription_gate
+        _, sub_err = subscription_gate(user.id)
+        if sub_err:
+            return sub_err
+
     job = db.session.get(Job, job_id)
     if not job:
         return _err("岗位不存在", 404)
@@ -559,6 +616,15 @@ def match_job(job_id):
     from app.routes.candidates import _public_dict
 
     candidates_list = Candidate.query.filter_by(availability_status="open").all()
+
+    # Phase 8: pre-compute which candidates this employer can fully see.
+    if user.role == "employer":
+        from app.utils.subscription_access import employer_unlocked_candidate_ids
+        cand_ids_all = [c.id for c in candidates_list]
+        unlocked_ids = employer_unlocked_candidate_ids(user.id, cand_ids_all)
+    else:
+        # admin sees all
+        unlocked_ids = {c.id for c in candidates_list}
 
     # 一次性取出该岗位已有的所有 match_results，避免循环内单条查询（N+1）
     existing_mrs = {
@@ -605,7 +671,11 @@ def match_job(job_id):
                 "created_at":     (mr.created_at.isoformat() if mr.created_at else None),
                 "updated_at":     now.isoformat(),
             },
-            "candidate": _public_dict(c),
+            "candidate": _public_dict(
+                c,
+                include_private=(c.id in unlocked_ids),
+                include_contact=(c.id in unlocked_ids),
+            ),
         })
 
     if new_mrs:

@@ -51,7 +51,11 @@ def blocklist_add(jti: str, expires_in_seconds: int = 60 * 60 * 24 * 8) -> None:
             r.setex(f'jwt_bl:{jti}', expires_in_seconds, '1')
             return
         except Exception:
-            pass
+            import logging
+            logging.getLogger(__name__).warning(
+                "Redis blocklist write failed — falling back to in-memory set. "
+                "Revoked tokens will NOT be shared across workers."
+            )
     _fallback_blocklist.add(jti)
 
 

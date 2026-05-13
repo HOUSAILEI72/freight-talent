@@ -22,7 +22,10 @@ def list_candidates_with_filters(
     q: str = "",
     tag_ids_raw: str = "",
     tag_groups_raw: str = "",
-) -> list:
+    gender: str = "",
+    page: int = 1,
+    page_size: int = 20,
+) -> dict:
     query = Candidate.query
 
     if avail_param == "all":
@@ -62,6 +65,8 @@ def list_candidates_with_filters(
                 Candidate.location_path.ilike(like),
             )
         )
+    if gender:
+        query = query.filter(Candidate.gender == gender)
     if tag_ids_raw:
         ids = [int(x) for x in tag_ids_raw.split(",") if x.strip().isdigit()]
         if ids:
@@ -88,10 +93,25 @@ def list_candidates_with_filters(
 
     # MySQL 8 不支持 "ORDER BY ... DESC NULLS LAST" 语法。
     # 用 CASE WHEN 把 NULL 排到末尾，等价于 PostgreSQL 的 nullslast()。
-    return query.order_by(
+    ordered = query.order_by(
         db.case((Candidate.profile_confirmed_at.is_(None), 0), else_=1).desc(),
         Candidate.profile_confirmed_at.desc(),
-    ).all()
+    )
+
+    total = ordered.count()
+    page = max(1, page)
+    page_size = max(1, min(page_size, 100))
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = min(page, total_pages)
+    items = ordered.offset((page - 1) * page_size).limit(page_size).all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 def count_candidates_by_business_area() -> list:

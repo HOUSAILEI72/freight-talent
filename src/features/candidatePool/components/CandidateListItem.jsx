@@ -1,0 +1,146 @@
+import { MapPin } from 'lucide-react'
+import { getSubtitleText } from '../utils/candidateFormatters'
+
+export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInvite, terminal, onSelect, onArchive, onInvite }) {
+  const rowClass = terminal
+    ? `p-4 cursor-pointer transition-all border-l-4 ${isSelected ? '' : 'border-l-transparent'}`
+    : `p-4 cursor-pointer border-b border-slate-100 transition-all ${
+        isSelected
+          ? 'border-l-4 border-l-blue-500 bg-blue-50'
+          : 'border-l-4 border-l-transparent hover:bg-slate-50'
+      }`
+  const rowStyle = terminal
+    ? {
+        borderBottom: '1px solid var(--t-border-subtle)',
+        background: isSelected ? 'var(--t-bg-active)' : 'transparent',
+        borderLeftColor: isSelected ? 'var(--t-primary)' : 'transparent',
+      }
+    : undefined
+
+  return (
+    <div
+      onClick={onSelect}
+      className={rowClass}
+      style={rowStyle}
+      onMouseEnter={(e) => { if (terminal && !isSelected) e.currentTarget.style.background = 'var(--t-bg-hover)' }}
+      onMouseLeave={(e) => { if (terminal && !isSelected) e.currentTarget.style.background = 'transparent' }}
+    >
+      <div className="flex items-center gap-3">
+        {/* 头像 */}
+        <div
+          className={
+            terminal
+              ? 'w-11 h-11 rounded-lg flex items-center justify-center text-white font-bold text-base flex-shrink-0'
+              : 'w-11 h-11 rounded-lg flex items-center justify-center text-white font-bold text-base flex-shrink-0 bg-blue-500'
+          }
+          style={terminal ? { background: 'var(--t-primary)' } : undefined}
+        >
+          {c.full_name?.[0] ?? '?'}
+        </div>
+
+        {/* 信息 */}
+        <div className="flex-1 min-w-0">
+          <p className={terminal ? 'font-medium text-sm truncate' : 'font-medium text-sm text-slate-800 truncate'} style={terminal ? { color: 'var(--t-text)' } : undefined}>
+            {c.full_name}
+          </p>
+          <p className={terminal ? 'text-xs truncate' : 'text-xs text-slate-500 truncate'} style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}>
+            {getSubtitleText(c)}
+          </p>
+          <div className={terminal ? 'flex items-center gap-2 text-xs mt-0.5 flex-wrap' : 'flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap'} style={terminal ? { color: 'var(--t-text-muted)' } : undefined}>
+            {(c.current_city || c.tags_by_category?.['意向城市']?.[0]) && (
+              <span className="flex items-center gap-0.5">
+                <MapPin size={9} />
+                {c.current_city || c.tags_by_category['意向城市'][0]}
+              </span>
+            )}
+            {c.age != null && <span>{c.age}岁</span>}
+            {c.experience_years != null && c.current_title && <span>{c.experience_years}年</span>}
+            {c.expected_salary_label && (
+              <span className={terminal ? 'font-semibold' : 'font-semibold text-blue-600'} style={terminal ? { color: 'var(--t-chart-blue)' } : undefined}>
+                {c.expected_salary_label}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 右侧按钮 */}
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onArchive(c.id) }}
+            className={terminal
+              ? 'text-xs px-2 py-0.5 rounded w-18 text-center'
+              : `text-xs px-2 py-0.5 rounded border transition-colors w-18 text-center ${
+                  isArchived
+                    ? 'border-emerald-300 text-emerald-600 bg-emerald-50'
+                    : 'border-slate-200 text-slate-500 bg-white hover:border-slate-300 hover:text-slate-700'
+                }`
+            }
+            style={terminal ? {
+              border: isArchived ? '1px solid var(--t-success)' : '1px solid var(--t-text-muted)',
+              color: isArchived ? 'var(--t-success)' : 'var(--t-text-secondary)',
+              background: isArchived ? 'var(--t-success-muted)' : 'transparent',
+              borderRadius: 'var(--t-radius-sm)',
+              outline: 'none',
+            } : undefined}
+            onMouseEnter={(e) => {
+              if (!terminal || isArchived) return
+              e.currentTarget.style.borderColor = 'var(--t-text)'
+              e.currentTarget.style.color = 'var(--t-text)'
+            }}
+            onMouseLeave={(e) => {
+              if (!terminal || isArchived) return
+              e.currentTarget.style.borderColor = 'var(--t-text-muted)'
+              e.currentTarget.style.color = 'var(--t-text-secondary)'
+            }}
+          >
+            {isArchived ? '已归档' : '简历归档'}
+          </button>
+          <button
+            type="button"
+            disabled={!canInvite && !isInvited}
+            title={
+              isInvited ? undefined
+              : !canInvite && typeof canInvite === 'boolean' ? '需要订阅才能发起邀约'
+              : undefined
+            }
+            onClick={(e) => { e.stopPropagation(); if (canInvite) onInvite(c) }}
+            className={terminal
+              ? 'text-xs px-2 py-0.5 rounded w-18 text-center'
+              : `text-xs px-2 py-0.5 rounded border transition-colors w-18 text-center ${
+                  isInvited
+                    ? 'border-blue-300 text-blue-600 bg-blue-50 cursor-default'
+                    : canInvite
+                      ? 'border-slate-200 text-slate-500 bg-white hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
+                      : 'border-slate-100 text-slate-300 bg-white cursor-not-allowed'
+                }`
+            }
+            style={terminal ? {
+              border: isInvited ? '1px solid var(--t-primary)' : '1px solid var(--t-text-muted)',
+              color: isInvited ? 'var(--t-primary)' : canInvite ? 'var(--t-text-secondary)' : 'var(--t-text-muted)',
+              background: isInvited ? 'var(--t-primary-muted)' : 'transparent',
+              opacity: (!canInvite && !isInvited) ? 0.4 : 1,
+              cursor: isInvited ? 'default' : !canInvite ? 'not-allowed' : 'pointer',
+              borderRadius: 'var(--t-radius-sm)',
+              outline: 'none',
+            } : undefined}
+            onMouseEnter={(e) => {
+              if (!terminal || !canInvite || isInvited) return
+              e.currentTarget.style.borderColor = 'var(--t-primary)'
+              e.currentTarget.style.color = 'var(--t-primary)'
+              e.currentTarget.style.background = 'var(--t-primary-muted)'
+            }}
+            onMouseLeave={(e) => {
+              if (!terminal || !canInvite || isInvited) return
+              e.currentTarget.style.borderColor = 'var(--t-text-muted)'
+              e.currentTarget.style.color = 'var(--t-text-secondary)'
+              e.currentTarget.style.background = 'transparent'
+            }}
+          >
+            {isInvited ? '已邀约' : '面议邀约'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

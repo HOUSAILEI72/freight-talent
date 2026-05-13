@@ -5,7 +5,7 @@ X 轴是时间，Function/Area 是筛选条件。
 统计候选人数量随时间变化。
 """
 from collections import defaultdict
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -25,15 +25,41 @@ employer_dashboard_bp = Blueprint(
 )
 
 ALL_VALUE = "ALL"
+DEFAULT_REGION_VALUE = "GREAT_CHINA"
+
+GREAT_CHINA_AREA_CODES = (
+    "GREAT_CHINA",
+    "EAST_CHINA",
+    "NORTH_CHINA",
+    "SOUTH_CHINA",
+    "WEST_CHINA",
+    "CENTRAL_CHINA",
+    "HONG_KONG",
+    "TAIWAN",
+    "MACAU",
+)
+
+
+def _is_default_region(region_value):
+    return region_value in (ALL_VALUE, DEFAULT_REGION_VALUE)
+
+
+def _is_paid_filter(function_value, region_value):
+    # China 是默认免费区域，不触发订阅 gate
+    return function_value != ALL_VALUE or not _is_default_region(region_value)
+
 
 # Area 显示名到 business_area_code 的映射
 AREA_NAME_TO_CODE = {
+    'China': 'GREAT_CHINA',
     'East China': 'EAST_CHINA',
     'South China': 'SOUTH_CHINA',
     'North China': 'NORTH_CHINA',
     'Central China': 'CENTRAL_CHINA',
     'West China': 'WEST_CHINA',
-    'Great China': 'GREAT_CHINA',
+    'Hong Kong': 'HONG_KONG',
+    'Taiwan': 'TAIWAN',
+    'Macau': 'MACAU',
     'Southeast Asia': 'SOUTHEAST_ASIA',
     'Northeast Asia': 'NORTHEAST_ASIA',
     'Europe': 'EUROPE',
@@ -171,7 +197,12 @@ def _load_candidates_with_time(function_value, region_value):
         sql_parts.append(" AND (function_code = :func OR business_type = :func)")
         params['func'] = function_value
 
-    if region_value != ALL_VALUE:
+    if region_value == DEFAULT_REGION_VALUE:
+        placeholders = ', '.join(f':area_{i}' for i in range(len(GREAT_CHINA_AREA_CODES)))
+        sql_parts.append(f" AND business_area_code IN ({placeholders})")
+        for i, code in enumerate(GREAT_CHINA_AREA_CODES):
+            params[f'area_{i}'] = code
+    elif region_value != ALL_VALUE:
         sql_parts.append(" AND business_area_code = :area")
         params['area'] = region_value
 
@@ -224,7 +255,9 @@ def _apply_job_filters(query, function_value, region_value):
             Job.business_type == function_value,
         ))
 
-    if region_value != ALL_VALUE:
+    if region_value == DEFAULT_REGION_VALUE:
+        query = query.filter(Job.business_area_code.in_(GREAT_CHINA_AREA_CODES))
+    elif region_value != ALL_VALUE:
         query = query.filter(Job.business_area_code == region_value)
 
     return query
@@ -283,6 +316,180 @@ def _count_interested_candidates(employer_id, function_value, region_value):
         return 0
 
 
+# ── Trend summary helpers ──────────────────────────────────────────────────
+
+# Asia/Shanghai is always UTC+8 (no DST)
+_SHANGHAI_TZ = timezone(timedelta(hours=8))
+
+
+def _checkpoint_pair(now=None):
+    """Return (current_checkpoint, previous_checkpoint) as date objects in Asia/Shanghai."""
+    if now is None:
+        now = datetime.now(_SHANGHAI_TZ)
+    elif now.tzinfo is None:
+        now = now.replace(tzinfo=_SHANGHAI_TZ)
+
+    today = now.date()
+    day = today.day
+    year = today.year
+    month = today.month
+
+    if day >= 20:
+        current = date(year, month, 20)
+        previous = date(year, month, 10)
+    elif day >= 10:
+        current = date(year, month, 10)
+        previous = date(year - 1, 12, 20) if month == 1 else date(year, month - 1, 20)
+    else:
+        if month == 1:
+            current = date(year - 1, 12, 20)
+            previous = date(year - 1, 12, 10)
+        else:
+            current = date(year, month - 1, 20)
+            previous = date(year, month - 1, 10)
+
+    return current, previous
+
+
+def _checkpoint_cutoff_utc(date_obj):
+    """23:59:59 Asia/Shanghai on date_obj, converted to UTC naive for MySQL comparison."""
+    shanghai_end = datetime(
+        date_obj.year, date_obj.month, date_obj.day, 23, 59, 59,
+        tzinfo=_SHANGHAI_TZ,
+    )
+    utc_dt = shanghai_end.astimezone(timezone.utc)
+    return utc_dt.replace(tzinfo=None)  # MySQL stores UTC naive
+
+
+def _count_platform_candidates_as_of(function_value, region_value, cutoff_naive):
+    """全平台候选人数（as-of 统计点），不限 company_id。"""
+    sql_parts = [
+        """
+        SELECT COUNT(*) FROM candidates
+        WHERE availability_status IN ('open', 'passive')
+          AND COALESCE(profile_confirmed_at, created_at) <= :cutoff
+        """
+    ]
+    params = {'cutoff': cutoff_naive}
+
+    if function_value != ALL_VALUE:
+        sql_parts.append(" AND (function_code = :func OR business_type = :func)")
+        params['func'] = function_value
+
+    if region_value == DEFAULT_REGION_VALUE:
+        placeholders = ', '.join(f':area_{i}' for i in range(len(GREAT_CHINA_AREA_CODES)))
+        sql_parts.append(f" AND business_area_code IN ({placeholders})")
+        for i, code in enumerate(GREAT_CHINA_AREA_CODES):
+            params[f'area_{i}'] = code
+    elif region_value != ALL_VALUE:
+        sql_parts.append(" AND business_area_code = :area")
+        params['area'] = region_value
+
+    try:
+        result = db.session.execute(db.text(''.join(sql_parts)), params).scalar()
+        return int(result or 0)
+    except Exception:
+        return 0
+
+
+def _count_platform_jobs_as_of(function_value, region_value, cutoff_naive):
+    """全平台已发布岗位数（as-of 统计点），不限 company_id。"""
+    sql_parts = [
+        """
+        SELECT COUNT(*) FROM jobs
+        WHERE status = 'published'
+          AND created_at <= :cutoff
+        """
+    ]
+    params = {'cutoff': cutoff_naive}
+
+    if function_value != ALL_VALUE:
+        sql_parts.append(" AND (function_code = :func OR business_type = :func)")
+        params['func'] = function_value
+
+    if region_value == DEFAULT_REGION_VALUE:
+        placeholders = ', '.join(f':area_{i}' for i in range(len(GREAT_CHINA_AREA_CODES)))
+        sql_parts.append(f" AND business_area_code IN ({placeholders})")
+        for i, code in enumerate(GREAT_CHINA_AREA_CODES):
+            params[f'area_{i}'] = code
+    elif region_value != ALL_VALUE:
+        sql_parts.append(" AND business_area_code = :area")
+        params['area'] = region_value
+
+    try:
+        result = db.session.execute(db.text(''.join(sql_parts)), params).scalar()
+        return int(result or 0)
+    except Exception:
+        return 0
+
+
+def _trend_payload(current, previous):
+    delta = current - previous
+    if previous > 0:
+        percent = round(delta / previous * 100, 2)
+    else:
+        percent = 0.0
+    direction = 'up' if delta > 0 else ('down' if delta < 0 else 'neutral')
+    return {
+        'current': current,
+        'previous': previous,
+        'delta': delta,
+        'percent': percent,
+        'direction': direction,
+    }
+
+
+@employer_dashboard_bp.get("/dashboard-trend-summary")
+@jwt_required()
+def dashboard_trend_summary():
+    user, err = _current_employer()
+    if err:
+        return err
+
+    function_value = _clean(request.args.get("function")) or ALL_VALUE
+    region_value = _clean(request.args.get("region")) or ALL_VALUE
+
+    if function_value.upper() == ALL_VALUE:
+        function_value = ALL_VALUE
+    region_value = _normalize_area_value(region_value)
+
+    if _is_paid_filter(function_value, region_value):
+        from app.utils.subscription_access import subscription_gate
+        _, sub_err = subscription_gate(user.id)
+        if sub_err:
+            return sub_err
+
+    current_cp, previous_cp = _checkpoint_pair()
+    current_cutoff = _checkpoint_cutoff_utc(current_cp)
+    previous_cutoff = _checkpoint_cutoff_utc(previous_cp)
+
+    cand_current = _count_platform_candidates_as_of(function_value, region_value, current_cutoff)
+    cand_previous = _count_platform_candidates_as_of(function_value, region_value, previous_cutoff)
+
+    jobs_current = _count_platform_jobs_as_of(function_value, region_value, current_cutoff)
+    jobs_previous = _count_platform_jobs_as_of(function_value, region_value, previous_cutoff)
+
+    return jsonify({
+        "success": True,
+        "function": function_value,
+        "region": region_value,
+        "current_checkpoint": current_cp.isoformat(),
+        "previous_checkpoint": previous_cp.isoformat(),
+        "timezone": "Asia/Shanghai",
+        "cards": {
+            "candidates": {
+                "label": "PLATFORM CANDIDATES",
+                **_trend_payload(cand_current, cand_previous),
+            },
+            "jobs": {
+                "label": "PLATFORM JOBS",
+                **_trend_payload(jobs_current, jobs_previous),
+            },
+        },
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+
 @employer_dashboard_bp.get("/dashboard-filters")
 @jwt_required()
 def dashboard_filters():
@@ -331,6 +538,13 @@ def dashboard_chart():
         function_value = ALL_VALUE
     # 规范化 area 值
     region_value = _normalize_area_value(region_value)
+
+    # China 是默认免费区域；只有非默认筛选才触发订阅 gate
+    if _is_paid_filter(function_value, region_value):
+        from app.utils.subscription_access import subscription_gate
+        _, sub_err = subscription_gate(user.id)
+        if sub_err:
+            return sub_err
 
     # 规范化 granularity
     valid_granularities = ('day', 'week', 'month', 'quarter', 'year')

@@ -269,7 +269,7 @@ def received_applications():
         if c is not None:
             d["candidate"] = {
                 "id":              c.id,
-                "anonymous_name":  f"候选人 #{c.id}",
+                "anonymous_name":  (c.full_name or "")[0] + "**" if c.full_name else f"候选人 #{c.id}",
                 "current_title":   c.current_title,
                 "function_code":   getattr(c, "function_code", None),
                 "function_name":   getattr(c, "function_name", None),

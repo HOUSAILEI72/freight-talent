@@ -44,6 +44,8 @@ export const jobsApi = {
       const s = serializeTagGroups(filters.tagGroups)
       if (s) params.tag_groups = s
     }
+    if (filters.page)      params.page = filters.page
+    if (filters.page_size) params.page_size = filters.page_size
     return client.get('/jobs/public', { params })
   },
 

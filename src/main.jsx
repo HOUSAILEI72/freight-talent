@@ -5,11 +5,14 @@ import './styles/index.css'
 import './styles/terminal.css'
 import { router } from './router/index.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { ToastProvider } from './components/ui/Toast'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </ToastProvider>
   </StrictMode>,
 )

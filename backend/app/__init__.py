@@ -22,17 +22,20 @@ def create_app(config_class=None):
     limiter.init_app(app)
 
     # message_queue: Redis URL — 空字符串或 None 时单进程模式，多实例需要设置
-    _mq = app.config.get("SOCKETIO_MESSAGE_QUEUE") or None
-    socketio.init_app(
-        app,
-        cors_allowed_origins='*',
-        async_mode='eventlet',
-        message_queue=_mq,
-        logger=False,
-        engineio_logger=False,
-        ping_timeout=20,
-        ping_interval=10,
-    )
+    # MESSAGES FEATURE DISABLED: socketio 初始化已跳过，不占用 eventlet 连接
+    _enable_socketio = app.config.get("ENABLE_SOCKETIO", "false").lower() == "true"
+    if _enable_socketio:
+        _mq = app.config.get("SOCKETIO_MESSAGE_QUEUE") or None
+        socketio.init_app(
+            app,
+            cors_allowed_origins=app.config["CORS_ORIGINS"],
+            async_mode='eventlet',
+            message_queue=_mq,
+            logger=False,
+            engineio_logger=False,
+            ping_timeout=20,
+            ping_interval=10,
+        )
 
     # JWT blocklist callback — 拦截已撤销的 token（Redis 优先，降级到内存 set）
     @jwt.token_in_blocklist_loader
@@ -59,25 +62,30 @@ def create_app(config_class=None):
     from app.routes.invitations import invitations_bp
     from app.routes.applications import applications_bp
     from app.routes.admin import admin_bp
-    from app.routes.conversations import conversations_bp
+    # from app.routes.conversations import conversations_bp  # HIDDEN — messages feature disabled
     from app.routes.admin_import import admin_import_bp
     from app.routes.employer_dashboard import employer_dashboard_bp
+    from app.routes.subscriptions import subscriptions_bp
+    from app.routes.public_market import public_market_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(jobs_bp)
     app.register_blueprint(candidates_bp)
     app.register_blueprint(invitations_bp, url_prefix='/api/invitations')
     app.register_blueprint(applications_bp)
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
-    app.register_blueprint(conversations_bp, url_prefix='/api/conversations')
+    # app.register_blueprint(conversations_bp, url_prefix='/api/conversations')  # HIDDEN
     app.register_blueprint(admin_import_bp, url_prefix='/api/admin/import')
     app.register_blueprint(employer_dashboard_bp)
+    app.register_blueprint(subscriptions_bp)
+    app.register_blueprint(public_market_bp)
 
     # 安装请求日志中间件（每个请求的方法、路径、状态、耗时、user_id、IP）
     init_request_logging(app)
 
-    # Socket.IO 事件处理器
-    from app.routes.socket_events import register_socket_events
-    register_socket_events(socketio)
+    # Socket.IO 事件处理器 — HIDDEN: 消息功能已禁用，随 ENABLE_SOCKETIO 一起跳过
+    if _enable_socketio:
+        from app.routes.socket_events import register_socket_events
+        register_socket_events(socketio)
 
     # Ensure all models are imported so Flask-Migrate can detect them
     with app.app_context():
@@ -91,6 +99,7 @@ def create_app(config_class=None):
         from app.models import import_models  # noqa: F401
         from app.models import tag          # noqa: F401
         from app.models import junction_tags  # noqa: F401
+        from app.models import subscription   # noqa: F401
 
     @app.get("/api/health")
     def health():

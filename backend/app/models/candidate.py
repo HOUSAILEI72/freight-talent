@@ -22,6 +22,9 @@ class Candidate(db.Model):
 
     experience_years = db.Column(db.Integer, nullable=True)
     age              = db.Column(db.Integer, nullable=True)
+    gender = db.Column(
+        db.Enum("male", "female", name="candidate_gender"), nullable=True
+    )
     education = db.Column(db.String(100), nullable=True)   # "本科 · 国际贸易"
     english_level = db.Column(db.String(30), nullable=True)  # "CET-6" / "流利" / "一般"
 
@@ -47,6 +50,7 @@ class Candidate(db.Model):
         db.Enum("open", "passive", "closed", name="availability_status"),
         nullable=False,
         default="open",
+        index=True,
     )
 
     # 联系信息（候选人控制是否对企业可见）
@@ -68,6 +72,7 @@ class Candidate(db.Model):
     function_code                 = db.Column(db.String(50), nullable=True, index=True)
     function_name                 = db.Column(db.String(100), nullable=True)
     is_management_role            = db.Column(db.Boolean, nullable=True)
+    management_headcount          = db.Column(db.Integer, nullable=True)
 
     # 能力画像（独立于 legacy skill_tags / route_tags）
     knowledge_tags                = db.Column(db.JSON, nullable=True)
@@ -133,6 +138,7 @@ class Candidate(db.Model):
             "expected_salary_label": self.expected_salary_label,
             "english_level": self.english_level,
             "summary": self.summary,
+            "gender": self.gender,
             "business_type": self.business_type,
             "job_type": self.job_type,
             "route_tags": self.route_tags or [],
@@ -149,6 +155,7 @@ class Candidate(db.Model):
             "function_code":      self.function_code,
             "function_name":      self.function_name,
             "is_management_role": self.is_management_role,
+            "management_headcount": self.management_headcount,
             "knowledge_tags":     self.knowledge_tags or [],
             "hard_skill_tags":    self.hard_skill_tags or [],
             "soft_skill_tags":    self.soft_skill_tags or [],
@@ -194,7 +201,10 @@ class Candidate(db.Model):
         else:
             # 隐私模式：脱敏的占位
             data.update({
-                "full_name":            f"候选人 #{self.id}",
+                "full_name":            (
+                    (self.full_name[0] + ("先生" if self.gender == "male" else "女士" if self.gender == "female" else "先生"))
+                    if self.full_name else f"候选人 #{self.id}"
+                ),
                 "age":                  None,
                 "experience_years":     None,
                 "education":            None,

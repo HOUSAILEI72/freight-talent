@@ -165,6 +165,41 @@ def me():
     return jsonify({"success": True, "user": user.to_dict()})
 
 
+@auth_bp.patch("/me")
+@jwt_required()
+def update_me():
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+
+    data = request.get_json(silent=True) or {}
+
+    name = (data.get("name") or "").strip()
+    if name:
+        user.name = name
+
+    if user.role == "employer":
+        company_name = (data.get("company_name") or "").strip()
+        if company_name:
+            user.company_name = company_name
+
+    # 改密码（可选）
+    old_password = data.get("old_password") or ""
+    new_password = data.get("new_password") or ""
+    if old_password or new_password:
+        if not old_password:
+            return _err("请填写当前密码")
+        if len(new_password) < 6:
+            return _err("新密码至少 6 位")
+        if not user.check_password(old_password):
+            return _err("当前密码不正确", 401)
+        user.set_password(new_password)
+
+    db.session.commit()
+    return jsonify({"success": True, "user": user.to_dict()})
+
+
 @auth_bp.post("/logout")
 @jwt_required(optional=True)
 def logout():

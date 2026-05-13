@@ -7,10 +7,10 @@
  * IMPORTANT INVARIANTS (mirrored in backend/app/utils/business_area.py):
  *   1. `business_area_code` is computed by the back-end on save. Front-end
  *      values are display-only and MUST NOT be trusted server-side.
- *   2. Hong Kong, Taiwan, Macau are NOT part of Great China.
+ *   2. Hong Kong, Taiwan, Macau are part of China (GREAT_CHINA umbrella).
+ *      Each has its own business_area_code for granular filtering.
  *   3. Province-level codes 71 / 81 / 82 are NOT valid mainland location
- *      codes — the system uses the special codes `HK` / `TW` instead.
- *      (Macau is currently not supported.)
+ *      codes — the system uses the special codes `HK` / `TW` / `MO` instead.
  *   4. The mainland-China province-prefix → business-area mapping is the
  *      single rule for any 6-digit code; all 6-digit codes that share the
  *      same first two digits resolve to the same business area.
@@ -25,7 +25,7 @@ import { OVERSEAS_COUNTRY_CODES, findOverseasCountry } from './overseasCountries
 export const BUSINESS_AREAS = {
   GLOBAL:        { code: 'GLOBAL',        name: 'Global' },
   REMOTE:        { code: 'REMOTE',        name: 'Remote' },
-  GREAT_CHINA:   { code: 'GREAT_CHINA',   name: 'Great China' },
+  GREAT_CHINA:   { code: 'GREAT_CHINA',   name: 'China' },
   EAST_CHINA:    { code: 'EAST_CHINA',    name: 'East China' },
   NORTH_CHINA:   { code: 'NORTH_CHINA',   name: 'North China' },
   SOUTH_CHINA:   { code: 'SOUTH_CHINA',   name: 'South China' },
@@ -33,6 +33,7 @@ export const BUSINESS_AREAS = {
   CENTRAL_CHINA: { code: 'CENTRAL_CHINA', name: 'Central China' },
   HONG_KONG:     { code: 'HONG_KONG',     name: 'Hong Kong' },
   TAIWAN:        { code: 'TAIWAN',        name: 'Taiwan' },
+  MACAU:         { code: 'MACAU',         name: 'Macau' },
   OVERSEAS:      { code: 'OVERSEAS',      name: 'Overseas' },
 }
 
@@ -46,6 +47,7 @@ export const DEFAULT_AREA_FILTERS = [
   BUSINESS_AREAS.WEST_CHINA,
   BUSINESS_AREAS.HONG_KONG,
   BUSINESS_AREAS.TAIWAN,
+  BUSINESS_AREAS.MACAU,
   BUSINESS_AREAS.OVERSEAS,
 ]
 
@@ -66,8 +68,7 @@ export const DEFAULT_AREA_FILTERS = [
 //                           shipping industry's working partition).
 //
 // HK/TW/MO (71/81/82) are NOT in this map; they have dedicated business areas
-// and dedicated location codes (HK / TW). Macau is currently unsupported as a
-// location code and would resolve to null here.
+// and dedicated location codes (HK / TW / MO).
 const PROVINCE_TO_AREA = {
   // North China
   '11': BUSINESS_AREAS.NORTH_CHINA,
@@ -140,14 +141,15 @@ export function isMainlandChinaCode(locationCode) {
 }
 
 /** True iff `code` is one of the special non-numeric location codes the
- *  system accepts (Global / Remote / mainland aggregate / HK / TW). */
+ *  system accepts (Global / Remote / mainland aggregate / HK / TW / MO). */
 export function isAllowedSpecialLocationCode(code) {
   return (
     code === 'GLOBAL' ||
     code === 'REMOTE' ||
     code === 'CN_MAINLAND_ALL' ||
     code === 'HK' ||
-    code === 'TW'
+    code === 'TW' ||
+    code === 'MO'
   )
 }
 
@@ -168,6 +170,7 @@ export function getBusinessAreaByLocationCode(locationCode) {
   if (locationCode === 'CN_MAINLAND_ALL') return BUSINESS_AREAS.GREAT_CHINA
   if (locationCode === 'HK')              return BUSINESS_AREAS.HONG_KONG
   if (locationCode === 'TW')              return BUSINESS_AREAS.TAIWAN
+  if (locationCode === 'MO')              return BUSINESS_AREAS.MACAU
 
   if (isKnownOverseasCountryCode(locationCode)) return BUSINESS_AREAS.OVERSEAS
 
@@ -219,20 +222,27 @@ export function validateLocationObject(loc) {
   return null
 }
 
-// ── Static helper for HK/TW display ─────────────────────────────────────────
+// ── Static helper for HK/TW/MO display ──────────────────────────────────────
 
 export const HK_LOCATION = {
   location_code: 'HK',
   location_name: 'Hong Kong',
-  location_path: 'Hong Kong',
+  location_path: 'China/Hong Kong',
   location_type: 'hong_kong',
 }
 
 export const TW_LOCATION = {
   location_code: 'TW',
   location_name: 'Taiwan',
-  location_path: 'Taiwan',
+  location_path: 'China/Taiwan',
   location_type: 'taiwan',
+}
+
+export const MO_LOCATION = {
+  location_code: 'MO',
+  location_name: 'Macau',
+  location_path: 'China/Macau',
+  location_type: 'macau',
 }
 
 export const GLOBAL_LOCATION = {
@@ -252,7 +262,7 @@ export const REMOTE_LOCATION = {
 export const CN_MAINLAND_ALL_LOCATION = {
   location_code: 'CN_MAINLAND_ALL',
   location_name: '全国',
-  location_path: 'Great China/全国',
+  location_path: 'China/全国',
   location_type: 'mainland_china',
 }
 

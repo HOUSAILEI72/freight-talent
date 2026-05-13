@@ -4,6 +4,7 @@ import {
   User, Briefcase, MapPin, Tag,
 } from 'lucide-react'
 import { applicationsApi } from '../../api/applications'
+import { useToast } from '../../components/ui/Toast'
 
 const STATUS_OPTIONS = [
   { value: '', label: '全部' },
@@ -207,6 +208,7 @@ function ApplicationCard({ app, terminal, onUpdateStatus, updating }) {
 }
 
 export default function ReceivedApplications({ terminal = false }) {
+  const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [items, setItems] = useState([])
@@ -263,7 +265,7 @@ export default function ReceivedApplications({ terminal = false }) {
         message: err.message,
       })
       const msg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.detail || '操作失败，请重试'
-      alert(msg)
+      toast.show(msg, 'error')
     } finally {
       setUpdating(null)
     }

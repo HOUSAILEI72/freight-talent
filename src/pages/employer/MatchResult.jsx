@@ -194,9 +194,14 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
         setMatches(res.data.matches)
       })
       .catch(err => {
+        const status = err.response?.status
+        if (status === 402) {
+          navigate('/employer/pricing')
+          return
+        }
         console.error('Failed to load match results:', {
           jobId,
-          status: err.response?.status,
+          status,
           data: err.response?.data,
           code: err.code,
           message: err.message,
@@ -258,7 +263,7 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
         }
       >
         <p className={terminal ? 'mb-4' : 'text-slate-500 mb-4'} style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}>{error}</p>
-        <Button variant="secondary" onClick={() => navigate(-1)}>返回</Button>
+        <Button terminal={terminal} variant="secondary" onClick={() => navigate(-1)}>返回</Button>
       </div>
     )
   }
@@ -329,13 +334,13 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
                   >
                     {job?.title}
                   </h1>
-                  <StatusBadge status={job?.status} />
+                  <StatusBadge status={job?.status} terminal={terminal} />
                 </div>
                 <p
                   className={terminal ? 'text-sm mt-0.5' : 'text-sm text-slate-500 mt-0.5'}
                   style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}
                 >
-                  {job?.company_name ?? '—'} · {job?.city} · {salaryText}
+                  {job?.company_name ?? '—'} · {job?.city} · {salaryText}{job?.employment_type ? ` · ${job.employment_type}` : ''}
                 </p>
               </div>
             </div>
@@ -783,12 +788,13 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
                           <CheckCircle size={14} /> 已发出邀约
                         </span>
                       ) : (
-                        <Button size="sm" onClick={() => setModal(modalCandidate)}>
+                        <Button terminal={terminal} size="sm" onClick={() => setModal(modalCandidate)}>
                           <Send size={13} /> 发起邀约
                         </Button>
                       )}
                       {isInvited && typeof invited[c.id] === 'number' && (
                         <Button
+                          terminal={terminal}
                           size="sm"
                           variant="secondary"
                           onClick={() => navigate(`${messagesBasePath}/${invited[c.id]}`)}
@@ -797,6 +803,7 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
                         </Button>
                       )}
                       <Button
+                        terminal={terminal}
                         size="sm"
                         variant="secondary"
                         onClick={() => navigate(`/candidate/profile/${c.id}`)}

@@ -12,8 +12,7 @@
  * NOT selectable:
  *   - Township-level rows (`town !== 0`) — filtered out
  *   - Province codes 71 (台湾) / 81 (香港) / 82 (澳门) — system uses
- *     dedicated codes `HK` / `TW` instead and does not currently support
- *     Macau as a location
+ *     dedicated codes `HK` / `TW` / `MO` instead
  */
 import chinaRegionData from '@province-city-china/data'
 import { OVERSEAS_COUNTRIES } from './overseasCountries.js'
@@ -23,6 +22,7 @@ import {
   CN_MAINLAND_ALL_LOCATION,
   HK_LOCATION,
   TW_LOCATION,
+  MO_LOCATION,
 } from './businessArea.js'
 
 // ── English aliases for mainland nodes ──────────────────────────────────────
@@ -152,13 +152,13 @@ export const MAINLAND_TREE = buildMainlandTree()
 /** Build a standard mainland location object given a node + ancestor chain.
  *  The chain is e.g. `[provinceNode, cityNode]` for an area-level node,
  *  empty for a province-level node. The result's `location_path` is always
- *  rooted at "Great China". */
+ *  rooted at "China". */
 export function buildMainlandLocation(node, ancestorChain = []) {
   const segments = ancestorChain.map(a => a.name).concat([node.name])
   return {
     location_code: node.code,
     location_name: node.name,
-    location_path: ['Great China', ...segments].join('/'),
+    location_path: ['China', ...segments].join('/'),
     location_type: 'mainland_china',
   }
 }
@@ -176,9 +176,7 @@ export function buildOverseasCountryLocation(country) {
 
 export const TOP_LEVEL_GROUPS = [
   { kind: 'leaf',  key: 'GLOBAL',      label: 'Global',     label_zh: 'Global',     location: GLOBAL_LOCATION },
-  { kind: 'group', key: 'GREAT_CHINA', label: 'Great China', label_zh: 'Great China' },
-  { kind: 'leaf',  key: 'HK',          label: 'Hong Kong',  label_zh: '香港',        location: HK_LOCATION },
-  { kind: 'leaf',  key: 'TW',          label: 'Taiwan',     label_zh: '台湾',        location: TW_LOCATION },
+  { kind: 'group', key: 'GREAT_CHINA', label: 'China',      label_zh: 'China' },
   { kind: 'group', key: 'OVERSEAS',    label: 'Overseas',   label_zh: 'Overseas' },
   { kind: 'leaf',  key: 'REMOTE',      label: 'Remote',     label_zh: 'Remote',     location: REMOTE_LOCATION },
 ]
@@ -198,12 +196,13 @@ function makeSearchItem(location, displayLabel, displayPath, tokens) {
 
 const _SEARCH_ITEMS = []
 
-// 5 special locations
+// 5 special locations + HK/TW/MO
 _SEARCH_ITEMS.push(makeSearchItem(GLOBAL_LOCATION,          'Global',                 'Global',           ['Global', 'GLOBAL', '全球', '全部']))
 _SEARCH_ITEMS.push(makeSearchItem(REMOTE_LOCATION,          'Remote',                 'Remote',           ['Remote', 'REMOTE', '远程', 'WFH']))
-_SEARCH_ITEMS.push(makeSearchItem(CN_MAINLAND_ALL_LOCATION, '全国 (Mainland China)',   'Great China/全国', ['全国', 'Mainland China', 'Great China', 'CN_MAINLAND_ALL', '中国大陆']))
-_SEARCH_ITEMS.push(makeSearchItem(HK_LOCATION,              'Hong Kong',              'Hong Kong',        ['Hong Kong', 'HK', '香港']))
-_SEARCH_ITEMS.push(makeSearchItem(TW_LOCATION,              'Taiwan',                 'Taiwan',           ['Taiwan', 'TW', '台湾']))
+_SEARCH_ITEMS.push(makeSearchItem(CN_MAINLAND_ALL_LOCATION, '全国 (Mainland China)',   'China/全国',       ['全国', 'Mainland China', 'China', 'CN_MAINLAND_ALL', '中国大陆']))
+_SEARCH_ITEMS.push(makeSearchItem(HK_LOCATION,              'Hong Kong',              'China/Hong Kong',  ['Hong Kong', 'HK', '香港']))
+_SEARCH_ITEMS.push(makeSearchItem(TW_LOCATION,              'Taiwan',                 'China/Taiwan',     ['Taiwan', 'TW', '台湾']))
+_SEARCH_ITEMS.push(makeSearchItem(MO_LOCATION,              'Macau',                  'China/Macau',      ['Macau', 'MO', '澳门', 'Macao']))
 
 // Mainland nodes (province + city + area, recursive)
 function pushMainlandNode(node, ancestorChain) {

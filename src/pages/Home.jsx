@@ -1,6 +1,10 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Zap, Shield, Clock, Users, Briefcase, TrendingUp, ChevronRight } from 'lucide-react'
 import { Button } from '../components/ui/Button'
+import MarketTicker from '../components/home/MarketTicker'
+import TalentIndexCard from '../components/home/TalentIndexCard'
+import { publicMarketApi } from '../api/publicMarket'
 
 const ROLE_CATEGORIES = [
   { label: '货代销售', color: 'bg-blue-500' },
@@ -40,9 +44,27 @@ const FEATURES = [
 
 export default function Home() {
   const navigate = useNavigate()
+  const [marketData, setMarketData] = useState(null)
+
+  useEffect(() => {
+    publicMarketApi.getSnapshot()
+      .then(data => {
+        if (data?.success) setMarketData(data)
+      })
+      .catch(err => {
+        console.error('[MarketSnapshot] failed:', err)
+      })
+  }, [])
+
+  const tickerItems = marketData?.ticker ?? []
+  const totals      = marketData?.totals ?? { candidates: 0, jobs: 0 }
+  const trend       = marketData?.trend  ?? []
 
   return (
     <div>
+      {/* Market Ticker — Navbar 下方，Hero 上方 */}
+      <MarketTicker items={tickerItems.length > 0 ? tickerItems : undefined} />
+
       {/* Hero */}
       <section className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white overflow-hidden relative">
         {/* Background pattern */}
@@ -52,54 +74,63 @@ export default function Home() {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-medium mb-6">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-              货代行业垂直人才撮合平台，精准连接优质货代企业。
+          {/* 左右布局：左侧文案 + 右侧 TalentIndexCard */}
+          <div className="flex flex-col lg:flex-row items-start gap-12">
+            {/* 左侧主文案 */}
+            <div className="flex-1 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-medium mb-6">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                货代行业垂直人才撮合平台，精准连接优质货代企业。
+              </div>
+
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+                找到下一个
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400"> 精准匹配 </span>
+                的<br className="hidden sm:block" />物流人才
+              </h1>
+
+              <p className="text-slate-300 text-lg md:text-xl leading-relaxed mb-10 max-w-2xl">
+                专为货代、物流行业设计的人才匹配系统。精准标签 · 简历鲜度优先 · 行业经验验证，助您快速实现岗位人才匹配。
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 mb-14">
+                <Button
+                  size="xl"
+                  onClick={() => navigate('/employer/jobs/new')}
+                  className="bg-blue-500 hover:bg-blue-400 shadow-lg shadow-blue-900/40"
+                >
+                  发布招聘岗位
+                  <ArrowRight size={18} />
+                </Button>
+                <Button
+                  size="xl"
+                  variant="ghost"
+                  onClick={() => navigate('/candidate/home')}
+                  className="text-white border border-white/20 hover:bg-white/10 hover:text-white"
+                >
+                  进入求职平台
+                </Button>
+              </div>
+
+              {/* Stats row */}
+              <div className="flex flex-wrap gap-x-8 gap-y-3">
+                {[
+                  { label: '货代行业专注', value: '垂直平台' },
+                  { label: '简历鲜度优先', value: '精准匹配' },
+                  { label: '行业经验验证', value: '质量保障' },
+                  { label: '平均入职周期', value: '快速高效' },
+                ].map(s => (
+                  <div key={s.label}>
+                    <p className="text-2xl font-bold text-white">{s.value}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{s.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-              找到下一个
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400"> 精准匹配 </span>
-              的<br className="hidden sm:block" />货代人才
-            </h1>
-
-            <p className="text-slate-300 text-lg md:text-xl leading-relaxed mb-10 max-w-2xl">
-              专为货代、物流行业设计的人才匹配系统。精准标签 · 简历鲜度优先 · 行业经验验证，助你快速完成入职。
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3 mb-14">
-              <Button
-                size="xl"
-                onClick={() => navigate('/employer/jobs/new')}
-                className="bg-blue-500 hover:bg-blue-400 shadow-lg shadow-blue-900/40"
-              >
-                发布招聘岗位
-                <ArrowRight size={18} />
-              </Button>
-              <Button
-                size="xl"
-                variant="ghost"
-                onClick={() => navigate('/candidate/home')}
-                className="text-white border border-white/20 hover:bg-white/10 hover:text-white"
-              >
-                进入求职平台
-              </Button>
-            </div>
-
-            {/* Stats row */}
-            <div className="flex flex-wrap gap-x-8 gap-y-3">
-              {[
-                { label: '货代行业专注', value: '垂直平台' },
-                { label: '简历鲜度优先', value: '精准匹配' },
-                { label: '行业经验验证', value: '质量保障' },
-                { label: '平均入职周期', value: '快速高效' },
-              ].map(s => (
-                <div key={s.label}>
-                  <p className="text-2xl font-bold text-white">{s.value}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{s.label}</p>
-                </div>
-              ))}
+            {/* 右侧 Talent Index Card */}
+            <div className="w-full lg:w-auto flex justify-center lg:justify-end lg:flex-shrink-0">
+              <TalentIndexCard totals={totals} trend={trend} />
             </div>
           </div>
         </div>

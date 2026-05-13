@@ -24,13 +24,14 @@ const FUNCTION_KEYWORDS = {
 }
 
 const AREA_KEYWORDS = {
-  'Great China': ['中国', 'china', '上海', '北京', '广州', '深圳', '宁波', '青岛', '厦门', '天津'],
+  'China': ['中国', 'china', '上海', '北京', '广州', '深圳', '宁波', '青岛', '厦门', '天津', '香港', '台湾', '澳门'],
   'East China': ['华东', '上海', '江苏', '南京', '苏州', '浙江', '杭州', '宁波', '安徽', '山东', '青岛'],
   'North China': ['华北', '北京', '天津', '河北', '山西', '内蒙古'],
   'South China': ['华南', '广东', '广州', '深圳', '福建', '厦门', '广西', '海南'],
   'West China': ['西部', '西南', '西北', '四川', '成都', '重庆', '陕西', '西安', '云南', '贵州', '新疆'],
   Taiwan: ['台湾', 'taiwan', '台北'],
   'Hong Kong': ['香港', 'hong kong', 'hk'],
+  Macau: ['澳门', 'macau', 'macao', 'mo'],
 }
 
 function textOfJob(job) {
@@ -98,7 +99,7 @@ export default function CandidateHome() {
   useEffect(() => {
     let alive = true
     jobsApi
-      .getPublicJobs({})
+      .getPublicJobs({ page_size: 500 })
       .then((res) => {
         if (!alive) return
         setJobs(res.data.jobs ?? [])

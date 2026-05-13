@@ -1,8 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Bell, Menu, X, LogOut } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { conversationsApi } from '../../api/conversations'
 
 const NAV_BY_ROLE = {
   employer: [
@@ -12,7 +11,7 @@ const NAV_BY_ROLE = {
     { label: '候选人池', href: '/candidates' },
     { label: '岗位广场', href: '/jobs' },
     { label: '标签申请', href: '/tags' },
-    { label: '消息', href: '/messages' },
+    // { label: '消息', href: '/messages' }, // HIDDEN — feature disabled
   ],
   candidate: [
     { label: '岗位动态', href: '/candidate/home' },
@@ -20,7 +19,7 @@ const NAV_BY_ROLE = {
     { label: '我的简历', href: '/candidate/upload' },
     { label: '我的邀约', href: '/candidate/invitations' },
     { label: '个人订阅', href: '/candidate/tags' },
-    { label: '消息', href: '/candidate/messages' },
+    // { label: '消息', href: '/candidate/messages' }, // HIDDEN — feature disabled
   ],
   admin: [
     { label: '管理后台', href: '/admin/overview' },
@@ -29,7 +28,7 @@ const NAV_BY_ROLE = {
     { label: '数据图表', href: '/admin/charts' },
     { label: '候选人池', href: '/admin/candidates' },
     { label: '岗位广场', href: '/admin/jobs' },
-    { label: '消息', href: '/messages' },
+    // { label: '消息', href: '/messages' }, // HIDDEN — feature disabled
   ],
 }
 
@@ -52,30 +51,8 @@ export function Navbar() {
   const { user, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [totalUnread, setTotalUnread] = useState(0)
 
   const navItems = user ? (NAV_BY_ROLE[user.role] ?? DEFAULT_NAV) : DEFAULT_NAV
-
-  // Poll total unread every 15s when logged in
-  useEffect(() => {
-    if (!user || !['employer', 'candidate', 'admin'].includes(user.role)) return
-    function fetchUnread() {
-      conversationsApi.getMyConversations()
-        .then(res => setTotalUnread(res.data.total_unread ?? 0))
-        .catch(() => {})
-    }
-    fetchUnread()
-    const timer = setInterval(fetchUnread, 30000)
-    return () => clearInterval(timer)
-  }, [user])
-
-  // Clear badge immediately when entering messages page
-  useEffect(() => {
-    if (location.pathname.startsWith('/messages')) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTotalUnread(0)
-    }
-  }, [location.pathname])
 
   async function handleLogout() {
     setShowUserMenu(false)
@@ -109,11 +86,6 @@ export function Navbar() {
                 }`}
               >
                 {item.label}
-                {item.href === '/messages' && totalUnread > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                    {totalUnread > 99 ? '99+' : totalUnread}
-                  </span>
-                )}
               </Link>
             ))}
           </nav>

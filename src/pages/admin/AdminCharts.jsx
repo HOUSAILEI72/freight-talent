@@ -17,7 +17,7 @@ function ChartSection({ title, fetchFn, color, label }) {
     setError('')
     try {
       const res = await fetchFn({ tagGroups: groups, granularity, periods: 12, refresh })
-      console.log(`[${title}] chart response`, res)
+      if (import.meta.env.DEV) console.log(`[${title}] chart response`, res)
       setChartData(res)
     } catch (e) {
       setError(e.response?.data?.detail || '查询失败，请稍后重试')

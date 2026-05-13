@@ -1,4 +1,5 @@
-import { Globe2, MapPin } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Globe2, MapPin, Lock } from 'lucide-react'
 
 /**
  * AreaSidebar
@@ -12,20 +13,24 @@ import { Globe2, MapPin } from 'lucide-react'
 
 export const DEFAULT_AREAS = [
   { key: 'Global',       label: 'Global' },
-  { key: 'Great China',  label: 'Great China' },
+  { key: 'China',        label: 'China' },
   { key: 'East China',   label: 'East China' },
   { key: 'North China',  label: 'North China' },
   { key: 'South China',  label: 'South China' },
   { key: 'West China',   label: 'West China' },
-  { key: 'Taiwan',       label: 'Taiwan' },
   { key: 'Hong Kong',    label: 'Hong Kong' },
+  { key: 'Taiwan',       label: 'Taiwan' },
+  { key: 'Macau',        label: 'Macau' },
 ]
 
 export default function AreaSidebar({
   value = 'Global',
   onChange = () => {},
   areas = DEFAULT_AREAS,
+  hasSubscription = true,
 }) {
+  const navigate = useNavigate()
+  const pricingPath = '/employer/pricing'
   return (
     <aside
       className="flex h-full shrink-0 flex-col border-r border-[var(--t-border)]"
@@ -41,11 +46,16 @@ export default function AreaSidebar({
       <nav className="flex-1 overflow-y-auto py-2 terminal-scrollbar">
         {areas.map((a) => {
           const active = a.key === value
+          const locked = a.key !== 'Global' && !hasSubscription
           return (
             <button
               key={a.key}
               type="button"
-              onClick={() => onChange(a.key)}
+              onClick={() => {
+                if (locked) { navigate(pricingPath); return }
+                onChange(a.key)
+              }}
+              title={locked ? `${a.label} — 订阅后可用` : a.label}
               className={`relative flex h-9 w-full items-center gap-2.5 px-3 text-left transition-colors duration-[var(--t-transition)] ${
                 active
                   ? 'bg-[var(--t-bg-active)] text-[color:var(--t-text)]'
@@ -62,6 +72,9 @@ export default function AreaSidebar({
               <span className="whitespace-nowrap font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] uppercase tracking-wider">
                 {a.label}
               </span>
+              {locked && (
+                <Lock size={10} className="shrink-0 ml-auto" style={{ color: 'var(--t-text-muted)', opacity: 0.5 }} />
+              )}
             </button>
           )
         })}

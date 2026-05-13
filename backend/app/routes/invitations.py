@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import logging
+from sqlalchemy.orm import joinedload
 from ..extensions import db
 from ..models.user import User
 from ..models.job import Job
@@ -21,6 +22,13 @@ def create_invitation():
     user = User.query.get(current_user_id)
     if not user or user.role not in ('employer', 'admin'):
         return jsonify({'message': '无权限'}), 403
+
+    # Phase 8: subscription gate for employers
+    if user.role == 'employer':
+        from app.utils.subscription_access import subscription_gate
+        sub, sub_err = subscription_gate(user.id)
+        if sub_err:
+            return sub_err
 
     data = request.get_json(silent=True) or {}
     job_id       = data.get('job_id')
@@ -47,6 +55,18 @@ def create_invitation():
         return jsonify({'message': '候选人不存在'}), 404
     if candidate.availability_status == 'closed':
         return jsonify({'message': '该候选人当前不接受邀约（已关闭求职状态）'}), 422
+
+    # Phase 8: subscription must cover candidate's function+area
+    if user.role == 'employer':
+        from app.utils.subscription_access import _get_active_subscription
+        sub = _get_active_subscription(user.id)
+        if sub and not sub.covers_candidate(candidate.function_code, candidate.business_area_code):
+            return jsonify({
+                'success': False,
+                'message': '您的订阅范围不覆盖该候选人，无法发起邀约',
+                'error_code': 'subscription_scope_mismatch',
+                'pricing_url': '/employer/pricing',
+            }), 402
 
     # 幂等/去重逻辑：
     # - 同一岗位+候选人已有 pending/accepted 邀约 → 直接返回已有记录（不重复发）
@@ -159,13 +179,21 @@ def get_sent_invitations():
     if user.role == 'employer':
         invs = (
             Invitation.query
+            .options(joinedload(Invitation.job).joinedload(Job.company))
+            .options(joinedload(Invitation.thread))
             .filter_by(employer_id=current_user_id)
             .order_by(Invitation.created_at.desc())
             .all()
         )
     else:
         # admin: 全部
-        invs = Invitation.query.order_by(Invitation.created_at.desc()).all()
+        invs = (
+            Invitation.query
+            .options(joinedload(Invitation.job).joinedload(Job.company))
+            .options(joinedload(Invitation.thread))
+            .order_by(Invitation.created_at.desc())
+            .all()
+        )
 
     return jsonify({
         'invitations': [
@@ -192,13 +220,21 @@ def get_my_invitations():
             return jsonify({'invitations': []}), 200
         invs = (
             Invitation.query
+            .options(joinedload(Invitation.job).joinedload(Job.company))
+            .options(joinedload(Invitation.thread))
             .filter_by(candidate_id=candidate.id)
             .order_by(Invitation.created_at.desc())
             .all()
         )
     else:
         # admin: 查看全部
-        invs = Invitation.query.order_by(Invitation.created_at.desc()).all()
+        invs = (
+            Invitation.query
+            .options(joinedload(Invitation.job).joinedload(Job.company))
+            .options(joinedload(Invitation.thread))
+            .order_by(Invitation.created_at.desc())
+            .all()
+        )
 
     result = []
     for inv in invs:

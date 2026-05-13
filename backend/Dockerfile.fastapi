@@ -27,8 +27,19 @@ RUN set -eux; \
 COPY requirements-fastapi.txt .
 RUN pip install --no-cache-dir -i "$PIP_INDEX_URL" -r requirements-fastapi.txt
 
+# 清理构建依赖（减小镜像体积 & 攻击面）
+RUN apt-get purge -y gcc pkg-config && apt-get autoremove -y
+
 COPY . .
+
+# 非 root 用户运行
+RUN adduser --disabled-password --gecos '' appuser \
+    && chown -R appuser /app
+USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "fastapi_app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl -fsS http://localhost:8000/api/v2/health || exit 1
+
+CMD ["uvicorn", "fastapi_app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

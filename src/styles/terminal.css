@@ -226,17 +226,62 @@
   background-color: rgba(251, 191, 36, 0.14) !important;
   color: var(--t-chart-amber) !important;
 }
+.terminal-mode .bg-orange-50,
+.terminal-mode .bg-orange-100 {
+  background-color: rgba(251, 191, 36, 0.12) !important;
+}
+.terminal-mode .bg-purple-50,
+.terminal-mode .bg-purple-100 {
+  background-color: rgba(167, 139, 250, 0.12) !important;
+}
 .terminal-mode .border-blue-100 {
   border-color: rgba(96, 165, 250, 0.28) !important;
 }
 .terminal-mode .border-emerald-100 {
   border-color: rgba(74, 222, 128, 0.28) !important;
 }
-.terminal-mode .text-blue-800 {
+.terminal-mode .border-amber-100,
+.terminal-mode .border-amber-200 {
+  border-color: rgba(251, 191, 36, 0.28) !important;
+}
+.terminal-mode .border-orange-100,
+.terminal-mode .border-orange-200 {
+  border-color: rgba(251, 191, 36, 0.28) !important;
+}
+.terminal-mode .border-purple-100,
+.terminal-mode .border-purple-200 {
+  border-color: rgba(167, 139, 250, 0.28) !important;
+}
+.terminal-mode .border-red-100,
+.terminal-mode .border-red-200 {
+  border-color: rgba(239, 68, 68, 0.28) !important;
+}
+/* Text — colored semantic classes */
+.terminal-mode .text-blue-800,
+.terminal-mode .text-blue-700,
+.terminal-mode .text-blue-600 {
   color: var(--t-chart-blue) !important;
 }
-.terminal-mode .text-emerald-800 {
-  color: var(--t-chart-green) !important;
+.terminal-mode .text-emerald-800,
+.terminal-mode .text-emerald-700,
+.terminal-mode .text-emerald-600 {
+  color: var(--t-success) !important;
+}
+.terminal-mode .text-amber-700,
+.terminal-mode .text-amber-600 {
+  color: var(--t-chart-amber) !important;
+}
+.terminal-mode .text-orange-700,
+.terminal-mode .text-orange-600 {
+  color: var(--t-chart-amber) !important;
+}
+.terminal-mode .text-purple-700,
+.terminal-mode .text-purple-600 {
+  color: var(--t-chart-purple) !important;
+}
+.terminal-mode .text-red-600,
+.terminal-mode .text-red-500 {
+  color: var(--t-danger) !important;
 }
 
 /* `.card` (light-theme card from index.css) — flatten to terminal panel */
@@ -247,6 +292,17 @@
 }
 .terminal-mode .card:hover {
   box-shadow: none !important;
+}
+
+/* Button secondary in terminal context (fallback for unpropagated terminal prop) */
+.terminal-mode .bg-white.border-blue-200,
+.terminal-mode button.border-blue-200 {
+  background-color: transparent !important;
+  border-color: var(--t-border) !important;
+  color: var(--t-text-secondary) !important;
+}
+.terminal-mode button.border-blue-200:hover {
+  background-color: var(--t-bg-hover) !important;
 }
 
 /* Buttons that were styled blue/white CTAs stay blue (--t-primary

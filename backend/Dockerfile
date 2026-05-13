@@ -28,6 +28,9 @@ RUN set -eux; \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -i "$PIP_INDEX_URL" -r requirements.txt
 
+# 清理构建依赖（减小镜像体积 & 攻击面）
+RUN apt-get purge -y gcc pkg-config && apt-get autoremove -y
+
 # 再复制应用代码
 COPY . .
 

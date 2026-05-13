@@ -39,8 +39,7 @@ const EMPTY_WORK_EXPERIENCE = {
   end_month: '',
   responsibilities: '',
   achievements: '',
-  salary_min: '',
-  salary_max: '',
+  salary: '',
   salary_months: '',
   average_bonus_percent: '',
   has_year_end_bonus: false,
@@ -64,7 +63,7 @@ function workExperienceToPayload(row) {
   const ach  = (row.achievements || '').trim()
   if (resp) out.responsibilities = resp
   if (ach)  out.achievements     = ach
-  const numKeys = ['salary_min', 'salary_max', 'salary_months', 'average_bonus_percent', 'year_end_bonus_months']
+  const numKeys = ['salary', 'salary_months', 'average_bonus_percent', 'year_end_bonus_months']
   for (const k of numKeys) {
     const v = row[k]
     if (v === '' || v == null) continue
@@ -79,10 +78,13 @@ function workExperienceToPayload(row) {
 }
 
 // Education experience textarea: each line "学校 | 专业 | 学位 | 起止"
+// Normalize fullwidth pipe ｜ (U+FF5C) to ASCII | before splitting so users
+// who paste pipe-separated strings from other sources still get parsed correctly.
 function parseEducationLines(text) {
   if (!text) return []
   return text.split(/\r?\n+/).map(l => l.trim()).filter(Boolean).map(line => {
-    const parts = line.split(/\s*\|\s*/)
+    const normalized = line.replace(/｜/g, '|')
+    const parts = normalized.split(/\s*\|\s*/)
     return {
       school: parts[0] || '',
       major:  parts[1] || '',
@@ -109,7 +111,7 @@ function educationLinesToText(rows) {
  * Supports terminal=true (deep dark with --t-* tokens) and terminal=false
  * (existing light slate palette) via dual-branched className/style.
  */
-export default function CandidateProfileBuilder({ terminal = false }) {
+export default function CandidateProfileBuilder({ terminal = false, onDone }) {
   const navigate = useNavigate()
 
   const [loading, setLoading]   = useState(true)
@@ -125,6 +127,8 @@ export default function CandidateProfileBuilder({ terminal = false }) {
   const [email, setEmail]       = useState('')
   const [location, setLocation] = useState(null)
   const [availability, setAvailability] = useState('open')
+  const [birthYear, setBirthYear] = useState('')
+  const [gender, setGender] = useState('')
 
   // ── Section 2: 当前任职 ─────────────────────────────────────────────────
   const [currentCompany,        setCurrentCompany]        = useState('')
@@ -132,6 +136,7 @@ export default function CandidateProfileBuilder({ terminal = false }) {
   const [currentResponsibilities, setCurrentResponsibilities] = useState('')
   const [functionCode, setFunctionCode]                 = useState('')
   const [isManagementStr, setIsManagementStr]           = useState('') // '' | 'yes' | 'no'
+  const [mgmtHeadcount, setMgmtHeadcount]               = useState('')
   const [csMin, setCsMin]                                = useState('')
   const [csMax, setCsMax]                                = useState('')
   const [csMonths, setCsMonths]                          = useState('')
@@ -174,6 +179,7 @@ export default function CandidateProfileBuilder({ terminal = false }) {
           })
         }
         setAvailability(p.availability_status || 'open')
+        setGender(p.gender || '')
 
         setCurrentCompany(p.current_company || '')
         setCurrentTitle(p.current_title || '')
@@ -183,6 +189,7 @@ export default function CandidateProfileBuilder({ terminal = false }) {
           p.is_management_role === true ? 'yes' :
           p.is_management_role === false ? 'no' : ''
         )
+        setMgmtHeadcount(p.management_headcount != null ? String(p.management_headcount) : '')
         setCsMin(p.current_salary_min != null ? String(p.current_salary_min) : '')
         setCsMax(p.current_salary_max != null ? String(p.current_salary_max) : '')
         setCsMonths(p.current_salary_months != null ? String(p.current_salary_months) : '')
@@ -199,8 +206,7 @@ export default function CandidateProfileBuilder({ terminal = false }) {
             end_month:   w.end_month   || '',
             responsibilities: w.responsibilities || '',
             achievements:     w.achievements     || '',
-            salary_min:    w.salary_min    != null ? String(w.salary_min)    : '',
-            salary_max:    w.salary_max    != null ? String(w.salary_max)    : '',
+            salary:       w.salary != null ? String(w.salary) : (w.salary_min != null ? String(w.salary_min) : (w.salary_max != null ? String(w.salary_max) : '')),
             salary_months: w.salary_months != null ? String(w.salary_months) : '',
             average_bonus_percent: w.average_bonus_percent != null ? String(w.average_bonus_percent) : '',
             has_year_end_bonus:    w.has_year_end_bonus === true,
@@ -283,11 +289,7 @@ export default function CandidateProfileBuilder({ terminal = false }) {
       const r = workRows[i]
       if (!r.company_name.trim()) return `工作经历 #${i + 1}：公司名称不能为空`
       if (!r.title.trim())        return `工作经历 #${i + 1}：职位不能为空`
-      if (r.salary_min !== '' && !/^\d+$/.test(r.salary_min)) return `工作经历 #${i + 1}：薪资 min 必须为纯数字`
-      if (r.salary_max !== '' && !/^\d+$/.test(r.salary_max)) return `工作经历 #${i + 1}：薪资 max 必须为纯数字`
-      if (r.salary_min !== '' && r.salary_max !== '' && Number(r.salary_min) > Number(r.salary_max)) {
-        return `工作经历 #${i + 1}：薪资 min 不能大于 max`
-      }
+      if (r.salary !== '' && !/^\d+$/.test(r.salary)) return `工作经历 #${i + 1}：薪资必须为纯数字`
       if (r.salary_months !== '' && !['12', '13', '14'].includes(String(r.salary_months))) {
         return `工作经历 #${i + 1}：薪资月数只能是 12 / 13 / 14`
       }
@@ -298,6 +300,15 @@ export default function CandidateProfileBuilder({ terminal = false }) {
       if (r.year_end_bonus_months !== '' &&
           (Number(r.year_end_bonus_months) < 0 || Number(r.year_end_bonus_months) > 24)) {
         return `工作经历 #${i + 1}：年终奖月数必须在 0-24 之间`
+      }
+    }
+
+    if (educationLines.trim()) {
+      const eduRows = parseEducationLines(educationLines)
+      for (let i = 0; i < eduRows.length; i++) {
+        const r = eduRows[i]
+        if (!r.school.trim()) return `教育经历第 ${i + 1} 行：学校名称不能为空`
+        if (/[|｜]/.test(r.school)) return `教育经历第 ${i + 1} 行：格式有误，请用 | 分隔各字段（学校 | 专业 | 学位 | 起止年份）`
       }
     }
 
@@ -336,6 +347,7 @@ export default function CandidateProfileBuilder({ terminal = false }) {
       business_type: fnLabel,
       is_management_role: isManagement,
       job_type: isManagement ? '管理' : '非管理',
+      ...(isManagement && mgmtHeadcount !== '' ? { management_headcount: Number(mgmtHeadcount) } : {}),
 
       knowledge_tags: knowledgeArr,
       hard_skill_tags: hardArr,
@@ -356,6 +368,8 @@ export default function CandidateProfileBuilder({ terminal = false }) {
       certificates: certsArr,
 
       availability_status: availability,
+      ...(gender !== '' ? { gender } : {}),
+      ...(birthYear !== '' ? { birth_year: Number(birthYear) } : {}),
       confirm_latest: false,
     }
 
@@ -382,7 +396,11 @@ export default function CandidateProfileBuilder({ terminal = false }) {
     setSaveErr('')
     try {
       await candidatesApi.confirmLatestResume()
-      navigate('/candidate/tags')
+      if (onDone) {
+        onDone()
+      } else {
+        navigate('/candidate/tags')
+      }
     } catch (err) {
       console.error('Failed to confirm latest resume:', {
         status: err.response?.status,
@@ -555,6 +573,25 @@ export default function CandidateProfileBuilder({ terminal = false }) {
                   <option value="closed">暂不考虑</option>
                 </select>
               </div>
+              <div>
+                <label className={labelClass} style={labelStyle}>出生年份</label>
+                <select className={inputClass} style={inputStyle}
+                  value={birthYear} onChange={e => setBirthYear(e.target.value)}>
+                  <option value="">请选择</option>
+                  {Array.from({ length: new Date().getFullYear() - 16 - 1950 + 1 }, (_, i) => new Date().getFullYear() - 16 - i).map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass} style={labelStyle}>性别</label>
+                <select className={inputClass} style={inputStyle}
+                  value={gender} onChange={e => setGender(e.target.value)}>
+                  <option value="">请选择</option>
+                  <option value="male">男</option>
+                  <option value="female">女</option>
+                </select>
+              </div>
             </div>
             <div>
               <label className={labelClass} style={labelStyle}>所在地区 *</label>
@@ -562,7 +599,7 @@ export default function CandidateProfileBuilder({ terminal = false }) {
                 value={location}
                 onChange={setLocation}
                 terminal={terminal}
-                placeholder="请选择所在地区（中国大陆 / 香港 / 台湾 / 海外 / Global / Remote）"
+                placeholder="请选择所在地区（中国大陆 / 香港 / 台湾 / 澳门 / 海外 / Global / Remote）"
               />
               {location?.location_path && (
                 <p className={helperClass} style={helperStyle}>
@@ -606,6 +643,15 @@ export default function CandidateProfileBuilder({ terminal = false }) {
                   <option value="no">否</option>
                 </select>
               </div>
+              {isManagementStr === 'yes' && (
+                <div>
+                  <label className={labelClass} style={labelStyle}>管理人数</label>
+                  <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
+                    value={mgmtHeadcount}
+                    onChange={e => setMgmtHeadcount(e.target.value.replace(/\D/g, ''))}
+                    placeholder="如 10" />
+                </div>
+              )}
             </div>
             <div>
               <label className={labelClass} style={labelStyle}>岗位职责 *</label>
@@ -753,16 +799,11 @@ export default function CandidateProfileBuilder({ terminal = false }) {
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className={helperClass} style={helperStyle}>薪资 min</label>
+                      <label className={helperClass} style={helperStyle}>薪资</label>
                       <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
-                        value={r.salary_min}
-                        onChange={e => updateWorkRow(i, { salary_min: e.target.value.replace(/\D/g, '') })} />
-                    </div>
-                    <div>
-                      <label className={helperClass} style={helperStyle}>薪资 max</label>
-                      <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
-                        value={r.salary_max}
-                        onChange={e => updateWorkRow(i, { salary_max: e.target.value.replace(/\D/g, '') })} />
+                        placeholder="例：20000"
+                        value={r.salary}
+                        onChange={e => updateWorkRow(i, { salary: e.target.value.replace(/\D/g, '') })} />
                     </div>
                     <div>
                       <label className={helperClass} style={helperStyle}>薪资月数</label>

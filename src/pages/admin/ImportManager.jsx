@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { adminApi } from '../../api/admin'
 import { Button } from '../../components/ui/Button'
+import { useToast } from '../../components/ui/Toast'
 import {
   getTags, getCategories, importTagsExcel,
   getPendingTags, reviewTag,
@@ -127,7 +128,7 @@ function PreviewPanel({ result, onConfirm, onDryRun, confirming, dryRunning }) {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      alert('下载失败，请重试')
+      toast.show('下载失败，请重试', 'error')
     } finally {
       setDownloading(false)
     }
@@ -426,7 +427,7 @@ function UploadZone({ onPreview, previewing }) {
                 a.click()
                 URL.revokeObjectURL(url)
               })
-              .catch(() => alert('模板下载失败'))
+              .catch(() => toast.show('模板下载失败', 'error'))
           }}
           className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
         >
@@ -533,7 +534,7 @@ function DataImportTab() {
     try {
       const res = await adminApi.dryRunImport(batchId)
       setPreviewResult(prev => ({ ...prev, dry_run_result: res.data }))
-    } catch (err) { alert(err.response?.data?.message || 'Dry Run 失败') }
+    } catch (err) { toast.show(err.response?.data?.message || 'Dry Run 失败', 'error') }
     finally { setDryRunning(false) }
   }
 
@@ -716,18 +717,18 @@ function PendingTagsTab() {
   const approve = async id => {
     setProcessing(id)
     try { await reviewTag(id, 'approve'); setTags(ts => ts.filter(t => t.id !== id)) }
-    catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
   const reject = async id => {
-    if (!rejectReason.trim()) { alert('请填写拒绝原因'); return }
+    if (!rejectReason.trim()) { toast.show('请填写拒绝原因', 'warning'); return }
     setProcessing(id)
     try {
       await reviewTag(id, 'reject', rejectReason)
       setTags(ts => ts.filter(t => t.id !== id))
       setRejectId(null); setRejectReason('')
-    } catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    } catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
@@ -807,18 +808,18 @@ function PendingNotesTab() {
   const approve = async id => {
     setProcessing(id)
     try { await reviewNote(id, 'approve'); setNotes(ns => ns.filter(n => n.id !== id)) }
-    catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
   const reject = async id => {
-    if (!rejectReason.trim()) { alert('请填写拒绝原因'); return }
+    if (!rejectReason.trim()) { toast.show('请填写拒绝原因', 'warning'); return }
     setProcessing(id)
     try {
       await reviewNote(id, 'reject', rejectReason)
       setNotes(ns => ns.filter(n => n.id !== id))
       setRejectId(null); setRejectReason('')
-    } catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    } catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
@@ -894,7 +895,7 @@ function ApprovalToggle() {
   const toggle = async () => {
     setSaving(true)
     try { const res = await setTagApprovalSetting(!enabled); setEnabled(res.enabled) }
-    catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setSaving(false) }
   }
 
@@ -924,6 +925,7 @@ const TABS = [
 ]
 
 export default function ImportManager() {
+  const toast = useToast()
   const [activeTab, setActiveTab] = useState('import')
 
   return (

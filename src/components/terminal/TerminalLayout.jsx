@@ -24,6 +24,39 @@ import { EMPLOYER_ICON_NAV } from './navItems'
 
 const ROLE_LABEL = { employer: '企业', candidate: '候选人', admin: '管理员' }
 
+function PricingButton({ onClick }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      title="订阅方案"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: 32,
+        padding: '0 14px',
+        borderRadius: 'var(--t-radius)',
+        border: 'none',
+        background: hover ? '#1d4ed8' : '#2563eb',
+        color: '#fff',
+        fontFamily: 'var(--t-font-mono)',
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase',
+        cursor: 'pointer',
+        transition: 'background 120ms',
+        flexShrink: 0,
+      }}
+    >
+      VIEW PRICING
+    </button>
+  )
+}
+
 function IconRail({ activeId = 'dashboard', navItems = EMPLOYER_ICON_NAV }) {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -118,6 +151,11 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Pricing button — employer only */}
+        {user?.role === 'employer' && (
+          <PricingButton onClick={() => navigate('/employer/pricing')} />
+        )}
+
         <button
           type="button"
           className="flex h-8 w-8 items-center justify-center rounded-[var(--t-radius)] text-[color:var(--t-text-secondary)] hover:bg-[var(--t-bg-hover)] hover:text-[color:var(--t-text)]"

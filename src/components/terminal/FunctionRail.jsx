@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Layers, Anchor, Plane, Truck, Train, Package, ShoppingCart } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Layers, Anchor, Plane, Truck, Train, Package, ShoppingCart, Lock } from 'lucide-react'
 
 /**
  * FunctionRail
@@ -39,8 +40,11 @@ export default function FunctionRail({
   value = 'ALL',
   onChange = () => {},
   functions = DEFAULT_FUNCTIONS,
+  hasSubscription = true,
 }) {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const pricingPath = '/employer/pricing'
 
   return (
     <aside
@@ -69,12 +73,16 @@ export default function FunctionRail({
         {functions.map((f) => {
           const Icon = f.icon || Layers
           const active = f.key === value
+          const locked = f.key !== 'ALL' && !hasSubscription
           return (
             <button
               key={f.key}
               type="button"
-              onClick={() => onChange(f.key)}
-              title={f.label}
+              onClick={() => {
+                if (locked) { navigate(pricingPath); return }
+                onChange(f.key)
+              }}
+              title={locked ? `${f.label} — 订阅后可用` : f.label}
               className={`relative flex h-12 w-full items-center transition-colors duration-[var(--t-transition)] ${
                 open ? 'gap-3 px-3' : 'flex-col justify-center gap-0.5 px-0'
               } ${
@@ -97,6 +105,10 @@ export default function FunctionRail({
                 <span className="min-w-0 flex-1 truncate font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] font-semibold uppercase tracking-wider whitespace-nowrap">
                   {f.label}
                 </span>
+              )}
+
+              {locked && (
+                <Lock size={open ? 11 : 9} className="shrink-0" style={{ color: 'var(--t-text-muted)', opacity: 0.5 }} />
               )}
             </button>
           )

@@ -264,9 +264,11 @@ def run_preview(
     try:
         wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
     except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Excel parse failed: %s", exc)
         result.errors.append({
             "issue_type": "file_parse_error",
-            "suggestion": f"无法解析 Excel 文件：{exc}",
+            "suggestion": "无法解析 Excel 文件，请检查文件格式是否正确",
         })
         return result
 

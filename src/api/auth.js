@@ -30,6 +30,11 @@ export const authApi = {
     return client.get('/auth/me')
   },
 
+  /** 更新当前用户账号信息（name / company_name / 密码） */
+  updateMe(data) {
+    return client.patch('/auth/me', data)
+  },
+
   /**
    * 登出：把 access token 和 refresh token 都传给后端撤销
    * @param {{ refresh_token?: string }} [data]

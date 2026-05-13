@@ -6,14 +6,15 @@ class Invitation(db.Model):
     __tablename__ = 'invitations'
 
     id           = db.Column(db.Integer, primary_key=True)
-    job_id       = db.Column(db.Integer, db.ForeignKey('jobs.id', ondelete='CASCADE'), nullable=False)
-    candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id', ondelete='CASCADE'), nullable=False)
-    employer_id  = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    job_id       = db.Column(db.Integer, db.ForeignKey('jobs.id', ondelete='CASCADE'), nullable=False, index=True)
+    candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id', ondelete='CASCADE'), nullable=False, index=True)
+    employer_id  = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     message      = db.Column(db.Text, nullable=True)
     status       = db.Column(
         db.Enum('pending', 'accepted', 'declined', name='invitation_status'),
         nullable=False,
         default='pending',
+        index=True,
     )
     created_at   = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at   = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),

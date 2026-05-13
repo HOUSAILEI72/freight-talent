@@ -12,6 +12,9 @@ import {
   getBusinessAreaByLocationCode,
   buildLocationObject,
   CN_MAINLAND_ALL_LOCATION,
+  HK_LOCATION,
+  TW_LOCATION,
+  MO_LOCATION,
 } from '../utils/businessArea.js'
 
 /**
@@ -38,7 +41,7 @@ import {
  * Architecture
  *  - All static data + search lives in `src/utils/regionTree.js` (JSX-free).
  *  - The component is two views inside one popover:
- *      1) drill-down (no query):  top-level groups → Great China tree /
+ *      1) drill-down (no query):  top-level groups → China tree /
  *         Overseas country list
  *      2) search results:         flat list across every selectable node
  */
@@ -261,7 +264,7 @@ export default function RegionSelector({
   function renderBreadcrumb() {
     if (!top) return null
     const segments = []
-    if (top.type === 'great-china') segments.push({ label: 'Great China', onClick: () => setNavStack([{ type: 'great-china' }]) })
+    if (top.type === 'great-china') segments.push({ label: 'China', onClick: () => setNavStack([{ type: 'great-china' }]) })
     if (top.type === 'overseas')    segments.push({ label: 'Overseas',    onClick: () => setNavStack([{ type: 'overseas' }]) })
     if (province) segments.push({ label: province.name, onClick: () => setNavStack(navStack.slice(0, navStack.findIndex(s => s.type === 'province') + 1)) })
     if (city)     segments.push({ label: city.name,     onClick: () => setNavStack(navStack.slice(0, navStack.findIndex(s => s.type === 'city') + 1)) })
@@ -288,7 +291,12 @@ export default function RegionSelector({
   }
 
   function renderGreatChina() {
-    // 1) "全国 (Mainland China)" + 2) provinces grid
+    // 1) "全国 (Mainland China)" + 2) HK / TW / MO + 3) provinces grid
+    const chinaSpecials = [
+      { loc: HK_LOCATION, label: 'Hong Kong', label_zh: '香港' },
+      { loc: TW_LOCATION, label: 'Taiwan',    label_zh: '台湾' },
+      { loc: MO_LOCATION, label: 'Macau',     label_zh: '澳门' },
+    ]
     return (
       <>
         <div
@@ -303,6 +311,24 @@ export default function RegionSelector({
             全国 / Mainland China
           </span>
         </div>
+        {chinaSpecials.map(({ loc, label, label_zh }) => (
+          <div
+            key={loc.location_code}
+            className={rowBaseClass()}
+            style={rowStyle()}
+            onMouseEnter={rowMouseEnter}
+            onMouseLeave={rowMouseLeave}
+            onClick={() => commit(loc)}
+          >
+            <MapPin size={12} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+            <span className="flex-1" style={terminal ? { color: 'var(--t-text)' } : undefined}>
+              {label}
+              <span className="ml-2 text-xs" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>
+                {label_zh}
+              </span>
+            </span>
+          </div>
+        ))}
         <div className="max-h-60 overflow-y-auto">
           {MAINLAND_TREE.map((p) => {
             const hasChildren = p.children?.length > 0
@@ -314,10 +340,6 @@ export default function RegionSelector({
                 onMouseEnter={rowMouseEnter}
                 onMouseLeave={rowMouseLeave}
                 onClick={() => {
-                  // Has children → drill down so the user can pick a city /
-                  // district. The "选择 XX 整体" row inside the next level
-                  // covers the case where they want to commit the province
-                  // as a whole. No children → commit directly.
                   if (hasChildren) {
                     setNavStack([{ type: 'great-china' }, { type: 'province', node: p }])
                   } else {
