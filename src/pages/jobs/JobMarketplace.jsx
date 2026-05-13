@@ -112,77 +112,101 @@ function JobDetailPanel({ job, terminal = false }) {
 
   if (terminal) {
     const commissionLabel = COMMISSION_BONUS_PERIODS.find(p => p.value === job.commission_bonus_period)?.label ?? job.commission_bonus_period ?? '—'
-    const salaryText = (job.salary_min || job.salary_max)
-      ? `${formatThousand(job.salary_min) || '?'} – ${formatThousand(job.salary_max) || '?'}`
-      : (job.salary_label || '面议')
+    const tagsByCat = job.tags_by_category || {}
+    const allTags = Object.values(tagsByCat).flat()
+
+    // PostJob-matching style tokens
+    const cardClass = 'p-4 space-y-3 rounded-[var(--t-radius-lg)] border flex flex-col min-h-0'
+    const cardStyle = { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' }
+    const secTitleClass = 'flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-1 flex-shrink-0'
+    const secTitleStyle = { color: 'var(--t-text-muted)' }
 
     return (
-      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        {/* Header */}
-        <div className="shrink-0 px-5 py-4 border-b" style={{ borderColor: 'var(--t-border-subtle)' }}>
-          <div className="font-[var(--t-font-mono)] text-[length:var(--t-text-base)] font-bold" style={{ color: 'var(--t-text)' }}>
-            {job.title}
-          </div>
-          <div className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
-            {job.company_name ?? '—'} · {fullLocation}
-          </div>
-          <div className="font-[var(--t-font-mono)] text-[11px] mt-1 uppercase tracking-wide font-semibold" style={{ color: 'var(--t-primary,var(--t-chart-blue))' }}>
-            {salaryText}
+      <div
+        className="terminal-mode flex-1 min-h-0 overflow-hidden flex flex-col px-6 py-5"
+        style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}
+      >
+        {/* Header row — mirrors PostJob header */}
+        <div className="flex items-start justify-between mb-3 flex-shrink-0">
+          <div>
+            <h1 className="text-base font-semibold" style={{ color: 'var(--t-text)' }}>{job.title}</h1>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
+              {job.company_name ?? '—'}
+              {job.created_at ? ` · 发布于 ${job.created_at.slice(0, 10)}` : ''}
+            </p>
           </div>
         </div>
 
-        {/* Three-column body */}
-        <div className="flex-1 min-h-0 grid grid-cols-3 gap-px" style={{ background: 'var(--t-border-subtle)' }}>
-          {/* Col 1 — Basic info */}
-          <div className="flex flex-col gap-3 p-4 overflow-y-auto terminal-scrollbar" style={{ background: 'var(--t-bg-panel)' }}>
-            <div className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.2em] font-semibold" style={{ color: 'var(--t-text-muted)' }}>
-              BASIC INFO
-            </div>
-            <ReadField label="FUNCTION" value={job.function_name ?? job.business_type} />
-            <ReadField label="LOCATION" value={fullLocation} />
-            <ReadField label="EXP REQUIRED" value={job.experience_required} />
-            <ReadField label="MIN EDUCATION" value={job.degree_required} />
-            <ReadField label="EMPLOYMENT TYPE" value={job.employment_type} />
-            <ReadField
-              label="MANAGEMENT ROLE"
-              value={job.is_management_role
-                ? `管理岗${job.management_headcount ? ` · ${job.management_headcount} 人` : ''}`
-                : '非管理岗'}
-            />
-            <ReadField label="TAGS" value={Object.values(tagsByCat).flat().join('、') || null} />
-            <div className="mt-auto pt-3 border-t font-[var(--t-font-mono)] text-[9px]" style={{ borderColor: 'var(--t-border-subtle)', color: 'var(--t-text-muted)' }}>
-              发布于 {job.created_at?.slice(0, 10) ?? '—'}
+        {/* 3-column grid — same proportions as PostJob */}
+        <div className="grid grid-cols-[minmax(280px,1fr)_minmax(320px,1.15fr)_minmax(280px,1fr)] gap-4 flex-1 min-h-0 overflow-hidden">
+
+          {/* ── Col 1: 基本信息 ── */}
+          <div className={cardClass} style={cardStyle}>
+            <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 基本信息</div>
+            <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
+              <ReadField label="岗位名称" value={job.title} />
+              <ReadField label="岗位板块" value={job.function_name ?? job.business_type} />
+              <ReadField label="经验要求" value={job.experience_required} />
+              <ReadField label="最低学历要求" value={job.degree_required} />
+              <ReadField label="是否管理行列" value={job.is_management_role == null ? null : job.is_management_role ? '是' : '否'} />
+              {job.is_management_role && (
+                <ReadField label="预计管理人数" value={job.management_headcount ? String(job.management_headcount) : null} />
+              )}
+              <ReadField label="应聘类型" value={job.employment_type} />
+              <ReadField label="岗位工作城市" value={
+                job.location_path ||
+                [job.province, job.city_name, job.district].filter(Boolean).join(' · ') ||
+                job.location_name || job.city
+              } />
+              <ReadField label="详细地址" value={job.address} />
+              {allTags.length > 0 && (
+                <ReadChips label="标签" value={allTags} />
+              )}
             </div>
           </div>
 
-          {/* Col 2 — Description */}
-          <div className="flex flex-col gap-3 p-4 overflow-y-auto terminal-scrollbar" style={{ background: 'var(--t-bg-panel)' }}>
-            <div className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.2em] font-semibold" style={{ color: 'var(--t-text-muted)' }}>
-              JOB DESCRIPTION
+          {/* ── Col 2: 岗位描述 ── */}
+          <div className={cardClass} style={cardStyle}>
+            <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 岗位描述</div>
+            <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-y-auto terminal-scrollbar pr-1">
+              <ReadTextarea label="岗位职责" value={job.description} />
+              <ReadChips label="知识" value={job.knowledge_requirements} />
+              <ReadChips label="硬技能" value={job.hard_skill_requirements} />
+              <ReadChips label="软技能" value={job.soft_skill_requirements} />
             </div>
-            <ReadTextarea label="DESCRIPTION" value={job.description} />
-            <ReadChips label="KNOWLEDGE REQ" value={job.knowledge_requirements} />
-            <ReadChips label="HARD SKILLS" value={job.hard_skill_requirements} />
-            <ReadChips label="SOFT SKILLS" value={job.soft_skill_requirements} />
           </div>
 
-          {/* Col 3 — Compensation */}
-          <div className="flex flex-col gap-3 p-4 overflow-y-auto terminal-scrollbar" style={{ background: 'var(--t-bg-panel)' }}>
-            <div className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.2em] font-semibold" style={{ color: 'var(--t-text-muted)' }}>
-              COMPENSATION
+          {/* ── Col 3: 薪酬福利 ── */}
+          <div className={cardClass} style={cardStyle}>
+            <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 薪酬福利</div>
+            <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
+              {/* Salary: 3 cells in one row — same as PostJob fieldSalaryRange */}
+              <div className="grid grid-cols-3 gap-3">
+                <ReadField label="最低月薪" value={formatThousand(job.salary_min)} />
+                <ReadField label="最高月薪" value={formatThousand(job.salary_max)} />
+                <ReadField label="薪资月数" value={job.salary_months ? `${job.salary_months} 个月` : null} />
+              </div>
+              {/* Commission: 2 cells in one row — same as PostJob fieldCommission */}
+              <div className="grid grid-cols-2 gap-3">
+                <ReadField label="计提/计件奖金" value={commissionLabel} />
+                <ReadField label="预估平均额" value={
+                  job.commission_bonus_period === 'not_applicable' ? '—'
+                  : job.commission_bonus_amount ? `${formatThousand(job.commission_bonus_amount)}` : null
+                } />
+              </div>
+              <ReadField
+                label="是否有年终奖"
+                value={job.has_year_end_bonus == null ? null : job.has_year_end_bonus ? '是' : '否'}
+              />
+              {job.has_year_end_bonus && (
+                <ReadField
+                  label="年终奖预估平均额"
+                  value={job.year_end_bonus_months ? `${job.year_end_bonus_months} 个月` : null}
+                />
+              )}
             </div>
-            <ReadField label="SALARY MIN (¥/mo)" value={formatThousand(job.salary_min)} />
-            <ReadField label="SALARY MAX (¥/mo)" value={formatThousand(job.salary_max)} />
-            <ReadField label="SALARY MONTHS" value={job.salary_months ? `${job.salary_months} 个月` : null} />
-            <ReadField label="COMMISSION PERIOD" value={commissionLabel} />
-            <ReadField label="COMMISSION AMOUNT" value={job.commission_bonus_amount ? `${job.commission_bonus_amount}` : null} />
-            <ReadField
-              label="YEAR-END BONUS"
-              value={job.has_year_end_bonus
-                ? `有${job.year_end_bonus_months ? ` · ${job.year_end_bonus_months} 个月` : ''}`
-                : job.has_year_end_bonus === false ? '无' : null}
-            />
           </div>
+
         </div>
       </div>
     )
