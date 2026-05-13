@@ -613,7 +613,7 @@ def match_job(job_id):
 
     from app.models.candidate import Candidate
     from app.models.match_result import MatchResult
-    from app.routes.candidates import _public_dict
+    from app.modules.candidates.serializers import build_public_dict as _public_dict
 
     candidates_list = Candidate.query.filter_by(availability_status="open").all()
 
