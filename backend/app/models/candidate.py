@@ -22,6 +22,8 @@ class Candidate(db.Model):
 
     experience_years = db.Column(db.Integer, nullable=True)
     age              = db.Column(db.Integer, nullable=True)
+    birth_year       = db.Column(db.Integer, nullable=True)
+    birth_month      = db.Column(db.Integer, nullable=True)
     gender = db.Column(
         db.Enum("male", "female", name="candidate_gender"), nullable=True
     )
@@ -182,6 +184,8 @@ class Candidate(db.Model):
             data.update({
                 "full_name":            self.full_name,
                 "age":                  self.age,
+                "birth_year":          self.birth_year,
+                "birth_month":         self.birth_month,
                 "experience_years":     self.experience_years,
                 "education":            self.education,
                 "availability_status":  self.availability_status,
@@ -206,6 +210,8 @@ class Candidate(db.Model):
                     if self.full_name else f"候选人 #{self.id}"
                 ),
                 "age":                  None,
+                "birth_year":          None,
+                "birth_month":         None,
                 "experience_years":     None,
                 "education":            None,
                 "availability_status":  None,

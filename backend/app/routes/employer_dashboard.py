@@ -52,6 +52,7 @@ def _is_paid_filter(function_value, region_value):
 # Area 显示名到 business_area_code 的映射
 AREA_NAME_TO_CODE = {
     'China': 'GREAT_CHINA',
+    'Great China': 'GREAT_CHINA',
     'East China': 'EAST_CHINA',
     'South China': 'SOUTH_CHINA',
     'North China': 'NORTH_CHINA',
@@ -454,8 +455,8 @@ def dashboard_trend_summary():
     region_value = _normalize_area_value(region_value)
 
     if _is_paid_filter(function_value, region_value):
-        from app.utils.subscription_access import subscription_gate
-        _, sub_err = subscription_gate(user.id)
+        from app.utils.subscription_access import subscription_scope_gate
+        _, sub_err = subscription_scope_gate(user.id, function_value, region_value)
         if sub_err:
             return sub_err
 
@@ -541,8 +542,8 @@ def dashboard_chart():
 
     # China 是默认免费区域；只有非默认筛选才触发订阅 gate
     if _is_paid_filter(function_value, region_value):
-        from app.utils.subscription_access import subscription_gate
-        _, sub_err = subscription_gate(user.id)
+        from app.utils.subscription_access import subscription_scope_gate
+        _, sub_err = subscription_scope_gate(user.id, function_value, region_value)
         if sub_err:
             return sub_err
 

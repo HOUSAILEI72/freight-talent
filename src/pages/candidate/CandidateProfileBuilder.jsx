@@ -128,6 +128,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
   const [location, setLocation] = useState(null)
   const [availability, setAvailability] = useState('open')
   const [birthYear, setBirthYear] = useState('')
+  const [birthMonth, setBirthMonth] = useState('')
   const [gender, setGender] = useState('')
 
   // ── Section 2: 当前任职 ─────────────────────────────────────────────────
@@ -179,6 +180,8 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
           })
         }
         setAvailability(p.availability_status || 'open')
+        setBirthYear(p.birth_year != null ? String(p.birth_year) : '')
+        setBirthMonth(p.birth_month != null ? String(p.birth_month) : '')
         setGender(p.gender || '')
 
         setCurrentCompany(p.current_company || '')
@@ -370,6 +373,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
       availability_status: availability,
       ...(gender !== '' ? { gender } : {}),
       ...(birthYear !== '' ? { birth_year: Number(birthYear) } : {}),
+      ...(birthMonth !== '' ? { birth_month: Number(birthMonth) } : {}),
       confirm_latest: false,
     }
 
@@ -574,14 +578,23 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
                 </select>
               </div>
               <div>
-                <label className={labelClass} style={labelStyle}>出生年份</label>
-                <select className={inputClass} style={inputStyle}
-                  value={birthYear} onChange={e => setBirthYear(e.target.value)}>
-                  <option value="">请选择</option>
-                  {Array.from({ length: new Date().getFullYear() - 16 - 1950 + 1 }, (_, i) => new Date().getFullYear() - 16 - i).map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
+                <label className={labelClass} style={labelStyle}>出生年月</label>
+                <div className="flex gap-2">
+                  <select className={inputClass} style={inputStyle}
+                    value={birthYear} onChange={e => setBirthYear(e.target.value)}>
+                    <option value="">年份</option>
+                    {Array.from({ length: new Date().getFullYear() - 16 - 1950 + 1 }, (_, i) => new Date().getFullYear() - 16 - i).map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                  <select className={inputClass} style={inputStyle}
+                    value={birthMonth} onChange={e => setBirthMonth(e.target.value)}>
+                    <option value="">月份</option>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                      <option key={m} value={m}>{m}月</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div>
                 <label className={labelClass} style={labelStyle}>性别</label>

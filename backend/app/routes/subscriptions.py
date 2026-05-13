@@ -171,7 +171,7 @@ def dev_activate():
         tier=plan_id,
         function_codes=func_codes,
         business_area_codes=area_codes,
-        starts_at=now,
+        starts_at=now - timedelta(seconds=1),  # slight past for is_active() robustness
         ends_at=now + timedelta(days=days),
         created_at=now,
         updated_at=now,

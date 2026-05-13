@@ -13,14 +13,14 @@ from app.utils.business_area import BUSINESS_AREAS
 
 public_market_bp = Blueprint("public_market", __name__, url_prefix="/api/public")
 
-# 用于 ticker / fallback 的 function 定义（与前端 FunctionRail DEFAULT_FUNCTIONS 保持一致）
+# Canonical function codes — must match VALID_FUNCTIONS in subscriptions.py and DEFAULT_FUNCTIONS in FunctionRail.jsx
 _FUNCTIONS = [
-    {"code": "Sea",    "name": "Sea"},
-    {"code": "Air",    "name": "Air"},
-    {"code": "Land",   "name": "Land"},
-    {"code": "Custom", "name": "Customs"},
-    {"code": "Sales",  "name": "Sales"},
-    {"code": "Ops",    "name": "Operations"},
+    {"code": "Sea",                "name": "Sea"},
+    {"code": "Air",                "name": "Air"},
+    {"code": "Road",               "name": "Road"},
+    {"code": "Railway",            "name": "Railway"},
+    {"code": "Contract Logistics", "name": "Contract Logistics"},
+    {"code": "ECOMS",              "name": "ECOMS"},
 ]
 
 # 排除 GLOBAL / REMOTE / OVERSEAS 等不实际展示的 area

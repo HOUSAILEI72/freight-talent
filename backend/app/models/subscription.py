@@ -14,7 +14,7 @@ CHINA_SCOPE_KEYS = frozenset({"GREAT_CHINA", "CHINA"})
 CHINA_AREA_CODES = frozenset({
     "GREAT_CHINA", "CHINA",
     "EAST_CHINA", "NORTH_CHINA", "SOUTH_CHINA", "WEST_CHINA", "CENTRAL_CHINA",
-    "HONG_KONG", "TAIWAN",
+    "HONG_KONG", "TAIWAN", "MACAU",
 })
 
 
@@ -116,8 +116,11 @@ class Subscription(db.Model):
             "employer_id": self.employer_id,
             "status":      self.status,
             "is_active":   self.is_active(),
-            "plan_type":   self.plan_type,
-            "tier":        self.tier,
+            # plan_type / tier are legacy column names; plan_id / billing_cycle are the canonical keys
+            "plan_id":       self.tier,
+            "billing_cycle": self.plan_type,
+            "plan_type":     self.plan_type,   # keep for backward compatibility
+            "tier":          self.tier,         # keep for backward compatibility
             "function_codes":      self.function_codes,
             "business_area_codes": self.business_area_codes,
             "starts_at":   self.starts_at.isoformat() if self.starts_at else None,

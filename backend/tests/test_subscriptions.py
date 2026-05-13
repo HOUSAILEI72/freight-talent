@@ -67,7 +67,7 @@ def _make_subscription(app, db_session, employer_id,
         tier="pro",
         function_codes=function_codes if function_codes is not None else ["ALL"],
         business_area_codes=business_area_codes if business_area_codes is not None else ["ALL"],
-        starts_at=now,
+        starts_at=now - timedelta(seconds=1),
         ends_at=now + timedelta(days=days),
         created_at=now,
         updated_at=now,
@@ -139,13 +139,13 @@ class TestFunctionSubscriptionCoverage:
     def test_function_match(self, app, client, db_session):
         emp_user = _make_employer_user(app, db_session, "emp_t2@ex.com")
         cand_user = _make_candidate_user(app, db_session, "cand_t2@ex.com")
-        _make_candidate(app, db_session, cand_user.id,
+        cand = _make_candidate(app, db_session, cand_user.id,
                         function_code="SALES", business_area_code="EAST_CHINA")
         _make_subscription(app, db_session, emp_user.id,
                            function_codes=["SALES"], business_area_codes=["ALL"])
 
         token = client.post("/api/auth/login", json={"email": "emp_t2@ex.com", "password": "Pass123!"}).get_json()["access_token"]
-        r = client.get(f"/api/candidates/{cand_user.id}", headers=_auth(token))
+        r = client.get(f"/api/candidates/{cand.id}", headers=_auth(token))
         assert r.status_code == 200
         c = r.get_json()["candidate"]
         assert c.get("private_visible") is True
@@ -153,13 +153,13 @@ class TestFunctionSubscriptionCoverage:
     def test_function_no_match(self, app, client, db_session):
         emp_user = _make_employer_user(app, db_session, "emp_t2b@ex.com")
         cand_user = _make_candidate_user(app, db_session, "cand_t2b@ex.com")
-        _make_candidate(app, db_session, cand_user.id,
+        cand = _make_candidate(app, db_session, cand_user.id,
                         function_code="OPS", business_area_code="EAST_CHINA")
         _make_subscription(app, db_session, emp_user.id,
                            function_codes=["SALES"], business_area_codes=["ALL"])
 
         token = client.post("/api/auth/login", json={"email": "emp_t2b@ex.com", "password": "Pass123!"}).get_json()["access_token"]
-        r = client.get(f"/api/candidates/{cand_user.id}", headers=_auth(token))
+        r = client.get(f"/api/candidates/{cand.id}", headers=_auth(token))
         assert r.status_code == 200
         c = r.get_json()["candidate"]
         assert c.get("private_visible") is False
@@ -171,13 +171,13 @@ class TestAreaSubscriptionCoverage:
     def test_area_match(self, app, client, db_session):
         emp_user = _make_employer_user(app, db_session, "emp_t3@ex.com")
         cand_user = _make_candidate_user(app, db_session, "cand_t3@ex.com")
-        _make_candidate(app, db_session, cand_user.id,
+        cand = _make_candidate(app, db_session, cand_user.id,
                         function_code="SALES", business_area_code="EAST_CHINA")
         _make_subscription(app, db_session, emp_user.id,
                            function_codes=["ALL"], business_area_codes=["EAST_CHINA"])
 
         token = client.post("/api/auth/login", json={"email": "emp_t3@ex.com", "password": "Pass123!"}).get_json()["access_token"]
-        r = client.get(f"/api/candidates/{cand_user.id}", headers=_auth(token))
+        r = client.get(f"/api/candidates/{cand.id}", headers=_auth(token))
         assert r.status_code == 200
         c = r.get_json()["candidate"]
         assert c.get("private_visible") is True
@@ -185,13 +185,13 @@ class TestAreaSubscriptionCoverage:
     def test_area_no_match(self, app, client, db_session):
         emp_user = _make_employer_user(app, db_session, "emp_t3b@ex.com")
         cand_user = _make_candidate_user(app, db_session, "cand_t3b@ex.com")
-        _make_candidate(app, db_session, cand_user.id,
+        cand = _make_candidate(app, db_session, cand_user.id,
                         function_code="SALES", business_area_code="SOUTH_CHINA")
         _make_subscription(app, db_session, emp_user.id,
                            function_codes=["ALL"], business_area_codes=["EAST_CHINA"])
 
         token = client.post("/api/auth/login", json={"email": "emp_t3b@ex.com", "password": "Pass123!"}).get_json()["access_token"]
-        r = client.get(f"/api/candidates/{cand_user.id}", headers=_auth(token))
+        r = client.get(f"/api/candidates/{cand.id}", headers=_auth(token))
         assert r.status_code == 200
         c = r.get_json()["candidate"]
         assert c.get("private_visible") is False
@@ -203,39 +203,39 @@ class TestComboSubscriptionCoverage:
     def test_both_match(self, app, client, db_session):
         emp_user = _make_employer_user(app, db_session, "emp_t4@ex.com")
         cand_user = _make_candidate_user(app, db_session, "cand_t4@ex.com")
-        _make_candidate(app, db_session, cand_user.id,
+        cand = _make_candidate(app, db_session, cand_user.id,
                         function_code="SALES", business_area_code="EAST_CHINA")
         _make_subscription(app, db_session, emp_user.id,
                            function_codes=["SALES"], business_area_codes=["EAST_CHINA"])
 
         token = client.post("/api/auth/login", json={"email": "emp_t4@ex.com", "password": "Pass123!"}).get_json()["access_token"]
-        r = client.get(f"/api/candidates/{cand_user.id}", headers=_auth(token))
+        r = client.get(f"/api/candidates/{cand.id}", headers=_auth(token))
         assert r.status_code == 200
         assert r.get_json()["candidate"].get("private_visible") is True
 
     def test_only_function_match(self, app, client, db_session):
         emp_user = _make_employer_user(app, db_session, "emp_t4b@ex.com")
         cand_user = _make_candidate_user(app, db_session, "cand_t4b@ex.com")
-        _make_candidate(app, db_session, cand_user.id,
+        cand = _make_candidate(app, db_session, cand_user.id,
                         function_code="SALES", business_area_code="SOUTH_CHINA")
         _make_subscription(app, db_session, emp_user.id,
                            function_codes=["SALES"], business_area_codes=["EAST_CHINA"])
 
         token = client.post("/api/auth/login", json={"email": "emp_t4b@ex.com", "password": "Pass123!"}).get_json()["access_token"]
-        r = client.get(f"/api/candidates/{cand_user.id}", headers=_auth(token))
+        r = client.get(f"/api/candidates/{cand.id}", headers=_auth(token))
         assert r.status_code == 200
         assert r.get_json()["candidate"].get("private_visible") is False
 
     def test_only_area_match(self, app, client, db_session):
         emp_user = _make_employer_user(app, db_session, "emp_t4c@ex.com")
         cand_user = _make_candidate_user(app, db_session, "cand_t4c@ex.com")
-        _make_candidate(app, db_session, cand_user.id,
+        cand = _make_candidate(app, db_session, cand_user.id,
                         function_code="OPS", business_area_code="EAST_CHINA")
         _make_subscription(app, db_session, emp_user.id,
                            function_codes=["SALES"], business_area_codes=["EAST_CHINA"])
 
         token = client.post("/api/auth/login", json={"email": "emp_t4c@ex.com", "password": "Pass123!"}).get_json()["access_token"]
-        r = client.get(f"/api/candidates/{cand_user.id}", headers=_auth(token))
+        r = client.get(f"/api/candidates/{cand.id}", headers=_auth(token))
         assert r.status_code == 200
         assert r.get_json()["candidate"].get("private_visible") is False
 
@@ -276,7 +276,7 @@ class TestInvitationNoLongerUnlocks:
 
         # No subscription → private must be False even with accepted invitation
         token = client.post("/api/auth/login", json={"email": "emp_t5@ex.com", "password": "Pass123!"}).get_json()["access_token"]
-        r = client.get(f"/api/candidates/{cand_user.id}", headers=_auth(token))
+        r = client.get(f"/api/candidates/{cand.id}", headers=_auth(token))
         assert r.status_code == 200
         assert r.get_json()["candidate"].get("private_visible") is False
 
@@ -312,6 +312,79 @@ class TestDashboardSubscriptionGate:
                            function_codes=["ALL"], business_area_codes=["ALL"])
         token = client.post("/api/auth/login", json={"email": "emp_t6d@ex.com", "password": "Pass123!"}).get_json()["access_token"]
         r = client.get("/api/employer/dashboard-chart?function=SALES&region=EAST_CHINA", headers=_auth(token))
+        assert r.status_code == 200
+
+    # ── Scope gate tests (new) ──
+
+    def test_china_sea_allows_sea_east_china(self, app, client, db_session):
+        """China+Sea sub should allow dashboard with Sea + EAST_CHINA."""
+        emp_user = _make_employer_user(app, db_session, "emp_ds1@ex.com")
+        _make_subscription(app, db_session, emp_user.id,
+                           function_codes=["Sea"], business_area_codes=["GREAT_CHINA"])
+        token = client.post("/api/auth/login", json={
+            "email": "emp_ds1@ex.com", "password": "Pass123!"}).get_json()["access_token"]
+        r = client.get("/api/employer/dashboard-chart?function=Sea&region=EAST_CHINA", headers=_auth(token))
+        assert r.status_code == 200
+
+    def test_china_sea_blocks_air(self, app, client, db_session):
+        """China+Sea sub should BLOCK dashboard with Air function."""
+        emp_user = _make_employer_user(app, db_session, "emp_ds2@ex.com")
+        _make_subscription(app, db_session, emp_user.id,
+                           function_codes=["Sea"], business_area_codes=["GREAT_CHINA"])
+        token = client.post("/api/auth/login", json={
+            "email": "emp_ds2@ex.com", "password": "Pass123!"}).get_json()["access_token"]
+        r = client.get("/api/employer/dashboard-chart?function=Air&region=EAST_CHINA", headers=_auth(token))
+        assert r.status_code == 402
+        assert r.get_json().get("error_code") == "subscription_scope_mismatch"
+
+    def test_china_sea_blocks_overseas(self, app, client, db_session):
+        """China+Sea sub should BLOCK dashboard with OVERSEAS region."""
+        emp_user = _make_employer_user(app, db_session, "emp_ds3@ex.com")
+        _make_subscription(app, db_session, emp_user.id,
+                           function_codes=["Sea"], business_area_codes=["GREAT_CHINA"])
+        token = client.post("/api/auth/login", json={
+            "email": "emp_ds3@ex.com", "password": "Pass123!"}).get_json()["access_token"]
+        r = client.get("/api/employer/dashboard-chart?function=Sea&region=OVERSEAS", headers=_auth(token))
+        assert r.status_code == 402
+        assert r.get_json().get("error_code") == "subscription_scope_mismatch"
+
+    def test_china_all_allows_road(self, app, client, db_session):
+        """China+ALL sub should allow dashboard with Road + SOUTH_CHINA."""
+        emp_user = _make_employer_user(app, db_session, "emp_ds4@ex.com")
+        _make_subscription(app, db_session, emp_user.id,
+                           function_codes=["ALL"], business_area_codes=["GREAT_CHINA"])
+        token = client.post("/api/auth/login", json={
+            "email": "emp_ds4@ex.com", "password": "Pass123!"}).get_json()["access_token"]
+        r = client.get("/api/employer/dashboard-chart?function=Road&region=SOUTH_CHINA", headers=_auth(token))
+        assert r.status_code == 200
+
+    def test_china_all_blocks_overseas(self, app, client, db_session):
+        """China+ALL sub should BLOCK dashboard with OVERSEAS region."""
+        emp_user = _make_employer_user(app, db_session, "emp_ds5@ex.com")
+        _make_subscription(app, db_session, emp_user.id,
+                           function_codes=["ALL"], business_area_codes=["GREAT_CHINA"])
+        token = client.post("/api/auth/login", json={
+            "email": "emp_ds5@ex.com", "password": "Pass123!"}).get_json()["access_token"]
+        r = client.get("/api/employer/dashboard-chart?function=ALL&region=OVERSEAS", headers=_auth(token))
+        assert r.status_code == 402
+        assert r.get_json().get("error_code") == "subscription_scope_mismatch"
+
+    def test_china_sea_allows_free_tier(self, app, client, db_session):
+        """ALL/ALL is free tier — no gate even with China+Sea sub."""
+        emp_user = _make_employer_user(app, db_session, "emp_ds6@ex.com")
+        _make_subscription(app, db_session, emp_user.id,
+                           function_codes=["Sea"], business_area_codes=["GREAT_CHINA"])
+        token = client.post("/api/auth/login", json={
+            "email": "emp_ds6@ex.com", "password": "Pass123!"}).get_json()["access_token"]
+        r = client.get("/api/employer/dashboard-chart?function=ALL&region=ALL", headers=_auth(token))
+        assert r.status_code == 200
+
+    def test_no_sub_free_tier_ok(self, app, client, db_session):
+        """ALL/ALL free tier should work without any subscription."""
+        emp_user = _make_employer_user(app, db_session, "emp_ds7@ex.com")
+        token = client.post("/api/auth/login", json={
+            "email": "emp_ds7@ex.com", "password": "Pass123!"}).get_json()["access_token"]
+        r = client.get("/api/employer/dashboard-trend-summary?function=ALL&region=ALL", headers=_auth(token))
         assert r.status_code == 200
 
 
@@ -549,6 +622,20 @@ class TestChinaScopeExpansion:
 
         token = client.post("/api/auth/login", json={
             "email": "emp_china1c@ex.com", "password": "Pass123!"}).get_json()["access_token"]
+        r = client.get(f"/api/candidates/{cand.id}", headers=_auth(token))
+        assert r.get_json()["candidate"].get("private_visible") is True
+
+    def test_china_covers_macau(self, app, client, db_session):
+        """China + Sea sub should unlock Sea + MACAU candidate."""
+        emp_user = _make_employer_user(app, db_session, "emp_china1d@ex.com")
+        cand_user = _make_candidate_user(app, db_session, "cand_china1d@ex.com")
+        cand = _make_candidate(app, db_session, cand_user.id,
+                        function_code="Sea", business_area_code="MACAU")
+        _make_subscription(app, db_session, emp_user.id,
+                           function_codes=["Sea"], business_area_codes=["GREAT_CHINA"])
+
+        token = client.post("/api/auth/login", json={
+            "email": "emp_china1d@ex.com", "password": "Pass123!"}).get_json()["access_token"]
         r = client.get(f"/api/candidates/{cand.id}", headers=_auth(token))
         assert r.get_json()["candidate"].get("private_visible") is True
 

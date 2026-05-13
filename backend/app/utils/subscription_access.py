@@ -116,3 +116,66 @@ def subscription_gate(employer_id: int):
             402,
         )
     return sub, None
+
+
+def subscription_scope_gate(
+    employer_id: int,
+    function_code: str | None = None,
+    region_code: str | None = None,
+):
+    """Return (subscription_or_None, error_response_or_None).
+
+    Like subscription_gate, but ALSO checks that the subscription's scope
+    covers the requested function and region.
+
+    function_code=None or "ALL" → skip function check.
+    region_code=None or "ALL" or "GREAT_CHINA" → skip region check (free tier).
+
+    Usage::
+        sub, err = subscription_scope_gate(user.id, function_value, region_value)
+        if err:
+            return err
+    """
+    from flask import jsonify
+
+    _free_regions = {"ALL", "GREAT_CHINA", "CHINA", None}
+
+    sub = _get_active_subscription(employer_id)
+    if sub is None:
+        return None, (
+            jsonify({
+                "success": False,
+                "message": "需要有效订阅才能使用此功能",
+                "error_code": "subscription_required",
+                "pricing_url": "/employer/pricing",
+            }),
+            402,
+        )
+
+    # Check function scope
+    fc = function_code or "ALL"
+    if fc != "ALL" and not sub.covers_function(fc):
+        return None, (
+            jsonify({
+                "success": False,
+                "message": f"您的订阅不覆盖 {fc} 职能方向，请升级套餐",
+                "error_code": "subscription_scope_mismatch",
+                "pricing_url": "/employer/pricing",
+            }),
+            402,
+        )
+
+    # Check region scope (ALL / GREAT_CHINA defaults are free tier)
+    rc = region_code or "ALL"
+    if rc not in _free_regions and not sub.covers_area(rc):
+        return None, (
+            jsonify({
+                "success": False,
+                "message": f"您的订阅不覆盖 {rc} 区域，请升级套餐",
+                "error_code": "subscription_scope_mismatch",
+                "pricing_url": "/employer/pricing",
+            }),
+            402,
+        )
+
+    return sub, None

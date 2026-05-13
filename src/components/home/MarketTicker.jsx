@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react'
 
 const FALLBACK_TICKER = [
-  { function_name: 'Sea',     area_name: 'East China',  candidates: 0, jobs: 0 },
-  { function_name: 'Air',     area_name: 'South China', candidates: 0, jobs: 0 },
-  { function_name: 'Customs', area_name: 'North China', candidates: 0, jobs: 0 },
-  { function_name: 'Sales',   area_name: 'East China',  candidates: 0, jobs: 0 },
-  { function_name: 'Land',    area_name: 'West China',  candidates: 0, jobs: 0 },
-  { function_name: 'Sea',     area_name: 'South China', candidates: 0, jobs: 0 },
-  { function_name: 'Air',     area_name: 'North China', candidates: 0, jobs: 0 },
-  { function_name: 'Sales',   area_name: 'South China', candidates: 0, jobs: 0 },
+  { function_name: 'Sea',                area_name: 'East China',  candidates: 0, jobs: 0 },
+  { function_name: 'Air',                area_name: 'South China', candidates: 0, jobs: 0 },
+  { function_name: 'Road',               area_name: 'North China', candidates: 0, jobs: 0 },
+  { function_name: 'Railway',            area_name: 'East China',  candidates: 0, jobs: 0 },
+  { function_name: 'Contract Logistics', area_name: 'West China',  candidates: 0, jobs: 0 },
+  { function_name: 'ECOMS',              area_name: 'South China', candidates: 0, jobs: 0 },
+  { function_name: 'Sea',                area_name: 'North China', candidates: 0, jobs: 0 },
+  { function_name: 'Air',                area_name: 'South China', candidates: 0, jobs: 0 },
 ]
 
 // px per second

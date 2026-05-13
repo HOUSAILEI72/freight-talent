@@ -304,7 +304,14 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
                   {profile.experience_years} 年从业经验
                 </div>
               )}
-              {profile.age != null && (
+              {(profile.birth_year != null) && (
+                <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                  <Clock size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  {profile.birth_year} 年{profile.birth_month != null ? `${profile.birth_month} 月` : ''}
+                  {profile.age != null && <span className="ml-1">（{profile.age} 岁）</span>}
+                </div>
+              )}
+              {profile.birth_year == null && profile.age != null && (
                 <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
                   <Clock size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
                   {profile.age} 岁

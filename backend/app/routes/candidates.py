@@ -120,6 +120,8 @@ def update_me():
             return _err("工作年限格式不正确")
 
     age_val = None
+    birth_year_val = None
+    birth_month_val = None
     birth_year = data.get("birth_year")
     if birth_year is not None:
         from datetime import datetime as _dt
@@ -128,9 +130,20 @@ def update_me():
             birth_year = int(birth_year)
             if birth_year < 1950 or birth_year > current_year - 16:
                 return _err(f"出生年份请填写 1950 至 {current_year - 16} 之间")
+            birth_year_val = birth_year
             age_val = current_year - birth_year
         except (ValueError, TypeError):
             return _err("出生年份格式不正确")
+
+    birth_month = data.get("birth_month")
+    if birth_month is not None:
+        try:
+            birth_month = int(birth_month)
+            if birth_month < 1 or birth_month > 12:
+                return _err("出生月份请填写 1-12")
+            birth_month_val = birth_month
+        except (ValueError, TypeError):
+            return _err("出生月份格式不正确")
 
     VALID_GENDER = {'male', 'female'}
     gender_val = data.get("gender") or None
@@ -332,6 +345,10 @@ def update_me():
     profile.experience_years = exp
     if age_val is not None:
         profile.age = age_val
+    if birth_year_val is not None:
+        profile.birth_year = birth_year_val
+    if birth_month_val is not None:
+        profile.birth_month = birth_month_val
     if "gender" in data:
         profile.gender = gender_val
     profile.education = (data.get("education") or "").strip() or None

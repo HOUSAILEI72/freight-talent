@@ -121,3 +121,5 @@ def db_session(app):
         for table in reversed(db.metadata.sorted_tables):
             db.session.execute(table.delete())
         db.session.commit()
+        # Expire all objects so next test starts with clean identity map
+        db.session.expire_all()

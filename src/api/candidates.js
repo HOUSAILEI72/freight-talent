@@ -64,6 +64,9 @@ export const candidatesApi = {
     if (filters.location_code)       params.location_code = filters.location_code
     if (filters.availability_status) params.availability_status = filters.availability_status
     if (filters.q)                   params.q = filters.q
+    if (filters.gender)              params.gender = filters.gender
+    if (filters.page != null)        params.page = filters.page
+    if (filters.page_size != null)   params.page_size = filters.page_size
     if (filters.tagGroups) {
       const s = serializeTagGroups(filters.tagGroups)
       if (s) params.tag_groups = s
