@@ -1,15 +1,17 @@
 """
 conftest.py — 测试通用夹具
 
-使用 SQLite in-memory 数据库，不依赖 MySQL。
+连接 freight_talent_test（真实 MySQL）。
 JWT_SECRET_KEY 通过环境变量注入测试值。
 """
 import os
 import pytest
 from dotenv import load_dotenv
 
-# 测试加载本地 .env，确保 TEST_DB_PASSWORD 可用
-load_dotenv()
+# 明确指向 backend/.env，无论 pytest 从哪个目录调用都能找到密码
+_HERE = os.path.dirname(os.path.abspath(__file__))           # backend/tests/
+_BACKEND_ENV = os.path.join(_HERE, "..", ".env")              # backend/.env
+load_dotenv(dotenv_path=_BACKEND_ENV, override=False)         # 不覆盖已设置的环境变量
 
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-pytest-only-32chars!!")
 os.environ.setdefault("FLASK_ENV", "development")
