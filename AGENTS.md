@@ -117,7 +117,7 @@
 | 7-B | FunctionRail（hover 展开）+ AreaSidebar（始终展开）+ 紫色柱状图 + ActionBar | **完成** |
 | 7-C | 真实 Function/Area 数据接入：新增 `GET /api/employer/terminal-dashboard` 聚合接口（functions / areas / chart 一次返回） | **完成** |
 | 7-D | 企业端老页面接入 Terminal 壳层 + 全屏布局规范化（外层铺满 + 内层限宽） | **完成** |
-| 7-E | 业务页面 Terminal 视觉精修（card/input/tag-chip/empty-state 等逐组件 token 化） | **进行中（6/6 单页完成）** |
+| 7-E | 业务页面 Terminal 视觉精修（card/input/tag-chip/empty-state 等逐组件 token 化） | **完成（6/6 单页完成）** |
 | 7-E-1 | `/employer/messages` token 化（ConvItem / DateDivider / Bubble / MessagePanel / 返回按钮 / ConnectionBanner / TypingIndicator / InvBadge） | **完成** |
 | 7-E-2 | `/employer/jobs` + `/candidate/jobs` token 化（左栏 / 选中态 / hover / 搜索框 / Empty / JobDetailPanel；候选人端默认隐藏 New Job） | **完成** |
 | 7-E-3 | `/employer/candidates` token 化（左栏 / 筛选 / 列表 / 选中态 / hover / CandidateDetailPanel / 联系方式 / 工作教育经历 / 证书 / 标签 / 邀约&沟通按钮） | **完成** |
