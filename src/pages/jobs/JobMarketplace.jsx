@@ -38,42 +38,50 @@ function formatThousand(val) {
 }
 
 // ── read-only field sub-components ───────────────────────────────────────────
+const LABEL_STYLE = { color: 'var(--t-text-secondary)', fontSize: 11, fontWeight: 500, display: 'block', marginBottom: 3 }
+const BOX_STYLE = {
+  background: 'var(--t-bg-input)',
+  border: '1px solid var(--t-border)',
+  color: 'var(--t-text)',
+  borderRadius: 'var(--t-radius)',
+  padding: '6px 10px',
+  fontSize: 13,
+  lineHeight: 1.45,
+  minHeight: 30,
+}
+
 function ReadField({ label, value, empty = '—' }) {
+  const display = (value === null || value === undefined || value === '') ? empty : value
   return (
-    <div className="flex flex-col gap-1">
-      <span className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.18em]" style={{ color: 'var(--t-text-muted)' }}>
-        {label}
-      </span>
-      <div
-        className="min-h-[28px] rounded-[var(--t-radius)] px-2 py-1.5 font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] leading-snug"
-        style={{ background: 'var(--t-bg-input,var(--t-bg-elevated))', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)' }}
-      >
-        {value || empty}
+    <div>
+      <span style={LABEL_STYLE}>{label}</span>
+      <div style={{ ...BOX_STYLE, color: display === empty ? 'var(--t-text-muted)' : 'var(--t-text)' }}>
+        {display}
       </div>
     </div>
   )
 }
+
 function ReadChips({ label, value, empty = '—' }) {
-  const tokens = splitTokens(value)
+  const tokens = Array.isArray(value)
+    ? value.map(s => String(s).trim()).filter(Boolean)
+    : splitTokens(value)
   return (
-    <div className="flex flex-col gap-1">
-      <span className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.18em]" style={{ color: 'var(--t-text-muted)' }}>
-        {label}
-      </span>
+    <div>
+      <span style={LABEL_STYLE}>{label}</span>
       {tokens.length === 0 ? (
-        <div
-          className="min-h-[28px] rounded-[var(--t-radius)] px-2 py-1.5 font-[var(--t-font-mono)] text-[length:var(--t-text-sm)]"
-          style={{ background: 'var(--t-bg-input,var(--t-bg-elevated))', border: '1px solid var(--t-border)', color: 'var(--t-text-muted)' }}
-        >
-          {empty}
-        </div>
+        <div style={{ ...BOX_STYLE, color: 'var(--t-text-muted)' }}>{empty}</div>
       ) : (
-        <div className="flex flex-wrap gap-1">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, paddingTop: 2 }}>
           {tokens.map((t, i) => (
             <span
               key={i}
-              className="font-[var(--t-font-mono)] text-[10px] px-2 py-0.5 rounded-[var(--t-radius-sm)]"
-              style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)' }}
+              style={{
+                padding: '3px 9px', fontSize: 11, borderRadius: 'var(--t-radius-sm)',
+                background: 'var(--t-bg-elevated)',
+                border: '1px solid var(--t-border)',
+                color: 'var(--t-text-secondary)',
+              }}
             >
               {t}
             </span>
@@ -83,17 +91,21 @@ function ReadChips({ label, value, empty = '—' }) {
     </div>
   )
 }
+
 function ReadTextarea({ label, value, empty = '—' }) {
+  const display = (value === null || value === undefined || value === '') ? empty : value
   return (
-    <div className="flex flex-col gap-1">
-      <span className="font-[var(--t-font-mono)] text-[9px] uppercase tracking-[0.18em]" style={{ color: 'var(--t-text-muted)' }}>
-        {label}
-      </span>
+    <div>
+      <span style={LABEL_STYLE}>{label}</span>
       <div
-        className="rounded-[var(--t-radius)] px-2 py-1.5 font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] leading-relaxed whitespace-pre-line"
-        style={{ background: 'var(--t-bg-input,var(--t-bg-elevated))', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)', minHeight: '80px' }}
+        style={{
+          ...BOX_STYLE,
+          whiteSpace: 'pre-line',
+          minHeight: 140,
+          color: display === empty ? 'var(--t-text-muted)' : 'var(--t-text)',
+        }}
       >
-        {value || empty}
+        {display}
       </div>
     </div>
   )
@@ -126,7 +138,7 @@ function JobDetailPanel({ job, terminal = false }) {
         className="terminal-mode flex-1 min-h-0 overflow-hidden flex flex-col px-6 py-5"
         style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}
       >
-        {/* Header row — mirrors PostJob header */}
+        {/* Header row */}
         <div className="flex items-start justify-between mb-3 flex-shrink-0">
           <div>
             <h1 className="text-base font-semibold" style={{ color: 'var(--t-text)' }}>{job.title}</h1>
@@ -134,6 +146,12 @@ function JobDetailPanel({ job, terminal = false }) {
               {job.company_name ?? '—'}
               {job.created_at ? ` · 发布于 ${job.created_at.slice(0, 10)}` : ''}
             </p>
+            {(job.salary_min || job.salary_max) && (
+              <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--t-primary)' }}>
+                ¥ {formatThousand(job.salary_min) || '?'} – {formatThousand(job.salary_max) || '?'} / 月
+                {job.salary_months ? `  ·  ${job.salary_months} 个月` : ''}
+              </p>
+            )}
           </div>
         </div>
 
