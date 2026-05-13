@@ -35,7 +35,7 @@ function TrendSummaryCard({ type, data, loading }) {
   const card = data?.cards?.[type]
 
   const baseClass =
-    'flex flex-1 flex-col gap-2 rounded-[var(--t-radius-lg)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] px-4 py-4 shadow-[var(--t-shadow-panel)]'
+    'flex flex-1 flex-col rounded-[var(--t-radius-lg)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] px-5 py-5 shadow-[var(--t-shadow-panel)]'
 
   if (loading) {
     return (
@@ -43,7 +43,7 @@ function TrendSummaryCard({ type, data, loading }) {
         <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
           {title}
         </span>
-        <div className="font-[var(--t-font-mono)] text-[32px] font-bold leading-none text-[color:var(--t-text)]">
+        <div className="flex flex-1 items-center font-[var(--t-font-mono)] text-[64px] font-bold leading-none text-[color:var(--t-text)]">
           —
         </div>
       </div>
@@ -56,7 +56,7 @@ function TrendSummaryCard({ type, data, loading }) {
         <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
           {title}
         </span>
-        <div className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] text-[color:var(--t-text-secondary)]">
+        <div className="flex flex-1 items-center font-[var(--t-font-mono)] text-[40px] font-bold uppercase tracking-wide text-[color:var(--t-text-secondary)]">
           NO DATA
         </div>
       </div>
@@ -77,20 +77,24 @@ function TrendSummaryCard({ type, data, loading }) {
       <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
         {title}
       </span>
-      <div className="font-[var(--t-font-mono)] text-[32px] font-bold leading-none text-[color:var(--t-text)]">
-        {card.current}
-      </div>
-      <div className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-secondary)]">
-        AS OF {data.current_checkpoint}
-      </div>
-      <div
-        className="font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] font-semibold"
-        style={{ color: deltaColor }}
-      >
-        {deltaSign}{card.delta} / {percentSign}{card.percent}%
-      </div>
-      <div className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
-        VS {data.previous_checkpoint}
+      <div className="flex flex-1 flex-col justify-center gap-4">
+        <div className="font-[var(--t-font-mono)] text-[72px] font-bold leading-none text-[color:var(--t-text)]">
+          {card.current}
+        </div>
+        <div className="space-y-2">
+          <div className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-secondary)]">
+            AS OF {data.current_checkpoint}
+          </div>
+          <div
+            className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-bold"
+            style={{ color: deltaColor }}
+          >
+            {deltaSign}{card.delta} / {percentSign}{card.percent}%
+          </div>
+          <div className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
+            VS {data.previous_checkpoint}
+          </div>
+        </div>
       </div>
     </div>
   )

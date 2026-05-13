@@ -115,17 +115,17 @@
 |---|---|---|
 | 7-A | 企业 Dashboard 全屏深色 Terminal 壳层（隐藏白色 Navbar/Footer，IconRail，TerminalHeader） | **完成** |
 | 7-B | FunctionRail（hover 展开）+ AreaSidebar（始终展开）+ 紫色柱状图 + ActionBar | **完成** |
-| 7-C | 真实 Function/Area 数据接入：新增 `GET /api/employer/terminal-dashboard` 聚合接口（functions / areas / chart 一次返回） | **待办** |
+| 7-C | 真实 Function/Area 数据接入：新增 `GET /api/employer/terminal-dashboard` 聚合接口（functions / areas / chart 一次返回） | **完成** |
 | 7-D | 企业端老页面接入 Terminal 壳层 + 全屏布局规范化（外层铺满 + 内层限宽） | **完成** |
-| 7-E | 业务页面 Terminal 视觉精修（card/input/tag-chip/empty-state 等逐组件 token 化） | **进行中（5/N 单页完成）** |
+| 7-E | 业务页面 Terminal 视觉精修（card/input/tag-chip/empty-state 等逐组件 token 化） | **进行中（6/6 单页完成）** |
 | 7-E-1 | `/employer/messages` token 化（ConvItem / DateDivider / Bubble / MessagePanel / 返回按钮 / ConnectionBanner / TypingIndicator / InvBadge） | **完成** |
 | 7-E-2 | `/employer/jobs` + `/candidate/jobs` token 化（左栏 / 选中态 / hover / 搜索框 / Empty / JobDetailPanel；候选人端默认隐藏 New Job） | **完成** |
 | 7-E-3 | `/employer/candidates` token 化（左栏 / 筛选 / 列表 / 选中态 / hover / CandidateDetailPanel / 联系方式 / 工作教育经历 / 证书 / 标签 / 邀约&沟通按钮） | **完成** |
 | 7-E-4 | `/employer/jobs/new` PostJob token 化（Step indicator / 表单卡 / input / textarea / chip / AI 标签卡 / 错误条 / 成功态） | **完成** |
 | 7-E-5 | `/employer/jobs/:jobId/match` MatchResult token 化（Toast / FreshBadge / 岗位摘要卡 / 4 项统计 / 过滤栏 / Empty / 候选人卡片 / 排名 chip / 头像 / 推荐理由 panel / 邀约按钮）；同步兼容旧路由 `/employer/match/:jobId` | **完成** |
-| 7-E-6 | `/employer/tags` MyTags 内部精修 | **待办** |
-| 7-F | 共享组件批量 token 化（Button / Badge / StatusBadge / TagList / MatchScore / ChartTagSelector） | **待办** |
-| 7-G | 数据回填验收 + 端到端跑通 employer 全链路（PostJob → Jobs → Match → Invite → Messages） | **待办** |
+| 7-E-6 | `/employer/tags` MyTags 内部精修 | **完成** |
+| 7-F | 共享组件批量 token 化（Button / Badge / StatusBadge / TagList / MatchScore / ChartTagSelector） | **完成** |
+| 7-G | 数据回填验收 + 端到端跑通 employer 全链路（PostJob → Jobs → Match → Invite → Messages） | **完成** |
 
 ### Phase 7 关键修复（与视觉无直接关系，但必须记录）
 
