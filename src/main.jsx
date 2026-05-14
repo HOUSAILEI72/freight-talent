@@ -6,13 +6,16 @@ import './styles/terminal.css'
 import { router } from './router/index.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { ToastProvider } from './components/ui/Toast'
+import { TerminalThemeProvider } from './context/TerminalThemeContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ToastProvider>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
-    </ToastProvider>
+    <TerminalThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </ToastProvider>
+    </TerminalThemeProvider>
   </StrictMode>,
 )

@@ -5,61 +5,11 @@
 ────────────────────────────────────────────── */
 
 :root {
-  /* ── Backgrounds ── */
-  --t-bg:            #0b0e13;   /* root shell background */
-  --t-bg-panel:      #111720;   /* panel / card surface */
-  --t-bg-elevated:   #16202e;   /* slightly lifted surface */
-  --t-bg-hover:      #1a2535;   /* hover state */
-  --t-bg-active:     #1f2d42;   /* pressed / selected */
-  --t-bg-input:      #0f1823;   /* form input fill */
-
-  /* ── Borders ── */
-  --t-border:        #1e2d40;   /* default border */
-  --t-border-subtle: #162030;   /* dividers, separators */
-  --t-border-focus:  #2563eb;   /* keyboard focus ring */
-
-  /* ── Text ── */
-  --t-text:          #e2e8f0;   /* primary text */
-  --t-text-secondary:#94a3b8;   /* secondary / supporting */
-  --t-text-muted:    #4b5a6e;   /* muted / disabled */
-  --t-text-inverse:  #0b0e13;   /* text on bright backgrounds */
-
-  /* ── Brand / Accent ── */
-  --t-primary:       #2563eb;   /* primary blue */
-  --t-primary-hover: #1d4ed8;
-  --t-primary-muted: #1e3a6e;   /* primary bg tint */
-
-  /* ── Semantic Colors ── */
-  --t-success:       #22c55e;
-  --t-success-muted: #14532d;
-  --t-danger:        #ef4444;
-  --t-danger-muted:  #7f1d1d;
-  --t-warning:       #f59e0b;
-  --t-warning-muted: #78350f;
-
-  /* ── Chart Palette ── */
-  --t-chart-purple:  #a78bfa;
-  --t-chart-blue:    #60a5fa;
-  --t-chart-cyan:    #22d3ee;
-  --t-chart-green:   #4ade80;
-  --t-chart-amber:   #fbbf24;
-
-  /* ── Trend Indicators ── */
-  --t-trend-up:      #22c55e;
-  --t-trend-down:    #ef4444;
-  --t-trend-neutral: #94a3b8;
-
   /* ── Spacing Scale ── */
   --t-radius-sm:  4px;
   --t-radius:     6px;
   --t-radius-lg:  10px;
   --t-radius-xl:  14px;
-
-  /* ── Shadows ── */
-  --t-shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.5),
-                    0 0 0 1px var(--t-border);
-  --t-shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.6),
-                       0 0 0 1px var(--t-border);
 
   /* ── Typography ── */
   --t-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
@@ -74,7 +24,109 @@
 
   /* ── Transitions ── */
   --t-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Rail hover animation ── */
+  --t-rail-collapsed:        60px;
+  --t-rail-expanded:         228px;
+  --t-rail-expand-duration:  400ms;
+  --t-rail-collapse-duration:300ms;
+  --t-rail-ease:             cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ── Chart Palette (theme-independent) ── */
+  --t-chart-purple:  #a78bfa;
+  --t-chart-blue:    #60a5fa;
+  --t-chart-cyan:    #22d3ee;
+  --t-chart-green:   #4ade80;
+  --t-chart-amber:   #fbbf24;
+
+  /* ── Trend Indicators (theme-independent) ── */
+  --t-trend-up:      #22c55e;
+  --t-trend-down:    #ef4444;
+  --t-trend-neutral: #94a3b8;
 }
+
+/* ── Dark theme ── */
+.terminal-shell[data-terminal-theme="dark"] {
+  /* Backgrounds */
+  --t-bg:            #0b0e13;
+  --t-bg-panel:      #111720;
+  --t-bg-elevated:   #16202e;
+  --t-bg-hover:      #1a2535;
+  --t-bg-active:     #1f2d42;
+  --t-bg-input:      #0f1823;
+
+  /* Borders */
+  --t-border:        #1e2d40;
+  --t-border-subtle: #162030;
+  --t-border-focus:  #2563eb;
+
+  /* Text */
+  --t-text:          #e2e8f0;
+  --t-text-secondary:#94a3b8;
+  --t-text-muted:    #4b5a6e;
+  --t-text-inverse:  #0b0e13;
+
+  /* Brand / Accent */
+  --t-primary:       #2563eb;
+  --t-primary-hover: #1d4ed8;
+  --t-primary-muted: #1e3a6e;
+
+  /* Semantic */
+  --t-success:       #22c55e;
+  --t-success-muted: #14532d;
+  --t-danger:        #ef4444;
+  --t-danger-muted:  #7f1d1d;
+  --t-warning:       #f59e0b;
+  --t-warning-muted: #78350f;
+
+  /* Shadows */
+  --t-shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.5),
+                    0 0 0 1px var(--t-border);
+  --t-shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.6),
+                       0 0 0 1px var(--t-border);
+}
+
+/* ── Light theme ── */
+.terminal-shell[data-terminal-theme="light"] {
+  /* Backgrounds */
+  --t-bg:            #f6f8fb;
+  --t-bg-panel:      #ffffff;
+  --t-bg-elevated:   #f1f5f9;
+  --t-bg-hover:      #e8eef7;
+  --t-bg-active:     #dbeafe;
+  --t-bg-input:      #ffffff;
+
+  /* Borders */
+  --t-border:        #d8e0eb;
+  --t-border-subtle: #e6edf5;
+  --t-border-focus:  #2563eb;
+
+  /* Text */
+  --t-text:          #0f172a;
+  --t-text-secondary:#475569;
+  --t-text-muted:    #94a3b8;
+  --t-text-inverse:  #ffffff;
+
+  /* Brand / Accent */
+  --t-primary:       #2563eb;
+  --t-primary-hover: #1d4ed8;
+  --t-primary-muted: #dbeafe;
+
+  /* Semantic */
+  --t-success:       #16a34a;
+  --t-success-muted: #dcfce7;
+  --t-danger:        #dc2626;
+  --t-danger-muted:  #fee2e2;
+  --t-warning:       #d97706;
+  --t-warning-muted: #fef3c7;
+
+  /* Shadows */
+  --t-shadow-panel: 0 1px 2px rgba(15, 23, 42, 0.06),
+                    0 0 0 1px var(--t-border);
+  --t-shadow-elevated: 0 8px 24px rgba(15, 23, 42, 0.10),
+                       0 0 0 1px var(--t-border);
+}
+
 
 /* ── Terminal-only dark scrollbar (used by FunctionRail / AreaSidebar) ── */
 .terminal-scrollbar::-webkit-scrollbar {
@@ -216,7 +268,7 @@
 
 /* Additional pastel surface / border / text overrides ─────────── */
 .terminal-mode .bg-slate-50\/40 {
-  background-color: rgba(17, 23, 32, 0.6) !important;
+  background-color: var(--t-bg-panel) !important;
 }
 .terminal-mode .bg-emerald-100 {
   background-color: rgba(74, 222, 128, 0.14) !important;
@@ -326,4 +378,436 @@
 }
 .terminal-mode *::-webkit-scrollbar-thumb:hover {
   background: var(--t-bg-active);
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-rail-expand-duration:   0ms;
+    --t-rail-collapse-duration: 0ms;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   TERMINAL RESPONSIVE LAYOUT UTILITIES
+   Breakpoints:
+     @1440  — large laptop / external monitor
+     @1280  — 13-inch MacBook target
+     @1180  — compact threshold (stack / collapse)
+     @1024  — minimum supported (allow scroll, no content loss)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Shell ── */
+.terminal-shell {
+  width: 100vw;
+  height: 100dvh;          /* dvh handles mobile chrome bar */
+  overflow: hidden;
+  display: flex;
+}
+
+/* ── Header compact on narrow screens ── */
+@media (max-width: 1280px) {
+  .terminal-header-brand .brand-sep,
+  .terminal-header-brand .brand-terminal {
+    display: none;
+  }
+  .terminal-header-brand .brand-page {
+    font-size: 11px;
+  }
+  .terminal-header-user .role-badge {
+    display: none;
+  }
+  .terminal-header-user .user-name {
+    max-width: 80px;
+  }
+  .terminal-pricing-btn .pricing-text {
+    display: none;
+  }
+  .terminal-pricing-btn {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+/* ── Dashboard grid ── */
+.terminal-dashboard-body {
+  display: grid;
+  grid-template-rows: minmax(360px, auto) auto auto;
+  gap: 16px;
+  padding: 16px 20px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.terminal-dashboard-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 300px);
+  align-items: stretch;
+  gap: 16px;
+  min-height: 0;
+}
+
+.terminal-dashboard-stats-aside-wrap {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+  overflow: visible;
+}
+
+.terminal-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* 1440 — tighten stats column */
+@media (max-width: 1440px) {
+  .terminal-dashboard-main {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 280px);
+    gap: 14px;
+  }
+  .terminal-dashboard-stats-aside-wrap {
+    gap: 12px;
+  }
+}
+
+/* 1280 — stack chart + stats side by side below */
+@media (max-width: 1280px) {
+  .terminal-dashboard-body {
+    grid-template-rows: auto auto auto auto;
+    padding: 12px 14px;
+    gap: 12px;
+  }
+  .terminal-dashboard-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    align-items: start;
+  }
+  .terminal-dashboard-stats-aside-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    height: auto;
+    gap: 12px;
+    overflow: visible;
+  }
+  .terminal-card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+}
+
+/* 1024 — further compact */
+@media (max-width: 1024px) {
+  .terminal-dashboard-body {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .terminal-card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+  }
+}
+
+/* ── Action bar ── */
+.terminal-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  overflow-x: auto;
+  padding: 12px 4px 4px;
+  border-top: 1px solid var(--t-border-subtle);
+  flex-shrink: 0;
+}
+
+.terminal-action-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  height: auto;
+  min-width: clamp(130px, 16vw, 180px);
+  padding: 8px 16px;
+  border-radius: var(--t-radius);
+  flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+  .terminal-action-bar {
+    gap: 8px;
+  }
+  .terminal-action-bar-btn {
+    min-height: 40px;
+    height: auto;
+    min-width: clamp(110px, 14vw, 160px);
+    padding: 7px 12px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-action-bar-btn .action-hint {
+    display: none;
+  }
+  .terminal-action-bar-btn {
+    min-width: auto;
+    padding: 6px 10px;
+  }
+}
+
+/* ── Split sidebar (CandidatePool / JobMarketplace) ── */
+.terminal-split-sidebar {
+  width: clamp(220px, 22vw, 288px);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 1180px) {
+  .terminal-split-sidebar {
+    width: clamp(200px, 20vw, 240px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-split-sidebar {
+    width: 200px;
+  }
+}
+
+/* ── Three-column form grid (PostJob) ── */
+.terminal-form-grid-3 {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.15fr) minmax(260px, 1fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.terminal-headhunting-form-grid {
+  grid-template-columns: minmax(280px, 0.9fr) minmax(340px, 1.15fr) minmax(260px, 0.95fr);
+  gap: 14px;
+  padding: 16px 24px;
+  align-items: stretch;
+}
+
+@media (max-width: 1280px) {
+  .terminal-form-grid-3 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .terminal-headhunting-form-grid {
+    padding: 14px 16px;
+    align-content: start;
+  }
+  .terminal-form-grid-3 > *:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .terminal-form-grid-3 > *:nth-child(3) {
+    grid-column: 1;
+  }
+}
+
+/* ── Outer form shell (PostJob wrapping px-6) ── */
+.terminal-form-shell {
+  padding: 20px 24px;
+}
+
+@media (max-width: 1280px) {
+  .terminal-form-shell {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-form-shell {
+    padding: 10px 12px;
+  }
+}
+
+/* ── CandidateChartPanel min-height to drive aside height ── */
+.terminal-candidate-chart-panel {
+  min-height: 380px;
+}
+
+@media (max-width: 1440px) {
+  .terminal-candidate-chart-panel {
+    min-height: 340px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .terminal-candidate-chart-panel {
+    min-height: 300px;
+  }
+}
+
+/* ── Safe glyph containers — prevents ascent clipping on any system/zoom ── */
+.terminal-page-title-safe {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  line-height: 24px;
+  padding-top: 2px;
+  overflow: visible;
+  font-family: var(--t-font-sans);
+}
+
+.terminal-stat-value-safe {
+  display: inline-flex;
+  align-items: center;
+  min-height: 64px;
+  line-height: 1;
+  padding-top: 4px;
+  overflow: visible;
+  font-family: var(--t-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1280px) {
+  .terminal-stat-value-safe {
+    min-height: 54px;
+  }
+}
+
+/* ── TrendSummaryCard — three-section grid, no overflow, safe spacing ── */
+.terminal-trend-card {
+  display: grid;
+  grid-template-rows: auto minmax(44px, 1fr) auto;
+  align-content: stretch;
+  height: 100%;
+  min-height: 0;
+  padding: 18px 22px 20px;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.terminal-trend-card-label {
+  display: block;
+  line-height: 1.3;
+  min-height: 16px;
+  margin-bottom: 10px;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+}
+
+.terminal-trend-card-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-height: 0;
+  padding-top: 6px;
+}
+
+.terminal-trend-card-value {
+  display: inline-flex;
+  align-items: center;
+  min-height: 64px;
+  font-size: clamp(36px, 3.4vw, 54px);
+  line-height: 1;
+  margin: 0;
+  padding-top: 4px;
+  overflow: visible;
+  font-family: var(--t-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.terminal-trend-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 10px;
+  padding-bottom: 0;
+}
+
+.terminal-trend-card-meta,
+.terminal-trend-card-change,
+.terminal-trend-card-compare {
+  display: block;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+@media (max-width: 1440px) {
+  .terminal-trend-card {
+    padding: 16px 20px 18px;
+  }
+  .terminal-trend-card-value {
+    min-height: 56px;
+    font-size: clamp(34px, 3.4vw, 50px);
+  }
+  .terminal-trend-card-footer {
+    gap: 4px;
+    padding-top: 8px;
+  }
+}
+
+@media (max-width: 1440px) and (max-height: 820px) {
+  .terminal-trend-card-compare {
+    display: none;
+  }
+}
+
+@media (max-width: 1280px) {
+  .terminal-trend-card {
+    height: auto;
+    min-height: 148px;
+    padding: 16px 18px 16px;
+  }
+  .terminal-trend-card-label {
+    white-space: normal;
+    margin-bottom: 8px;
+  }
+  .terminal-trend-card-value {
+    min-height: 54px;
+    font-size: clamp(30px, 4vw, 44px);
+  }
+  .terminal-trend-card-footer {
+    gap: 3px;
+    padding-top: 8px;
+  }
+}
+
+/* ── CandidateChartPanel header responsive ── */
+.terminal-chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.terminal-chart-header-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.terminal-chart-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1280px) {
+  .terminal-chart-header {
+    gap: 6px;
+  }
 }

@@ -65,6 +65,8 @@ export const candidatesApi = {
     if (filters.availability_status) params.availability_status = filters.availability_status
     if (filters.q)                   params.q = filters.q
     if (filters.gender)              params.gender = filters.gender
+    if (filters.pool_type)           params.pool_type = filters.pool_type
+    if (filters.job_id)              params.job_id = filters.job_id
     if (filters.page != null)        params.page = filters.page
     if (filters.page_size != null)   params.page_size = filters.page_size
     if (filters.tagGroups) {
@@ -72,6 +74,21 @@ export const candidatesApi = {
       if (s) params.tag_groups = s
     }
     return client.get('/candidates', { params })
+  },
+
+  /** POST /api/candidates/:id/favorite — 切换收藏，返回 { favorited: bool } */
+  toggleFavorite(candidateId) {
+    return client.post(`/candidates/${candidateId}/favorite`)
+  },
+
+  /** GET /api/candidates/favorites — 返回已收藏的 candidate_id 数组 */
+  getFavorites() {
+    return client.get('/candidates/favorites')
+  },
+
+  /** POST /api/candidates/favorites/sync — 批量迁移 localStorage → 后端 */
+  syncFavorites(candidateIds) {
+    return client.post('/candidates/favorites/sync', { candidate_ids: candidateIds })
   },
 
   /** GET /api/candidates/area-filters — counts of open/passive candidates by business_area_code */

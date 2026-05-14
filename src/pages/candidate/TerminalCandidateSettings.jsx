@@ -5,6 +5,7 @@ import { CANDIDATE_ICON_NAV } from '../../components/terminal/navItems'
 import { useAuth } from '../../context/AuthContext'
 import { authApi } from '../../api/auth'
 import { candidatesApi } from '../../api/candidates'
+import ThemeModeSelector from '../../components/terminal/ThemeModeSelector'
 
 // ── atoms ─────────────────────────────────────────────────────────────────────
 
@@ -288,6 +289,14 @@ export default function TerminalCandidateSettings() {
                     </Row>
                   </>
                 )}
+              </section>
+
+              {/* ── 外观 ── */}
+              <section className="border border-[var(--t-border)]" style={{ borderRadius: 'var(--t-radius)' }}>
+                <SectionHead label="Appearance" />
+                <Row label="外观模式">
+                  <ThemeModeSelector />
+                </Row>
               </section>
 
               {/* ── 安全 ── */}

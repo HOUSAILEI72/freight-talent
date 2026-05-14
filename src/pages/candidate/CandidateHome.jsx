@@ -232,7 +232,7 @@ export default function CandidateHome() {
         areas={DEFAULT_AREAS}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto terminal-scrollbar">
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-5 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
@@ -253,7 +253,7 @@ export default function CandidateHome() {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
-          <div className="grid shrink-0 grid-cols-3 gap-4">
+          <div className="terminal-card-grid shrink-0">
             <MetricCard
               compact
               label="Jobs"
@@ -277,7 +277,7 @@ export default function CandidateHome() {
             />
           </div>
 
-          <div className="grid shrink-0 grid-cols-3 gap-4">
+          <div className="terminal-card-grid shrink-0">
             <MetricCard
               compact
               label="Applied Jobs"

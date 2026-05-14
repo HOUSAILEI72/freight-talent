@@ -11,7 +11,7 @@ const NAV_BY_ROLE = {
     { label: '候选人池', href: '/candidates' },
     { label: '岗位广场', href: '/jobs' },
     { label: '标签申请', href: '/tags' },
-    // { label: '消息', href: '/messages' }, // HIDDEN — feature disabled
+    { label: '消息', href: '/messages' },
   ],
   candidate: [
     { label: '岗位动态', href: '/candidate/home' },
@@ -19,7 +19,7 @@ const NAV_BY_ROLE = {
     { label: '我的简历', href: '/candidate/upload' },
     { label: '我的邀约', href: '/candidate/invitations' },
     { label: '个人订阅', href: '/candidate/tags' },
-    // { label: '消息', href: '/candidate/messages' }, // HIDDEN — feature disabled
+    { label: '消息', href: '/candidate/messages' },
   ],
   admin: [
     { label: '管理后台', href: '/admin/overview' },
@@ -28,7 +28,7 @@ const NAV_BY_ROLE = {
     { label: '数据图表', href: '/admin/charts' },
     { label: '候选人池', href: '/admin/candidates' },
     { label: '岗位广场', href: '/admin/jobs' },
-    // { label: '消息', href: '/messages' }, // HIDDEN — feature disabled
+    { label: '消息', href: '/messages' },
   ],
 }
 

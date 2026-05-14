@@ -163,12 +163,12 @@ export default function PostJob({ terminal = false }) {
 
     // Commission bonus validation
     if (commissionBonusPeriod !== 'not_applicable') {
-      if (!commissionBonusAmount.trim()) return '请填写计提/计件奖金预估平均额'
+      if (!commissionBonusAmount.trim()) return '请填写提成/计件奖金预估平均额'
       const ca = Number(commissionBonusAmount)
       if (!Number.isFinite(ca) || ca <= 0) return '预估平均额必须为有效数字'
     }
     if (commissionBonusPeriod === 'not_applicable' && commissionBonusAmount.trim()) {
-      return '请先选择计提/计件奖金周期，再填写预估平均额'
+      return '请先选择提成/计件奖金周期，再填写预估平均额'
     }
 
     if (hasYearEndBonus !== 'true' && hasYearEndBonus !== 'false') return '请选择是否有年终奖'
@@ -641,7 +641,7 @@ export default function PostJob({ terminal = false }) {
   const fieldCommission = (
     <div className="grid grid-cols-2 gap-3">
       <div>
-        <label className={labelClass} style={labelStyle}>计提/计件奖金</label>
+        <label className={labelClass} style={labelStyle}>提成/计件奖金</label>
         <select className={inputClass} style={inputStyle} value={commissionBonusPeriod}
           onChange={(e) => {
             setCommissionBonusPeriod(e.target.value)
@@ -740,7 +740,7 @@ export default function PostJob({ terminal = false }) {
   if (terminal) {
     return (
       <div
-        className="terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-hidden px-6 py-5"
+        className="terminal-mode terminal-form-shell flex-1 w-full min-w-0 h-full min-h-0 overflow-hidden flex flex-col"
         style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}
       >
         <div className="flex flex-col h-full min-h-0">
@@ -757,7 +757,7 @@ export default function PostJob({ terminal = false }) {
           {errorBanner && <div className="mb-2 flex-shrink-0">{errorBanner}</div>}
 
           {/* 3-column grid */}
-          <div className="grid grid-cols-[minmax(280px,1fr)_minmax(320px,1.15fr)_minmax(280px,1fr)] gap-4 flex-1 min-h-0 overflow-hidden">
+          <div className="terminal-form-grid-3">
 
             {/* ── Col 1: 基本信息 ── */}
             <div className={cardClass} style={cardStyle}>

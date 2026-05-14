@@ -25,6 +25,9 @@ def list_candidates_with_filters(
     gender: str = "",
     page: int = 1,
     page_size: int = 20,
+    pool_type: str = "all",
+    employer_id: int | None = None,
+    job_id: int | None = None,
 ) -> dict:
     query = Candidate.query
 
@@ -67,6 +70,29 @@ def list_candidates_with_filters(
         )
     if gender:
         query = query.filter(Candidate.gender == gender)
+    if pool_type == "applied" and employer_id:
+        from app.models.job_application import JobApplication
+        from app.models.job import Job
+        sub = (
+            db.session.query(JobApplication.candidate_id)
+            .join(Job, Job.id == JobApplication.job_id)
+            .filter(JobApplication.employer_id == employer_id)
+        )
+        if job_id:
+            sub = sub.filter(JobApplication.job_id == job_id)
+        applied_ids = sub.distinct()
+        query = query.filter(Candidate.id.in_(applied_ids))
+    elif pool_type == "favorited" and employer_id:
+        from app.models.employer_candidate_favorite import EmployerCandidateFavorite
+        fav_ids = (
+            db.session.query(EmployerCandidateFavorite.candidate_id)
+            .filter(EmployerCandidateFavorite.employer_id == employer_id)
+            .distinct()
+        )
+        query = query.filter(Candidate.id.in_(fav_ids))
+    elif pool_type in ("personal_headhunter", "team_headhunter", "entrusted"):
+        # Not yet implemented: return empty
+        query = query.filter(db.false())
     if tag_ids_raw:
         ids = [int(x) for x in tag_ids_raw.split(",") if x.strip().isdigit()]
         if ids:
@@ -105,12 +131,39 @@ def list_candidates_with_filters(
     page = min(page, total_pages)
     items = ordered.offset((page - 1) * page_size).limit(page_size).all()
 
+    # 如果是 applied 模式，顺带查一次 application 记录，方便路由层注入状态
+    application_map: dict[int, dict] = {}
+    if pool_type == "applied" and employer_id and items:
+        from app.models.job_application import JobApplication
+        cand_ids = [c.id for c in items]
+        app_q = (
+            db.session.query(JobApplication)
+            .filter(
+                JobApplication.employer_id == employer_id,
+                JobApplication.candidate_id.in_(cand_ids),
+            )
+        )
+        if job_id:
+            app_q = app_q.filter(JobApplication.job_id == job_id)
+        for app in app_q.all():
+            # 一个候选人可能投了多个岗位；job_id 指定时只有一条；
+            # 未指定时取最新（by id desc）覆盖即可，调用方已知是 all-jobs 模式
+            existing = application_map.get(app.candidate_id)
+            if existing is None or app.id > existing["application_id"]:
+                application_map[app.candidate_id] = {
+                    "application_id":      app.id,
+                    "application_status":  app.status,
+                    "application_job_id":  app.job_id,
+                    "application_message": app.message,
+                }
+
     return {
         "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,
+        "application_map": application_map,
     }
 
 

@@ -43,6 +43,8 @@ import TerminalCandidateProfile from '../pages/candidate/TerminalCandidateProfil
 import TerminalCandidateProfileBuilder from '../pages/candidate/TerminalCandidateProfileBuilder'
 import TerminalSettings from '../pages/employer/TerminalSettings'
 import TerminalPricing from '../pages/employer/TerminalPricing'
+import TerminalPersonalHeadhunting from '../pages/employer/TerminalPersonalHeadhunting'
+import TerminalTeamHeadhunting from '../pages/employer/TerminalTeamHeadhunting'
 import TerminalCandidateSettings from '../pages/candidate/TerminalCandidateSettings'
 import TerminalEmployerCandidateProfile from '../pages/employer/TerminalCandidateProfile'
 
@@ -84,24 +86,22 @@ export const router = createBrowserRouter([
         ),
       },
 
-      // ─── MESSAGES FEATURE DISABLED — uncomment to re-enable ─────────────────
-      // {
-      //   path: 'messages',
-      //   element: (
-      //     <Lazy><RequireAuth roles={['employer', 'candidate', 'admin']}>
-      //       <Messages />
-      //     </RequireAuth></Lazy>
-      //   ),
-      // },
-      // {
-      //   path: 'messages/:threadId',
-      //   element: (
-      //     <Lazy><RequireAuth roles={['employer', 'candidate', 'admin']}>
-      //       <Messages />
-      //     </RequireAuth></Lazy>
-      //   ),
-      // },
-      // ─────────────────────────────────────────────────────────────────────────
+      {
+        path: 'messages',
+        element: (
+          <Lazy><RequireAuth roles={['employer', 'candidate', 'admin']}>
+            <Messages />
+          </RequireAuth></Lazy>
+        ),
+      },
+      {
+        path: 'messages/:threadId',
+        element: (
+          <Lazy><RequireAuth roles={['employer', 'candidate', 'admin']}>
+            <Messages />
+          </RequireAuth></Lazy>
+        ),
+      },
 
       // 标签申请（candidate / employer 共用）
       {
@@ -162,24 +162,22 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // ─── MESSAGES FEATURE DISABLED — uncomment to re-enable ─────────────────
-      // {
-      //   path: 'candidate/messages',
-      //   element: (
-      //     <RequireAuth roles={['candidate']}>
-      //       <TerminalCandidateMessages />
-      //     </RequireAuth>
-      //   ),
-      // },
-      // {
-      //   path: 'candidate/messages/:threadId',
-      //   element: (
-      //     <RequireAuth roles={['candidate']}>
-      //       <TerminalCandidateMessages />
-      //     </RequireAuth>
-      //   ),
-      // },
-      // ─────────────────────────────────────────────────────────────────────────
+      {
+        path: 'candidate/messages',
+        element: (
+          <RequireAuth roles={['candidate']}>
+            <TerminalCandidateMessages />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'candidate/messages/:threadId',
+        element: (
+          <RequireAuth roles={['candidate']}>
+            <TerminalCandidateMessages />
+          </RequireAuth>
+        ),
+      },
       {
         path: 'candidate/tags',
         element: (
@@ -246,24 +244,22 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // ─── MESSAGES FEATURE DISABLED — uncomment to re-enable ─────────────────
-      // {
-      //   path: 'employer/messages',
-      //   element: (
-      //     <RequireAuth roles={['employer']}>
-      //       <TerminalMessages />
-      //     </RequireAuth>
-      //   ),
-      // },
-      // {
-      //   path: 'employer/messages/:threadId',
-      //   element: (
-      //     <RequireAuth roles={['employer']}>
-      //       <TerminalMessages />
-      //     </RequireAuth>
-      //   ),
-      // },
-      // ─────────────────────────────────────────────────────────────────────────
+      {
+        path: 'employer/messages',
+        element: (
+          <RequireAuth roles={['employer']}>
+            <TerminalMessages />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'employer/messages/:threadId',
+        element: (
+          <RequireAuth roles={['employer']}>
+            <TerminalMessages />
+          </RequireAuth>
+        ),
+      },
       {
         path: 'employer/tags',
         element: (
@@ -329,6 +325,22 @@ export const router = createBrowserRouter([
         element: (
           <RequireAuth roles={['employer', 'admin']}>
             <TerminalPricing />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'employer/headhunting/personal',
+        element: (
+          <RequireAuth roles={['employer', 'admin']}>
+            <TerminalPersonalHeadhunting />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'employer/headhunting/team',
+        element: (
+          <RequireAuth roles={['employer', 'admin']}>
+            <TerminalTeamHeadhunting />
           </RequireAuth>
         ),
       },

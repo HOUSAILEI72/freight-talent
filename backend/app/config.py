@@ -73,6 +73,9 @@ class Config:
     SERVE_STATIC = os.getenv("SERVE_STATIC", "false").lower() == "true"
     STATIC_FOLDER = os.path.join(os.path.dirname(__file__), "..", "..", "dist")
 
+    # ── Socket.IO ─────────────────────────────────────────────────────────────
+    ENABLE_SOCKETIO = os.getenv("ENABLE_SOCKETIO", "false").lower() == "true"
+
     # ── 邮件 ──────────────────────────────────────────────────────────────────
     MAIL_ENABLED = os.getenv("MAIL_ENABLED", "true").lower() == "true"
     MAIL_HOST = os.getenv("MAIL_HOST", "smtp.exmail.qq.com")

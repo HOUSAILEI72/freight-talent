@@ -22,13 +22,14 @@ const TERMINAL_PREFIXES = [
   '/employer/applications',
   '/employer/post-job',
   '/employer/match',
-  // '/employer/messages',  // HIDDEN — feature disabled
+  '/employer/messages',
   '/employer/tags',
   '/employer/settings',
   '/employer/pricing',
+  '/employer/headhunting',
   '/candidate/home',
   '/candidate/jobs',
-  // '/candidate/messages', // HIDDEN — feature disabled
+  '/candidate/messages',
   '/candidate/tags',
   '/candidate/upload',
   '/candidate/invitations',

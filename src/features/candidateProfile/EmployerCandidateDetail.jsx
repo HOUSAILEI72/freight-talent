@@ -445,13 +445,14 @@ export default function EmployerCandidateDetail() {
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
 
           {/* ── left sticky rail 320px ── */}
-          <div style={{ width: 320, flexShrink: 0, position: 'sticky', top: 16 }}>
+          <div style={{ width: 320, flexShrink: 0, position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+            {/* block 1: candidate signal */}
             <Panel>
-              {/* avatar + name */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingBottom: 14, borderBottom: '1px solid var(--t-border-subtle)', marginBottom: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, paddingBottom: 14, borderBottom: '1px solid var(--t-border-subtle)', marginBottom: 12 }}>
                 <div style={{
-                  width: 56,
-                  height: 56,
+                  width: 52,
+                  height: 52,
                   borderRadius: '50%',
                   background: 'var(--t-bg-elevated)',
                   border: '1px solid var(--t-border)',
@@ -459,115 +460,176 @@ export default function EmployerCandidateDetail() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontFamily: 'var(--t-font-mono)',
-                  fontSize: 18,
+                  fontSize: 17,
                   color: 'var(--t-text-secondary)',
                   letterSpacing: 1,
+                  flexShrink: 0,
                 }}>
                   {initials}
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>{displayName}</div>
                   {profile.current_title && (
-                    <div style={{ fontSize: 12, color: 'var(--t-text-secondary)', marginTop: 2 }}>{profile.current_title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--t-text-secondary)', marginTop: 3 }}>{profile.current_title}</div>
                   )}
-                  {profile.current_company && (
-                    <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11, color: 'var(--t-text-muted)', marginTop: 2 }}>{profile.current_company}</div>
+                  {profile.current_city && (
+                    <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11, color: 'var(--t-text-muted)', marginTop: 2 }}>
+                      @ {profile.current_city}
+                    </div>
                   )}
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <AvailChip status={profile.availability_status} />
+                  <FreshnessChip days={profile.freshness_days} />
                 </div>
               </div>
 
-              {/* meta rows */}
-              <div style={{ marginBottom: 14 }}>
-                <MetaRow label="年龄"   value={profile.age ? `${profile.age} 岁` : null} />
-                <MetaRow label="经验"   value={profile.experience_years != null ? `${profile.experience_years} 年` : null} />
-                <MetaRow label="学历"   value={profile.education} />
-                <MetaRow label="城市"   value={profile.current_city} />
+              {/* block 2: hiring fit */}
+              <div style={{ marginBottom: 12 }}>
+                <SectionLabel>Hiring Fit</SectionLabel>
+                <MetaRow label="职能方向" value={profile.function_name} />
+                <MetaRow label="业务区域" value={profile.business_area_name} />
                 <MetaRow label="期望城市" value={profile.expected_city} />
-                <MetaRow label="英语"   value={profile.english_level} />
-                <MetaRow label="业务线" value={profile.business_area_name} />
-                <MetaRow label="职能"   value={profile.function_name} />
+                <MetaRow label="英语水平" value={profile.english_level} />
+                {profile.expected_salary_label && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginTop: 6, paddingTop: 8, borderTop: '1px solid var(--t-border-subtle)' }}>
+                    <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--t-text-muted)', flexShrink: 0 }}>
+                      期望薪资
+                    </span>
+                    <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 13, color: 'var(--t-chart-amber)', fontWeight: 600 }}>
+                      {profile.expected_salary_label}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* expected salary */}
-              {profile.expected_salary_label && (
-                <div style={{ marginBottom: 14, paddingTop: 10, borderTop: '1px solid var(--t-border-subtle)' }}>
-                  <SectionLabel>期望薪资</SectionLabel>
-                  <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 13, color: 'var(--t-chart-amber)' }}>
-                    {profile.expected_salary_label}
-                  </div>
+              {/* block 3: summary highlight */}
+              {profile.summary && (
+                <div style={{ marginBottom: 12, paddingTop: 10, borderTop: '1px solid var(--t-border-subtle)' }}>
+                  <SectionLabel>候选人亮点</SectionLabel>
+                  <p style={{ fontSize: 12, color: 'var(--t-text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                    {profile.summary.length > 120 ? profile.summary.slice(0, 120) + '…' : profile.summary}
+                  </p>
                 </div>
               )}
 
-              {/* core tags */}
+              {/* block 4: core skills */}
               {tagGroups.length > 0 && (
-                <div style={{ paddingTop: 10, borderTop: '1px solid var(--t-border-subtle)' }}>
-                  <SectionLabel>核心标签</SectionLabel>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {tagGroups.flatMap(g => g.tags.slice(0, 3).map(t => (
-                      <Tag key={`${g.color}-${t}`} label={t} color={g.color} />
-                    )))}
+                <div style={{ paddingTop: 10, borderTop: '1px solid var(--t-border-subtle)', marginBottom: 14 }}>
+                  <SectionLabel>Core Skills</SectionLabel>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {tagGroups.map(g => (
+                      <div key={g.label}>
+                        <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, color: 'var(--t-text-muted)', letterSpacing: '0.12em', marginBottom: 4 }}>
+                          {g.label}
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {g.tags.slice(0, 4).map(t => (
+                            <Tag key={t} label={t} color={g.color} />
+                          ))}
+                          {g.tags.length > 4 && (
+                            <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', alignSelf: 'center' }}>
+                              +{g.tags.length - 4}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
-              {/* CTA */}
-              <button
-                onClick={handleInvite}
-                disabled={inviting}
-                style={{
-                  marginTop: 16,
-                  width: '100%',
-                  background: 'var(--t-primary)',
-                  border: 'none',
-                  borderRadius: 4,
-                  color: '#fff',
-                  fontFamily: 'var(--t-font-mono)',
-                  fontSize: 12,
-                  padding: '8px 0',
-                  cursor: inviting ? 'not-allowed' : 'pointer',
-                  opacity: inviting ? 0.6 : 1,
-                  letterSpacing: '0.08em',
-                }}
-              >
-                {inviting ? '发送中...' : '发送邀请'}
-              </button>
+              {/* CTA block */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  onClick={handleInvite}
+                  disabled={inviting}
+                  style={{
+                    width: '100%',
+                    background: 'var(--t-primary)',
+                    border: 'none',
+                    borderRadius: 4,
+                    color: '#fff',
+                    fontFamily: 'var(--t-font-mono)',
+                    fontSize: 12,
+                    padding: '8px 0',
+                    cursor: inviting ? 'not-allowed' : 'pointer',
+                    opacity: inviting ? 0.6 : 1,
+                    letterSpacing: '0.08em',
+                  }}
+                >
+                  {inviting ? '发送中...' : '发送邀请'}
+                </button>
+                {!unlocked && (
+                  <button
+                    onClick={() => navigate('/employer/pricing')}
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: '1px solid var(--t-border)',
+                      borderRadius: 4,
+                      color: 'var(--t-text-secondary)',
+                      fontFamily: 'var(--t-font-mono)',
+                      fontSize: 11,
+                      padding: '7px 0',
+                      cursor: 'pointer',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    解锁完整档案
+                  </button>
+                )}
+                {!unlocked && (
+                  <div style={{
+                    fontFamily: 'var(--t-font-mono)',
+                    fontSize: 10,
+                    color: 'var(--t-text-muted)',
+                    lineHeight: 1.6,
+                    textAlign: 'center',
+                    letterSpacing: '0.04em',
+                  }}>
+                    完整工作经历、教育证书、薪资结构<br />及联系方式需订阅后查看
+                  </div>
+                )}
+                {inviteMsg && (
+                  <div style={{
+                    fontFamily: 'var(--t-font-mono)',
+                    fontSize: 11,
+                    color: inviteMsg.ok ? 'var(--t-success)' : 'var(--t-danger)',
+                    textAlign: 'center',
+                  }}>
+                    {inviteMsg.text}
+                  </div>
+                )}
+              </div>
             </Panel>
           </div>
 
-          {/* ── right content area ── */}
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-            {/* public panels: always visible regardless of subscription */}
-            {profile.summary && (
-              <Panel>
-                <SectionLabel>个人简介</SectionLabel>
-                <p style={{ fontSize: 13, color: 'var(--t-text-secondary)', lineHeight: 1.7, margin: 0 }}>
-                  {profile.summary}
-                </p>
-              </Panel>
-            )}
-
-            {tagGroups.length > 0 && (
-              <Panel>
-                <SectionLabel>能力标签</SectionLabel>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {tagGroups.map(group => (
-                    <div key={group.label}>
-                      <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', marginBottom: 5, letterSpacing: '0.12em' }}>
-                        {group.label}
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                        {group.tags.map(t => <Tag key={t} label={t} color={group.color} />)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
-            )}
-
-            {/* premium section: locked preview or real data */}
+          {/* ── right content area: entirely premium ── */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             {unlocked ? (
-              <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                {/* full capability tags */}
+                {tagGroups.length > 0 && (
+                  <Panel>
+                    <SectionLabel>能力标签</SectionLabel>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {tagGroups.map(group => (
+                        <div key={group.label}>
+                          <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', marginBottom: 5, letterSpacing: '0.12em' }}>
+                            {group.label}
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                            {group.tags.map(t => <Tag key={t} label={t} color={group.color} />)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Panel>
+                )}
+
                 {/* current position */}
                 {(profile.current_title || profile.current_company || currentSalary || profile.business_type || profile.is_management_role != null) && (
                   <Panel>
@@ -658,11 +720,11 @@ export default function EmployerCandidateDetail() {
                     <MetaRow label="地址" value={profile.address} />
                   </div>
                 </Panel>
-              </>
+
+              </div>
             ) : (
               <LockedProfilePreview onViewPricing={() => navigate('/employer/pricing')} />
             )}
-
           </div>
         </div>
       </div>

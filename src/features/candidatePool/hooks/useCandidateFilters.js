@@ -8,25 +8,31 @@ export function useCandidateFilters() {
   const [archiveFilter, setArchiveFilter]     = useState('all')
   const [inviteFilter, setInviteFilter]       = useState('all')
   const [gender, setGender]                   = useState('')
+  const [poolType, setPoolType]               = useState('all')
 
   function buildFilters(overrides = {}) {
-    const loc = overrides.location  !== undefined ? overrides.location  : location
-    const av  = overrides.avail     !== undefined ? overrides.avail     : avail
-    const qv  = overrides.q         !== undefined ? overrides.q         : q
-    const fn  = overrides.fn        !== undefined ? overrides.fn        : functionCode
-    const gv  = overrides.gender    !== undefined ? overrides.gender    : gender
+    const loc   = overrides.location  !== undefined ? overrides.location  : location
+    const av    = overrides.avail     !== undefined ? overrides.avail     : avail
+    const qv    = overrides.q         !== undefined ? overrides.q         : q
+    const fn    = overrides.fn        !== undefined ? overrides.fn        : functionCode
+    const gv    = overrides.gender    !== undefined ? overrides.gender    : gender
+    const pool  = overrides.poolType  !== undefined ? overrides.poolType  : poolType
+    const jobId = overrides.job_id    !== undefined ? overrides.job_id    : undefined
     return {
       availability_status: av,
       ...(qv ? { q: qv } : {}),
       ...(loc?.location_code ? { location_code: loc.location_code } : {}),
       ...(fn ? { function_code: fn } : {}),
       ...(gv ? { gender: gv } : {}),
+      ...(pool !== 'all' ? { pool_type: pool } : {}),
+      ...(jobId ? { job_id: jobId } : {}),
     }
   }
 
   function resetFilters() {
     setQ(''); setAvail('open'); setLocation(null); setFunctionCode('')
     setArchiveFilter('all'); setInviteFilter('all'); setGender('')
+    // poolType 保留：重置搜索条件不归零候选人池分类
   }
 
   const hasFilter = !!(q || avail !== 'open' || location?.location_code || functionCode || archiveFilter !== 'all' || inviteFilter !== 'all' || gender)
@@ -39,6 +45,7 @@ export function useCandidateFilters() {
     archiveFilter, setArchiveFilter,
     inviteFilter, setInviteFilter,
     gender, setGender,
+    poolType, setPoolType,
     buildFilters,
     resetFilters,
     hasFilter,

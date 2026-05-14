@@ -17,6 +17,7 @@ export function useCandidatePool() {
   const [page, setPage]                   = useState(1)
   const [totalPages, setTotalPages]       = useState(1)
   const [total, setTotal]                 = useState(0)
+  const [poolCounts, setPoolCounts]       = useState({})
 
   function fetchCandidates(filters, targetPage = 1) {
     setLoading(true)
@@ -27,6 +28,7 @@ export function useCandidatePool() {
         setPage(res.data.page ?? targetPage)
         setTotalPages(res.data.total_pages ?? 1)
         setTotal(res.data.total ?? 0)
+        setPoolCounts(res.data.pool_counts ?? {})
       })
       .catch(err => {
         console.error('Failed to load candidate pool:', {
@@ -43,7 +45,7 @@ export function useCandidatePool() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCandidates({ availability_status: 'open' }, 1)
+    fetchCandidates({ availability_status: 'open', pool_type: 'all' }, 1)
     Promise.all([
       jobsApi.getMyJobs(),
       invitationsApi.getSentInvitations(),
@@ -77,5 +79,6 @@ export function useCandidatePool() {
     hasSubscription,
     fetchCandidates,
     page, totalPages, total,
+    poolCounts,
   }
 }

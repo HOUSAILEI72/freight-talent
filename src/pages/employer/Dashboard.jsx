@@ -34,17 +34,28 @@ function TrendSummaryCard({ type, data, loading }) {
   const title = type === 'candidates' ? 'PLATFORM CANDIDATES' : 'PLATFORM JOBS'
   const card = data?.cards?.[type]
 
-  const baseClass =
-    'flex flex-1 flex-col rounded-[var(--t-radius-lg)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] px-5 py-5 shadow-[var(--t-shadow-panel)]'
+  const cardClass =
+    'terminal-trend-card rounded-[var(--t-radius-lg)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] shadow-[var(--t-shadow-panel)]'
+
+  const labelEl = (
+    <span className="terminal-trend-card-label font-[var(--t-font-mono)] text-[10px] uppercase text-[color:var(--t-text-muted)]">
+      {title}
+    </span>
+  )
 
   if (loading) {
     return (
-      <div className={baseClass}>
-        <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
-          {title}
-        </span>
-        <div className="flex flex-1 items-center font-[var(--t-font-mono)] text-[64px] font-bold leading-none text-[color:var(--t-text)]">
-          —
+      <div className={cardClass}>
+        {labelEl}
+        <div className="terminal-trend-card-main">
+          <span className="terminal-trend-card-value font-[var(--t-font-mono)] font-bold text-[color:var(--t-text-secondary)]">
+            —
+          </span>
+        </div>
+        <div className="terminal-trend-card-footer">
+          <span className="terminal-trend-card-meta font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
+            &nbsp;
+          </span>
         </div>
       </div>
     )
@@ -52,12 +63,17 @@ function TrendSummaryCard({ type, data, loading }) {
 
   if (!card) {
     return (
-      <div className={baseClass}>
-        <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
-          {title}
-        </span>
-        <div className="flex flex-1 items-center font-[var(--t-font-mono)] text-[40px] font-bold uppercase tracking-wide text-[color:var(--t-text-secondary)]">
-          NO DATA
+      <div className={cardClass}>
+        {labelEl}
+        <div className="terminal-trend-card-main">
+          <span className="font-[var(--t-font-mono)] text-[26px] font-bold uppercase tracking-wide text-[color:var(--t-text-secondary)]">
+            NO DATA
+          </span>
+        </div>
+        <div className="terminal-trend-card-footer">
+          <span className="terminal-trend-card-meta font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
+            &nbsp;
+          </span>
         </div>
       </div>
     )
@@ -73,28 +89,26 @@ function TrendSummaryCard({ type, data, loading }) {
         : 'var(--t-text-muted)'
 
   return (
-    <div className={baseClass}>
-      <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
-        {title}
-      </span>
-      <div className="flex flex-1 flex-col justify-center gap-4">
-        <div className="font-[var(--t-font-mono)] text-[72px] font-bold leading-none text-[color:var(--t-text)]">
+    <div className={cardClass}>
+      {labelEl}
+      <div className="terminal-trend-card-main">
+        <span className="terminal-trend-card-value font-[var(--t-font-mono)] font-bold text-[color:var(--t-text)]">
           {card.current}
-        </div>
-        <div className="space-y-2">
-          <div className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-secondary)]">
-            AS OF {data.current_checkpoint}
-          </div>
-          <div
-            className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-bold"
-            style={{ color: deltaColor }}
-          >
-            {deltaSign}{card.delta} / {percentSign}{card.percent}%
-          </div>
-          <div className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
-            VS {data.previous_checkpoint}
-          </div>
-        </div>
+        </span>
+      </div>
+      <div className="terminal-trend-card-footer">
+        <span className="terminal-trend-card-meta font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-secondary)]">
+          AS OF {data.current_checkpoint}
+        </span>
+        <span
+          className="terminal-trend-card-change font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-bold"
+          style={{ color: deltaColor }}
+        >
+          {deltaSign}{card.delta} / {percentSign}{card.percent}%
+        </span>
+        <span className="terminal-trend-card-compare font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
+          VS {data.previous_checkpoint}
+        </span>
       </div>
     </div>
   )
@@ -216,7 +230,14 @@ export default function Dashboard() {
   const stats = chart?.stats ?? {}
   const applicationsCount = stats.applications_received ?? 0
   const jobsCount = stats.jobs ?? 0
-  const interestedCount = stats.interested ?? 0
+  const favoritesCount = useMemo(() => {
+    try {
+      const raw = localStorage.getItem(`archived_${user?.id}`)
+      return raw ? JSON.parse(raw).length : 0
+    } catch {
+      return 0
+    }
+  }, [user?.id])
 
   const subtitle = `FUNC=${selectedFunction} / AREA=${selectedArea}`
   const filterHelper = selectedFunction === DEFAULT_FUNCTION && selectedArea === DEFAULT_AREA
@@ -270,9 +291,9 @@ export default function Dashboard() {
         </div>
 
         {/* Body — chart panel + locked insights + action bar */}
-        <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
+        <div className="terminal-dashboard-body terminal-scrollbar min-w-0">
           {/* Chart + trend sidebar */}
-          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_320px] gap-4">
+          <div className="terminal-dashboard-main min-w-0">
             <CandidateChartPanel
               data={chartBars}
               title="CANDIDATE TREND"
@@ -283,7 +304,7 @@ export default function Dashboard() {
               granularity={granularity}
               onGranularityChange={setGranularity}
             />
-            <aside className="flex flex-col gap-4">
+            <aside className="terminal-dashboard-stats-aside-wrap">
               <TrendSummaryCard type="candidates" data={trendSummary} loading={trendLoading} />
               <TrendSummaryCard type="jobs"       data={trendSummary} loading={trendLoading} />
             </aside>
@@ -295,7 +316,7 @@ export default function Dashboard() {
             onPricingClick={() => navigate('/employer/pricing')}
           >
             <div className="flex flex-col gap-4 p-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="terminal-card-grid">
                 <MetricCard
                   compact
                   label="JOBS"
@@ -313,12 +334,12 @@ export default function Dashboard() {
                 <MetricCard
                   compact
                   label="INTERESTED"
-                  value={chartLoading ? '—' : interestedCount}
+                  value={chartLoading ? '—' : favoritesCount}
                   helper={filterHelper}
                   icon={<Heart size={14} />}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="terminal-card-grid">
                 <MetricCard
                   compact
                   label="2.0 后续迭代"
@@ -346,7 +367,7 @@ export default function Dashboard() {
 
           {/* Metric strip — Row 2 (hidden, code preserved) */}
           {SHOW_SECONDARY_METRICS && (
-          <div className="grid shrink-0 grid-cols-3 gap-4">
+          <div className="terminal-card-grid shrink-0">
             <MetricCard
               compact
               label="CANDIDATES"
@@ -387,8 +408,8 @@ export default function Dashboard() {
               onClick: () => hasSubscription ? navigate('/employer/candidates') : navigate('/employer/pricing'),
             },
             { icon: Wrench,     label: '辅助工具包', hint: 'TOOLS',       disabled: true },
-            { icon: UserSearch, label: '猎头服务',   hint: 'HEADHUNTING', disabled: true },
-            { icon: UsersRound, label: '团队猎头服务', hint: 'TEAM SEARCH', disabled: true },
+            { icon: UserSearch, label: '个人猎头服务', hint: 'HEADHUNTING', onClick: () => navigate('/employer/headhunting/personal') },
+            { icon: UsersRound, label: '团队猎头服务', hint: 'TEAM SEARCH', onClick: () => navigate('/employer/headhunting/team') },
           ]} />
         </div>
       </main>

@@ -23,7 +23,7 @@ def create_app(config_class=None):
 
     # message_queue: Redis URL — 空字符串或 None 时单进程模式，多实例需要设置
     # MESSAGES FEATURE DISABLED: socketio 初始化已跳过，不占用 eventlet 连接
-    _enable_socketio = app.config.get("ENABLE_SOCKETIO", "false").lower() == "true"
+    _enable_socketio = app.config.get("ENABLE_SOCKETIO", False)
     if _enable_socketio:
         _mq = app.config.get("SOCKETIO_MESSAGE_QUEUE") or None
         socketio.init_app(
@@ -62,22 +62,24 @@ def create_app(config_class=None):
     from app.routes.invitations import invitations_bp
     from app.routes.applications import applications_bp
     from app.routes.admin import admin_bp
-    # from app.routes.conversations import conversations_bp  # HIDDEN — messages feature disabled
+    from app.routes.conversations import conversations_bp
     from app.routes.admin_import import admin_import_bp
     from app.routes.employer_dashboard import employer_dashboard_bp
     from app.routes.subscriptions import subscriptions_bp
     from app.routes.public_market import public_market_bp
+    from app.routes.headhunting import headhunting_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(jobs_bp)
     app.register_blueprint(candidates_bp)
     app.register_blueprint(invitations_bp, url_prefix='/api/invitations')
     app.register_blueprint(applications_bp)
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
-    # app.register_blueprint(conversations_bp, url_prefix='/api/conversations')  # HIDDEN
+    app.register_blueprint(conversations_bp, url_prefix='/api/conversations')
     app.register_blueprint(admin_import_bp, url_prefix='/api/admin/import')
     app.register_blueprint(employer_dashboard_bp)
     app.register_blueprint(subscriptions_bp)
     app.register_blueprint(public_market_bp)
+    app.register_blueprint(headhunting_bp)
 
     # 安装请求日志中间件（每个请求的方法、路径、状态、耗时、user_id、IP）
     init_request_logging(app)
@@ -100,6 +102,8 @@ def create_app(config_class=None):
         from app.models import tag          # noqa: F401
         from app.models import junction_tags  # noqa: F401
         from app.models import subscription   # noqa: F401
+        from app.models import employer_candidate_favorite  # noqa: F401
+        from app.models import headhunting_request  # noqa: F401
 
     @app.get("/api/health")
     def health():

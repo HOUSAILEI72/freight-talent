@@ -1436,7 +1436,7 @@ export default function Messages({ terminal = false, basePath = '/messages' }) {
         <div
           className={
             terminal
-              ? 'w-64 flex flex-col flex-shrink-0'
+              ? 'terminal-split-sidebar flex flex-col flex-shrink-0'
               : 'w-64 border-r border-slate-100 flex flex-col flex-shrink-0'
           }
           style={terminal ? { borderRight: '1px solid var(--t-border)' } : undefined}

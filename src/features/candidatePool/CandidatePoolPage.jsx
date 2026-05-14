@@ -12,6 +12,8 @@ import { CandidateFilterBar } from './components/CandidateFilterBar'
 import { CandidateList } from './components/CandidateList'
 import { CandidateDetailPanel } from './components/CandidateDetailPanel'
 import { Toast } from './components/Toast'
+import { CandidatePoolRail } from './components/CandidatePoolRail'
+import { CANDIDATE_POOL_TABS } from './constants'
 import { useState, useEffect } from 'react'
 
 export default function CandidatePoolPage({ terminal = false, messagesBasePath }) {
@@ -30,6 +32,17 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
     if (!terminal && pool.candidates.length > 0 && !selected) setSelected(pool.candidates[0])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pool.candidates])
+
+  function handleJobChange(job) {
+    pool.setSelectedJob(job)
+    // applied 模式下切换岗位需要重新过滤投递列表
+    if (filters.poolType === 'applied') {
+      setSelected(null)
+      const f = filters.buildFilters({ job_id: job?.id })
+      lastFiltersRef.current = f
+      pool.fetchCandidates(f, 1)
+    }
+  }
 
   function handleSearch(e) {
     e.preventDefault()
@@ -99,7 +112,7 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
     inviteFilter: filters.inviteFilter, setInviteFilter: filters.setInviteFilter,
     hasFilter: filters.hasFilter,
     onSearch: handleSearch, onReset: handleReset,
-    myJobs: pool.myJobs, selectedJob: pool.selectedJob, setSelectedJob: pool.setSelectedJob,
+    myJobs: pool.myJobs, selectedJob: pool.selectedJob, setSelectedJob: handleJobChange,
     jobsReady: pool.jobsReady,
     loading: pool.loading, candidates: pool.candidates, total: pool.total,
     terminal,
@@ -117,7 +130,7 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
     onInvite: invite.setModal,
   }
 
-  // ── Terminal layout: filter sidebar + wide card list ─────────────────────
+  // ── Terminal layout: pool rail + filter sidebar + wide card list ──────────
   if (terminal) {
     return (
       <>
@@ -133,16 +146,42 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
         {invite.toast && <Toast name={invite.toast} onDone={() => invite.setToast(null)} />}
 
         <TerminalPageSurface split>
-          {/* Left: filter sidebar only */}
+          {/* Pool type rail — hover-expands, fixed height */}
+          <CandidatePoolRail
+            value={filters.poolType}
+            onChange={(next) => {
+              filters.setPoolType(next)
+              setSelected(null)
+              const jobId = next === 'applied' && pool.selectedJob ? pool.selectedJob.id : undefined
+              const f = filters.buildFilters({ poolType: next, job_id: jobId })
+              lastFiltersRef.current = f
+              pool.fetchCandidates(f, 1)
+            }}
+            counts={pool.poolCounts}
+          />
+
+          {/* Left: filter sidebar — fixed 260px, scroll internally */}
           <aside
-            className="w-72 flex-shrink-0 flex flex-col overflow-y-auto terminal-scrollbar"
-            style={{ background: 'var(--t-bg-panel)', borderRight: '1px solid var(--t-border)' }}
+            className="flex-shrink-0 flex flex-col overflow-hidden"
+            style={{
+              width: 260,
+              background: 'var(--t-bg-panel)',
+              borderRight: '1px solid var(--t-border)',
+            }}
           >
-            <CandidateFilterBar {...filterBarProps} />
+            <div className="flex-1 overflow-y-auto terminal-scrollbar">
+              <CandidateFilterBar
+                {...filterBarProps}
+                activePoolLabel={CANDIDATE_POOL_TABS.find(t => t.key === filters.poolType)?.label}
+              />
+            </div>
           </aside>
 
-          {/* Right: wide card list */}
-          <main className="flex-1 min-w-0 flex flex-col overflow-hidden" style={{ background: 'var(--t-bg)' }}>
+          {/* Right: wide card list — fills remaining space */}
+          <main
+            className="flex-1 min-w-0 flex flex-col overflow-hidden"
+            style={{ background: 'var(--t-bg)' }}
+          >
             <div className="flex-1 overflow-y-auto terminal-scrollbar">
               <CandidateList
                 {...listProps}
@@ -189,6 +228,12 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
           candidate={selected}
           isInvited={selectedInvKey ? !!pool.invited[selectedInvKey] : false}
           terminal={false}
+          onApplicationStatusChange={(candId, _appId, nextStatus) => {
+            pool.setCandidates(prev => prev.map(c =>
+              c.id === candId ? { ...c, application_status: nextStatus } : c
+            ))
+            setSelected(prev => prev?.id === candId ? { ...prev, application_status: nextStatus } : prev)
+          }}
         />
       ) : (
         <div className="h-full flex items-center justify-center text-slate-400">

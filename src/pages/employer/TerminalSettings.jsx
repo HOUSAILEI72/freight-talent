@@ -3,6 +3,7 @@ import { Save, X, Edit3, Lock, CheckCircle, AlertCircle } from 'lucide-react'
 import TerminalLayout from '../../components/terminal/TerminalLayout'
 import { useAuth } from '../../context/AuthContext'
 import { authApi } from '../../api/auth'
+import ThemeModeSelector from '../../components/terminal/ThemeModeSelector'
 
 // ── atoms ─────────────────────────────────────────────────────────────────────
 
@@ -217,6 +218,14 @@ export default function TerminalSettings() {
                   <Row label="公司名称"><Val>{user?.company_name}</Val></Row>
                 </>
               )}
+            </section>
+
+            {/* ── 外观 ── */}
+            <section className="border border-[var(--t-border)]" style={{ borderRadius: 'var(--t-radius)' }}>
+              <SectionHead label="Appearance" />
+              <Row label="外观模式">
+                <ThemeModeSelector />
+              </Row>
             </section>
 
             {/* ── 安全（修改密码）── */}

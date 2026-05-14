@@ -1,4 +1,4 @@
-import { MapPin } from 'lucide-react'
+import { MapPin, Bookmark } from 'lucide-react'
 import { getSubtitleText } from '../utils/candidateFormatters'
 
 export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInvite, terminal, onSelect, onArchive, onInvite }) {
@@ -40,9 +40,35 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
 
         {/* 信息 */}
         <div className="flex-1 min-w-0">
-          <p className={terminal ? 'font-medium text-sm truncate' : 'font-medium text-sm text-slate-800 truncate'} style={terminal ? { color: 'var(--t-text)' } : undefined}>
-            {c.full_name}
-          </p>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className={terminal ? 'font-medium text-sm truncate' : 'font-medium text-sm text-slate-800 truncate'} style={terminal ? { color: 'var(--t-text)' } : undefined}>
+              {c.full_name}
+            </p>
+            {isArchived && terminal && (
+              <span
+                title="已收藏"
+                style={{
+                  flexShrink: 0,
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  background: 'rgba(251,191,36,0.18)',
+                  border: '1px solid var(--t-chart-amber)',
+                  color: 'var(--t-chart-amber)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  fontFamily: 'var(--t-font-mono)',
+                  letterSpacing: 0,
+                }}
+              >
+                藏
+              </span>
+            )}
+          </div>
           <p className={terminal ? 'text-xs truncate' : 'text-xs text-slate-500 truncate'} style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}>
             {getSubtitleText(c)}
           </p>
@@ -55,6 +81,23 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
             )}
             {c.age != null && <span>{c.age}岁</span>}
             {c.experience_years != null && c.current_title && <span>{c.experience_years}年</span>}
+            {terminal && c.freshness_days != null && c.freshness_days <= 7 && (
+              <span style={{ color: c.freshness_days <= 3 ? 'var(--t-success)' : 'var(--t-chart-blue)', fontWeight: 600 }}>
+                {c.freshness_days <= 1 ? '今日更新' : `${c.freshness_days}天前更新`}
+              </span>
+            )}
+            {terminal && c.availability_status && (
+              <span style={{
+                color: c.availability_status === 'open' ? 'var(--t-success)' : c.availability_status === 'passive' ? 'var(--t-chart-blue)' : 'var(--t-text-muted)',
+                fontFamily: 'var(--t-font-mono)',
+                fontSize: 10,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                fontWeight: 600,
+              }}>
+                {c.availability_status === 'open' ? 'OPEN' : c.availability_status === 'passive' ? 'PASSIVE' : 'CLOSED'}
+              </span>
+            )}
             {c.expected_salary_label && (
               <span className={terminal ? 'font-semibold' : 'font-semibold text-blue-600'} style={terminal ? { color: 'var(--t-chart-blue)' } : undefined}>
                 {c.expected_salary_label}
@@ -94,7 +137,7 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
               e.currentTarget.style.color = 'var(--t-text-secondary)'
             }}
           >
-            {isArchived ? '已归档' : '简历归档'}
+            {isArchived ? '已收藏' : '收藏'}
           </button>
           <button
             type="button"

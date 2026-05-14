@@ -4,13 +4,16 @@ import {
   MapPin, Briefcase, Clock, Search, X,
   Loader2, FolderOpen, AlertCircle,
   GraduationCap, Users, Zap, PlusCircle,
+  UserSearch, UsersRound, CheckCircle,
 } from 'lucide-react'
 import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
+import { headhuntingApi } from '../../api/headhunting'
 import TerminalPageSurface from '../../components/terminal/TerminalPageSurface'
 import RegionSelector from '../../components/RegionSelector'
 import Pagination from '../../components/ui/Pagination'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
+import { JobsRail } from './JobsRail'
 
 const FUNCTION_OPTIONS = DEFAULT_FUNCTIONS.filter(f => f.key !== 'ALL')
 
@@ -111,7 +114,319 @@ function ReadTextarea({ label, value, empty = '—' }) {
   )
 }
 
-// ── 右侧详情面板 ──────────────────────────────────────────────────────────────
+// ── headhunting read-only detail panels ──────────────────────────────────────
+
+const PERSONAL_TERM_LABELS = {
+  service_intro: '我方提供人才推荐服务',
+  type_a:        'A 类型（月收入 ≥ 1 万）',
+  type_b:        'B 类型（月收入 < 1 万）',
+  income_scope:  '收入范围界定',
+  replacement:   '替换保证',
+  advertising:   '广告及宣传授权',
+  invoice:       '发票条款',
+}
+
+const TEAM_TERM_LABELS = {
+  team_service_intro:    '团队搭建服务协议',
+  team_fixed_fee:        '固定服务费条款',
+  team_departure_clause: '离职及返费条款',
+  team_invoice:          '发票条款',
+}
+
+function fmtCNY(n) {
+  if (!n && n !== 0) return '—'
+  return `¥${Number(n).toLocaleString('zh-CN')}`
+}
+
+function StatusBadge({ status }) {
+  const label = status === 'submitted' ? '已提交' : status === 'in_progress' ? '处理中' : status === 'completed' ? '已完成' : status ?? '—'
+  const color = status === 'submitted' ? 'var(--t-chart-blue)'
+    : status === 'in_progress' ? 'var(--t-chart-yellow)'
+    : status === 'completed' ? 'var(--t-success)'
+    : 'var(--t-text-muted)'
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+      padding: '2px 7px', borderRadius: 'var(--t-radius-sm)',
+      border: `1px solid ${color}`, color, background: 'transparent',
+    }}>
+      {label}
+    </span>
+  )
+}
+
+function PersonalHdDetail({ req }) {
+  if (!req) return null
+  const job = req.job_payload || {}
+  const terms = req.terms_payload || {}
+  const addOns = req.add_ons_payload || {}
+  const fee = req.fee_snapshot || {}
+
+  const cardClass = 'p-4 space-y-3 rounded-[var(--t-radius-lg)] border flex flex-col min-h-0'
+  const cardStyle = { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' }
+  const secTitleClass = 'flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-1 flex-shrink-0'
+  const secTitleStyle = { color: 'var(--t-text-muted)' }
+
+  return (
+    <div
+      className="terminal-mode flex-1 min-h-0 overflow-y-auto terminal-scrollbar flex flex-col px-6 py-5"
+      style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3 flex-shrink-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <UserSearch size={14} style={{ color: 'var(--t-primary)', flexShrink: 0 }} />
+            <h1 className="text-base font-semibold truncate" style={{ color: 'var(--t-text)' }}>
+              个人猎头服务
+            </h1>
+            <StatusBadge status={req.status} />
+          </div>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
+            {job.title ? `岗位：${job.title}` : '—'}
+            {req.created_at ? ` · 提交于 ${req.created_at.slice(0, 10)}` : ''}
+          </p>
+        </div>
+      </div>
+
+      {/* 3-column grid */}
+      <div className="terminal-form-grid-3 flex-1 min-h-0">
+
+        {/* Col 1: 服务条款 + 增值服务 */}
+        <div className={cardClass} style={cardStyle}>
+          <div className={secTitleClass} style={secTitleStyle}><CheckCircle size={11} /> 服务条款 &amp; 增值服务</div>
+          <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
+            <div className="space-y-1.5">
+              {Object.entries(PERSONAL_TERM_LABELS).map(([k, label]) => (
+                <div key={k} className="flex items-start gap-2 text-xs" style={{ color: terms[k] ? 'var(--t-text)' : 'var(--t-text-muted)' }}>
+                  <span style={{ color: terms[k] ? 'var(--t-success)' : 'var(--t-border)', flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: 10 }}>
+              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-muted)' }}>增值服务</div>
+              <div className="space-y-1">
+                {addOns.accelerated && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 加速通道（+5% 服务费）</div>}
+                {addOns.backgroundCheck && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 背景调查 × {addOns.backgroundCheckCount ?? 1}（¥3,500/人）</div>}
+                {addOns.personalityReport && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 性格测评 × {addOns.personalityReportCount ?? 1}（¥800/人）</div>}
+                {!addOns.accelerated && !addOns.backgroundCheck && !addOns.personalityReport && (
+                  <div className="text-xs" style={{ color: 'var(--t-text-muted)' }}>无增值服务</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Col 2: 岗位信息 */}
+        <div className={cardClass} style={cardStyle}>
+          <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 岗位信息</div>
+          <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
+            <ReadField label="岗位名称" value={job.title} />
+            <ReadField label="岗位板块" value={job.function_name || job.function_code} />
+            <ReadField label="岗位城市" value={job.location_path || job.location_name || job.location_code} />
+            <ReadField label="详细地址" value={job.address} />
+            <div className="grid grid-cols-2 gap-3">
+              <ReadField label="最低月薪" value={job.salary_min ? `¥${Number(job.salary_min).toLocaleString()}` : null} />
+              <ReadField label="最高月薪" value={job.salary_max ? `¥${Number(job.salary_max).toLocaleString()}` : null} />
+            </div>
+            <ReadField label="薪资月数" value={job.salary_months ? `${job.salary_months} 个月` : null} />
+            <ReadField label="经验要求" value={job.experience_required} />
+            <ReadField label="学历要求" value={job.degree_required} />
+            <ReadField label="应聘类型" value={job.employment_type} />
+          </div>
+        </div>
+
+        {/* Col 3: 费用快照 + 联系方式 */}
+        <div className={cardClass} style={cardStyle}>
+          <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 费用快照 &amp; 联系人</div>
+          <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
+            {(fee.feeLow != null || fee.minFee != null) ? (
+              <>
+                <ReadField label="服务费（低估）" value={fmtCNY(fee.feeLow ?? fee.minFee)} />
+                <ReadField label="服务费（高估）" value={fmtCNY(fee.feeHigh ?? fee.maxFee)} />
+                {(fee.addonFee ?? 0) > 0 && <ReadField label="增值服务费" value={fmtCNY(fee.addonFee)} />}
+                <ReadField label="合计（低）" value={fmtCNY(fee.totalLow ?? fee.totalMin ?? fee.feeLow ?? fee.minFee)} />
+                <ReadField label="合计（高）" value={fmtCNY(fee.totalHigh ?? fee.totalMax ?? fee.feeHigh ?? fee.maxFee)} />
+                {fee.typeLabel && <ReadField label="服务类型" value={`${fee.typeLabel} 类`} />}
+                {fee.guaranteeLabel && <ReadField label="保证期" value={fee.guaranteeLabel} />}
+              </>
+            ) : (
+              <div className="text-xs" style={{ color: 'var(--t-text-muted)' }}>费用快照不可用</div>
+            )}
+            <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: 10 }} />
+            <ReadField label="联系人" value={req.contact_name} />
+            <ReadField label="手机" value={req.contact_phone} />
+            <ReadField label="邮箱" value={req.contact_email} />
+            {req.contact_wechat && <ReadField label="微信" value={req.contact_wechat} />}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+function TeamHdDetail({ req }) {
+  if (!req) return null
+  const team = req.job_payload || {}
+  const terms = req.terms_payload || {}
+  const addOns = req.add_ons_payload || {}
+  const fee = req.fee_snapshot || {}
+
+  const cardClass = 'p-4 space-y-3 rounded-[var(--t-radius-lg)] border flex flex-col min-h-0'
+  const cardStyle = { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' }
+  const secTitleClass = 'flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-1 flex-shrink-0'
+  const secTitleStyle = { color: 'var(--t-text-muted)' }
+
+  const preferredCities = Array.isArray(team.preferred_cities) ? team.preferred_cities : []
+  const businessFocus = Array.isArray(team.business_focus) ? team.business_focus : splitTokens(team.business_focus)
+
+  return (
+    <div
+      className="terminal-mode flex-1 min-h-0 overflow-y-auto terminal-scrollbar flex flex-col px-6 py-5"
+      style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3 flex-shrink-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <UsersRound size={14} style={{ color: 'var(--t-primary)', flexShrink: 0 }} />
+            <h1 className="text-base font-semibold truncate" style={{ color: 'var(--t-text)' }}>
+              团队猎头服务
+            </h1>
+            <StatusBadge status={req.status} />
+          </div>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
+            {team.summary ? `需求：${String(team.summary).slice(0, 40)}…` : '—'}
+            {req.created_at ? ` · 提交于 ${req.created_at.slice(0, 10)}` : ''}
+          </p>
+        </div>
+      </div>
+
+      {/* 3-column grid */}
+      <div className="terminal-form-grid-3 flex-1 min-h-0">
+
+        {/* Col 1: 服务条款 + 增值服务 */}
+        <div className={cardClass} style={cardStyle}>
+          <div className={secTitleClass} style={secTitleStyle}><CheckCircle size={11} /> 服务条款 &amp; 增值服务</div>
+          <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
+            <div className="space-y-1.5">
+              {Object.entries(TEAM_TERM_LABELS).map(([k, label]) => (
+                <div key={k} className="flex items-start gap-2 text-xs" style={{ color: terms[k] ? 'var(--t-text)' : 'var(--t-text-muted)' }}>
+                  <span style={{ color: terms[k] ? 'var(--t-success)' : 'var(--t-border)', flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: 10 }}>
+              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-muted)' }}>增值服务</div>
+              <div className="space-y-1">
+                {addOns.accelerated && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 加速通道</div>}
+                {addOns.leaderBgCheck && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 领导层背景调查（¥3,500/人）</div>}
+                {addOns.memberBgCheck > 0 && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 成员背景调查 × {addOns.memberBgCheck}（¥1,800/人）</div>}
+                {addOns.memberReport > 0 && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 成员性格测评 × {addOns.memberReport}（¥800/人）</div>}
+                {!addOns.accelerated && !addOns.leaderBgCheck && !(addOns.memberBgCheck > 0) && !(addOns.memberReport > 0) && (
+                  <div className="text-xs" style={{ color: 'var(--t-text-muted)' }}>无增值服务</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Col 2: 团队需求 */}
+        <div className={cardClass} style={cardStyle}>
+          <div className={secTitleClass} style={secTitleStyle}><UsersRound size={11} /> 团队需求</div>
+          <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
+            <ReadTextarea label="需求简述" value={team.summary} />
+            <div>
+              <span style={LABEL_STYLE}>所在城市偏向</span>
+              {preferredCities.length === 0 ? (
+                <div style={{ ...BOX_STYLE, color: 'var(--t-text-muted)' }}>—</div>
+              ) : (
+                <div className="space-y-1.5">
+                  {preferredCities.map((c, i) => {
+                    const loc = typeof c === 'object' ? (c.location_path || c.location_name || c.location_code) : String(c)
+                    const addr = typeof c === 'object' ? c.address : null
+                    return (
+                      <div key={i} style={{ ...BOX_STYLE, fontSize: 12 }}>
+                        {loc || '—'}{addr ? ` · ${addr}` : ''}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            <ReadChips label="业务侧重" value={businessFocus} />
+            <ReadField label="希望到岗时间" value={team.expected_onboard_time} />
+            <ReadField label="团队规模" value={team.team_size} />
+            <ReadField label="年龄偏好" value={team.age_preference} />
+            <ReadTextarea label="背景偏好" value={team.background_preference} />
+          </div>
+        </div>
+
+        {/* Col 3: 费用快照 + 联系方式 */}
+        <div className={cardClass} style={cardStyle}>
+          <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 费用快照 &amp; 联系人</div>
+          <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
+            {fee.baseTotal != null && (
+              <>
+                <ReadField label="服务费总额" value={fmtCNY(fee.baseTotal)} />
+                <ReadField label="月付金额" value={fmtCNY(fee.monthlyFee)} />
+                <ReadField label="支付周期" value={fee.months ? `${fee.months} 个月` : null} />
+                {fee.addonFee > 0 && <ReadField label="增值服务费" value={fmtCNY(fee.addonFee)} />}
+                {fee.total != null && <ReadField label="合计" value={fmtCNY(fee.total)} />}
+              </>
+            )}
+            {fee.baseTotal == null && <div className="text-xs" style={{ color: 'var(--t-text-muted)' }}>费用快照不可用</div>}
+            <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: 10 }} />
+            <ReadField label="联系人" value={req.contact_name} />
+            <ReadField label="手机" value={req.contact_phone} />
+            <ReadField label="邮箱" value={req.contact_email} />
+            {req.contact_wechat && <ReadField label="微信" value={req.contact_wechat} />}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+// ── headhunting request list item ─────────────────────────────────────────────
+function HdRequestRow({ req, selected, onSelect, serviceType }) {
+  const isPersonal = serviceType === 'personal_headhunt'
+  const job = req.job_payload || {}
+  const title = isPersonal ? (job.title || '未命名岗位') : (String(job.summary || '').slice(0, 30) || '团队需求')
+  const isSelected = selected?.id === req.id
+
+  return (
+    <div
+      onClick={() => onSelect(req)}
+      style={{
+        padding: '12px 16px',
+        cursor: 'pointer',
+        borderBottom: '1px solid var(--t-border-subtle)',
+        borderLeft: `4px solid ${isSelected ? 'var(--t-primary)' : 'transparent'}`,
+        background: isSelected ? 'var(--t-bg-active)' : 'transparent',
+        transition: 'background 120ms',
+      }}
+      onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--t-bg-hover)' }}
+      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
+    >
+      <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--t-text)', marginBottom: 3 }}>
+        {title}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <StatusBadge status={req.status} />
+        {req.created_at && (
+          <span style={{ fontSize: 10, color: 'var(--t-text-muted)' }}>{req.created_at.slice(0, 10)}</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
 function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChange }) {
   const tagsByCat = job.tags_by_category || {}
   const baseLocation =
@@ -136,7 +451,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
 
     return (
       <div
-        className="terminal-mode flex-1 min-h-0 overflow-hidden flex flex-col px-6 py-5"
+        className="terminal-mode flex-1 min-h-0 overflow-y-auto terminal-scrollbar flex flex-col px-6 py-5"
         style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}
       >
         {/* Header row */}
@@ -194,7 +509,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
         </div>
 
         {/* 3-column grid — same proportions as PostJob */}
-        <div className="grid grid-cols-[minmax(280px,1fr)_minmax(320px,1.15fr)_minmax(280px,1fr)] gap-4 flex-1 min-h-0 overflow-hidden">
+        <div className="terminal-form-grid-3 flex-1 min-h-0">
 
           {/* ── Col 1: 基本信息 ── */}
           <div className={cardClass} style={cardStyle}>
@@ -244,7 +559,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
               </div>
               {/* Commission: 2 cells in one row — same as PostJob fieldCommission */}
               <div className="grid grid-cols-2 gap-3">
-                <ReadField label="计提/计件奖金" value={commissionLabel} />
+                <ReadField label="提成/计件奖金" value={commissionLabel} />
                 <ReadField label="预估平均额" value={
                   job.commission_bonus_period === 'not_applicable' ? '—'
                   : job.commission_bonus_amount ? `${formatThousand(job.commission_bonus_amount)}` : null
@@ -363,6 +678,12 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
   const [savedFilter, setSavedFilter] = useState('all')
   const [appliedFilter, setAppliedFilter] = useState('all')
 
+  // Jobs rail tab (terminal + employer only)
+  const [jobsTab, setJobsTab] = useState('all')
+  const [hdRequests, setHdRequests] = useState([])
+  const [hdLoading, setHdLoading] = useState(false)
+  const [selectedHd, setSelectedHd] = useState(null)
+
   // CAND-4 — Maps of jobId → applicationId (only used when canApply=true).
   // Using Map instead of Set so we can call the withdraw endpoint by app id.
   const [appliedJobMap, setAppliedJobMap] = useState(new Map()) // jobId → appId
@@ -406,6 +727,26 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
   }
 
   useEffect(() => { fetchJobs({}, 1) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch headhunting requests when in headhunting tabs (terminal + employer only)
+  useEffect(() => {
+    if (!terminal || !showNewJobButton) return
+    if (jobsTab !== 'personal_headhunt' && jobsTab !== 'team_headhunt') return
+    const svcType = jobsTab === 'personal_headhunt' ? 'personal' : 'team'
+    let alive = true
+    setHdLoading(true)
+    setSelectedHd(null)
+    headhuntingApi.getMyRequests(svcType)
+      .then(res => {
+        if (!alive) return
+        const list = res.data.requests ?? []
+        setHdRequests(list)
+        if (list.length > 0) setSelectedHd(list[0])
+      })
+      .catch(() => { if (alive) setHdRequests([]) })
+      .finally(() => { if (alive) setHdLoading(false) })
+    return () => { alive = false }
+  }, [terminal, showNewJobButton, jobsTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // CAND-4: hydrate jobId→appId maps on mount so button state survives refresh.
   useEffect(() => {
@@ -597,13 +938,87 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
   const hasStatusFilter = canApply && (savedFilter !== 'all' || appliedFilter !== 'all')
   const hasFilter = q || !!location?.location_code || !!functionCode || !!employmentType || hasStatusFilter
 
+  // ── headhunting tab render ───────────────────────────────────────────────────
+  const isHdTab = terminal && showNewJobButton && (jobsTab === 'personal_headhunt' || jobsTab === 'team_headhunt')
+
+  const hdInner = isHdTab && (
+    <>
+      {/* Left: request list */}
+      <div
+        style={{
+          width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          background: 'var(--t-bg-panel)', borderRight: '1px solid var(--t-border)',
+        }}
+      >
+        <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--t-border-subtle)', flexShrink: 0 }}>
+          <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--t-text-muted)', marginBottom: 4, lineHeight: 1.4 }}>
+            {jobsTab === 'personal_headhunt' ? '个人猎头服务' : '团队猎头服务'}
+          </div>
+          <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', lineHeight: 1.4 }}>
+            {hdLoading ? '加载中…' : `共 ${hdRequests.length} 条需求`}
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto' }} className="terminal-scrollbar">
+          {hdLoading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '32px 16px', color: 'var(--t-text-muted)' }}>
+              <Loader2 size={14} className="animate-spin" />
+              <span style={{ fontSize: 12 }}>加载中…</span>
+            </div>
+          )}
+          {!hdLoading && hdRequests.length === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 16px', color: 'var(--t-text-muted)' }}>
+              <FolderOpen size={24} style={{ marginBottom: 8 }} />
+              <span style={{ fontSize: 12 }}>暂无提交记录</span>
+              <button
+                type="button"
+                onClick={() => navigate(jobsTab === 'personal_headhunt' ? '/employer/headhunting/personal' : '/employer/headhunting/team')}
+                style={{
+                  marginTop: 12, fontSize: 11, fontWeight: 600, padding: '5px 12px',
+                  borderRadius: 'var(--t-radius-sm)', cursor: 'pointer',
+                  border: '1px solid var(--t-primary)', color: 'var(--t-primary)', background: 'transparent',
+                }}
+              >
+                立即提交需求
+              </button>
+            </div>
+          )}
+          {!hdLoading && hdRequests.map(req => (
+            <HdRequestRow
+              key={req.id}
+              req={req}
+              selected={selectedHd}
+              onSelect={setSelectedHd}
+              serviceType={jobsTab}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Right: detail */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--t-bg)' }}>
+        {selectedHd ? (
+          jobsTab === 'personal_headhunt'
+            ? <PersonalHdDetail req={selectedHd} />
+            : <TeamHdDetail req={selectedHd} />
+        ) : (
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t-text-muted)' }}>
+            <div style={{ textAlign: 'center' }}>
+              <FolderOpen size={40} style={{ margin: '0 auto 12px', color: 'var(--t-text-muted)' }} />
+              <p style={{ fontSize: 13 }}>点击左侧记录查看详情</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  )
+
   const inner = (
     <>
       {/* ── 左栏 ── */}
       <div
         className={
           terminal
-            ? 'w-80 flex-shrink-0 flex flex-col overflow-hidden'
+            ? 'terminal-split-sidebar flex flex-col overflow-hidden'
             : 'w-80 flex-shrink-0 flex flex-col border-r border-slate-200 bg-white overflow-hidden'
         }
         style={terminal ? { background: 'var(--t-bg-panel)', borderRight: '1px solid var(--t-border)' } : undefined}
@@ -1113,7 +1528,17 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
   if (terminal) {
     return (
       <TerminalPageSurface split>
-        {inner}
+        {terminal && showNewJobButton && (
+          <JobsRail
+            value={jobsTab}
+            onChange={setJobsTab}
+            counts={{
+              personal_headhunt: undefined,
+              team_headhunt: undefined,
+            }}
+          />
+        )}
+        {isHdTab ? hdInner : inner}
       </TerminalPageSurface>
     )
   }

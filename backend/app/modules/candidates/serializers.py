@@ -40,6 +40,7 @@ def build_public_dict(profile: Candidate, include_contact: bool = False,
         "skill_tags": profile.skill_tags or [],
         "all_tags": profile.all_tags(),
         "contact_visible": profile.contact_visible,
+        "gender": profile.gender,
         # Phase C: standard location
         "location_code": profile.location_code,
         "location_name": profile.location_name,
@@ -93,7 +94,10 @@ def build_public_dict(profile: Candidate, include_contact: bool = False,
         })
     else:
         data.update({
-            "full_name":             (profile.full_name or "")[0] + "**" if profile.full_name else f"候选人 #{profile.id}",
+            "full_name":             (
+                (profile.full_name[0] + ("先生" if profile.gender == "male" else "女士" if profile.gender == "female" else "先生"))
+                if profile.full_name else f"候选人 #{profile.id}"
+            ),
             "age":                   None,
             "experience_years":      None,
             "education":             None,

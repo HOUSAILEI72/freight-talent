@@ -78,7 +78,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS}
       SERVE_STATIC: "false"
       GUNICORN_BIND: "0.0.0.0:5000"
-      ENABLE_SOCKETIO: "false"  # messages feature disabled — set true to re-enable
+      ENABLE_SOCKETIO: "true"
       MAIL_ENABLED: ${MAIL_ENABLED:-false}
       MAIL_HOST: ${MAIL_HOST:-smtp.exmail.qq.com}
       MAIL_PORT: ${MAIL_PORT:-465}

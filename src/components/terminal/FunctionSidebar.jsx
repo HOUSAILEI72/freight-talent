@@ -28,7 +28,7 @@ export default function FunctionSidebar({
   return (
     <aside
       className="flex h-full shrink-0 flex-col border-r border-[var(--t-border)]"
-      style={{ background: '#0e1521' }}
+      style={{ background: 'var(--t-bg-elevated)', width: 'max-content', minWidth: 160 }}
     >
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-3">
         <span className="font-[var(--t-font-mono)] text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--t-text-muted)]">

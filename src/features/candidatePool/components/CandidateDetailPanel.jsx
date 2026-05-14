@@ -1,7 +1,9 @@
-import { Lock, CheckCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Lock, CheckCircle, Send } from 'lucide-react'
 import { FreshBadge, AvailBadge } from './FreshBadge'
 import { LockedBadge, LockedSection } from './LockedBadge'
 import { formatSalaryRange, formatYearEndBonus, formatWorkPeriod } from '../utils/candidateFormatters'
+import { applicationsApi } from '../../../api/applications'
 
 function SectionHeader({ terminal, mutedColor, titleColor, children }) {
   return (
@@ -25,7 +27,7 @@ function TerminalTag({ children, colorStyle }) {
   )
 }
 
-export function CandidateDetailPanel({ candidate, isInvited, terminal = false }) {
+export function CandidateDetailPanel({ candidate, isInvited, terminal = false, onApplicationStatusChange }) {
   const isPrivate    = !!candidate.private_visible
   const tagsByCat    = candidate.tags_by_category || {}
   const titleColor   = terminal ? { color: 'var(--t-text)' } : undefined
@@ -33,6 +35,42 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false })
   const mutedColor   = terminal ? { color: 'var(--t-text-muted)' } : undefined
   const accentColor  = terminal ? { color: 'var(--t-chart-blue)' } : undefined
   const sectionDivider = terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined
+
+  const [appStatus, setAppStatus] = useState(candidate.application_status ?? null)
+  const [appId]                   = useState(candidate.application_id ?? null)
+  const [updating, setUpdating]   = useState(false)
+
+  const APP_ACTIONS = {
+    submitted:   [{ label: '标记已查看', next: 'viewed' }, { label: '加入候选名单', next: 'shortlisted' }, { label: '暂不匹配', next: 'rejected' }],
+    viewed:      [{ label: '加入候选名单', next: 'shortlisted' }, { label: '暂不匹配', next: 'rejected' }],
+    shortlisted: [{ label: '暂不匹配', next: 'rejected' }],
+  }
+  const APP_STATUS_LABEL = {
+    submitted: '待查看', viewed: '已查看', shortlisted: '候选名单',
+    rejected: '暂不匹配', withdrawn: '已撤回', saved: '已保存',
+  }
+  const APP_STATUS_COLOR = {
+    submitted:   'var(--t-chart-blue)',
+    viewed:      'var(--t-primary)',
+    shortlisted: 'var(--t-success)',
+    rejected:    'var(--t-text-muted)',
+    withdrawn:   'var(--t-text-muted)',
+    saved:       'var(--t-chart-amber)',
+  }
+
+  async function handleAdvanceStatus(nextStatus) {
+    if (!appId || updating) return
+    setUpdating(true)
+    try {
+      await applicationsApi.updateApplicationStatus(appId, nextStatus)
+      setAppStatus(nextStatus)
+      onApplicationStatusChange?.(candidate.id, appId, nextStatus)
+    } catch (e) {
+      console.error('advance application status failed', e)
+    } finally {
+      setUpdating(false)
+    }
+  }
 
   return (
     <div className="p-5 space-y-5">
@@ -85,6 +123,50 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false })
           )}
         </div>
       </div>
+
+      {/* 投递状态 — 仅 applied 池有 application_id 时显示 */}
+      {appId && appStatus && (
+        <div style={sectionDivider}>
+          <SectionHeader terminal={terminal} mutedColor={mutedColor} titleColor={titleColor}>
+            {terminal ? 'APPLICATION' : '投递状态'}
+          </SectionHeader>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                height: 20, padding: '0 8px', borderRadius: 999,
+                fontSize: 11, fontWeight: 700,
+                fontFamily: terminal ? 'var(--t-font-mono)' : undefined,
+                background: `${APP_STATUS_COLOR[appStatus]}22`,
+                border: `1px solid ${APP_STATUS_COLOR[appStatus]}55`,
+                color: APP_STATUS_COLOR[appStatus],
+              }}
+            >
+              <Send size={10} />
+              {APP_STATUS_LABEL[appStatus] ?? appStatus}
+            </span>
+            {(APP_ACTIONS[appStatus] ?? []).map(({ label, next }) => (
+              <button
+                key={next}
+                type="button"
+                disabled={updating}
+                onClick={() => handleAdvanceStatus(next)}
+                style={{
+                  height: 20, padding: '0 8px', borderRadius: 999,
+                  fontSize: 11, fontWeight: 600, cursor: updating ? 'not-allowed' : 'pointer',
+                  fontFamily: terminal ? 'var(--t-font-mono)' : undefined,
+                  background: terminal ? 'var(--t-bg-elevated)' : '#f1f5f9',
+                  border: terminal ? '1px solid var(--t-border)' : '1px solid #cbd5e1',
+                  color: terminal ? 'var(--t-text-secondary)' : '#475569',
+                  opacity: updating ? 0.5 : 1,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 基本信息格 */}
       <div className={terminal ? 'grid grid-cols-2 gap-px' : 'grid grid-cols-2 gap-3'} style={terminal ? { background: 'var(--t-border-subtle)' } : undefined}>

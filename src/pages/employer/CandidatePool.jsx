@@ -869,8 +869,8 @@ export default function CandidatePool({ terminal = false, messagesBasePath = '/m
                   }
                 >
                   <option value="all">全部候选人</option>
-                  <option value="archived">已归档</option>
-                  <option value="not_archived">未归档</option>
+                  <option value="archived">已收藏</option>
+                  <option value="not_archived">未收藏</option>
                   <option value="invited">已邀约</option>
                   <option value="not_invited">未邀约</option>
                 </select>
@@ -1105,7 +1105,7 @@ export default function CandidatePool({ terminal = false, messagesBasePath = '/m
                           e.currentTarget.style.color = 'var(--t-text-secondary)'
                         }}
                       >
-                        {isArchived ? '已归档' : '简历归档'}
+                        {isArchived ? '已收藏' : '收藏'}
                       </button>
                       <button
                         type="button"

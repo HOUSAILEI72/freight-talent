@@ -2,58 +2,96 @@ import { Loader2, AlertCircle, FolderOpen } from 'lucide-react'
 import { CandidateListItem } from './CandidateListItem'
 import { CandidateResultCard } from './CandidateResultCard'
 
+function EmptyState({ terminal, text }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center"
+      style={terminal
+        ? { padding: '64px 24px', gap: 10 }
+        : { padding: '64px 24px', gap: 8 }
+      }
+    >
+      <FolderOpen
+        size={terminal ? 24 : 28}
+        style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#cbd5e1' }}
+      />
+      {terminal ? (
+        <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--t-text-muted)' }}>
+          {text}
+        </span>
+      ) : (
+        <p className="text-xs text-slate-400 text-center">{text}</p>
+      )}
+    </div>
+  )
+}
+
 export function CandidateList({
   loading, error, candidates, filteredCandidates,
   selected, selectedJob, invited, archivedSet, hasSubscription,
   archiveFilter, inviteFilter, terminal,
-  variant,          // 'wide' → CandidateResultCard in padded wrapper; default → CandidateListItem
+  variant,
   onSelect, onArchive, onInvite,
-  navigateBasePath, // for variant==='wide'
+  navigateBasePath,
 }) {
-  const muted  = terminal ? { color: 'var(--t-text-muted)' } : undefined
-  const danger = terminal ? { color: 'var(--t-danger)' } : undefined
-
   if (loading) return (
     <div
-      className={terminal
-        ? 'flex items-center justify-center gap-2 py-16'
-        : 'flex items-center justify-center gap-2 py-16 text-slate-400'}
-      style={muted}
+      className="flex items-center justify-center gap-2"
+      style={terminal
+        ? { padding: '64px 24px', color: 'var(--t-text-muted)' }
+        : { padding: '64px 24px', color: '#94a3b8' }
+      }
     >
-      <Loader2 size={16} className="animate-spin" />
-      <span className="text-sm">加载中...</span>
+      <Loader2 size={15} className="animate-spin" style={terminal ? { color: 'var(--t-primary)' } : undefined} />
+      {terminal ? (
+        <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11, letterSpacing: '0.06em', color: 'var(--t-text-muted)' }}>
+          LOADING...
+        </span>
+      ) : (
+        <span className="text-sm">加载中...</span>
+      )}
     </div>
   )
 
   if (error) return (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <AlertCircle size={24} className={terminal ? 'mb-2' : 'text-red-300 mb-2'} style={danger} />
-      <p className={terminal ? 'text-xs text-center' : 'text-xs text-red-500 text-center'} style={danger}>{error}</p>
+    <div
+      className="flex flex-col items-center justify-center"
+      style={terminal
+        ? { padding: '64px 24px', gap: 8 }
+        : { padding: '64px 24px', gap: 6 }
+      }
+    >
+      <AlertCircle
+        size={20}
+        style={terminal ? { color: 'var(--t-danger)' } : { color: '#fca5a5' }}
+      />
+      <p
+        className="text-xs text-center"
+        style={terminal ? { color: 'var(--t-danger)', maxWidth: 240 } : { color: '#ef4444', maxWidth: 240 }}
+      >
+        {error}
+      </p>
     </div>
   )
 
   if (candidates.length === 0) return (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <FolderOpen size={28} className={terminal ? 'mb-2' : 'text-slate-300 mb-2'} style={muted} />
-      <p className={terminal ? 'text-xs text-center' : 'text-xs text-slate-400 text-center'} style={muted}>
-        暂无匹配候选人
-      </p>
-    </div>
+    <EmptyState terminal={terminal} text={terminal ? 'NO CANDIDATES' : '暂无候选人'} />
   )
 
   if (filteredCandidates.length === 0) return (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <FolderOpen size={28} className={terminal ? 'mb-2' : 'text-slate-300 mb-2'} style={muted} />
-      <p className={terminal ? 'text-xs text-center' : 'text-xs text-slate-400 text-center'} style={muted}>
-        {(archiveFilter !== 'all' || inviteFilter !== 'all') ? '无符合条件的候选人' : '暂无匹配候选人'}
-      </p>
-    </div>
+    <EmptyState
+      terminal={terminal}
+      text={terminal
+        ? ((archiveFilter !== 'all' || inviteFilter !== 'all') ? 'NO MATCH' : 'NO CANDIDATES')
+        : ((archiveFilter !== 'all' || inviteFilter !== 'all') ? '无符合条件的候选人' : '暂无匹配候选人')
+      }
+    />
   )
 
-  // ── wide card list (terminal variant) ──────────────────────────────────
+  // ── wide card grid (terminal variant) ──────────────────────────────────────
   if (variant === 'wide') {
     return (
-      <div className="px-5 py-4 space-y-3">
+      <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {filteredCandidates.map(c => {
           const invKey     = selectedJob ? `${selectedJob.id}_${c.id}` : null
           const isInvited  = invKey ? !!invited[invKey] : false
@@ -77,7 +115,7 @@ export function CandidateList({
     )
   }
 
-  // ── default compact list (public light mode) ────────────────────────────
+  // ── default compact list (public light mode) ────────────────────────────────
   return (
     <>
       {filteredCandidates.map(c => {

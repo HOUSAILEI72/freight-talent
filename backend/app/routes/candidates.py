@@ -508,6 +508,14 @@ def list_candidates():
     except (ValueError, TypeError):
         page, page_size = 1, 20
 
+    pool_type   = request.args.get("pool_type", "all").strip()
+    employer_id = user.id if user.role == "employer" else None
+
+    job_id_raw = request.args.get("job_id", "").strip()
+    job_id: int | None = None
+    if job_id_raw.isdigit():
+        job_id = int(job_id_raw)
+
     result = list_candidates_with_filters(
         avail_param=request.args.get("availability_status", "open").strip(),
         city=request.args.get("city", "").strip(),
@@ -522,6 +530,9 @@ def list_candidates():
         gender=request.args.get("gender", "").strip(),
         page=page,
         page_size=page_size,
+        pool_type=pool_type,
+        employer_id=employer_id,
+        job_id=job_id,
     )
 
     candidates_list = result["items"]
@@ -536,14 +547,52 @@ def list_candidates():
         unlocked_ids = employer_unlocked_candidate_ids(user.id, cand_ids)
 
     tag_map = load_tags_by_category(cand_ids)
+    application_map = result.get("application_map", {})
 
     out = []
     for c in candidates_list:
         priv = is_admin or (c.id in unlocked_ids)
-        out.append(build_public_dict(
+        d = build_public_dict(
             c, include_contact=priv, include_private=priv,
             tags_by_category=tag_map.get(c.id, {}),
-        ))
+        )
+        if c.id in application_map:
+            d.update(application_map[c.id])
+        out.append(d)
+
+    # Compute pool_counts for the rail badges (only all + applied for now)
+    pool_counts = {}
+    if user.role == "employer":
+        from app.models.job_application import JobApplication
+        from app.models.job import Job
+        from app.extensions import db as _db
+        from app.models.candidate import Candidate as _Cand
+        try:
+            pool_counts["all"] = _db.session.query(_db.func.count(_Cand.id)).filter(
+                _Cand.availability_status.in_(["open", "passive"])
+            ).scalar() or 0
+        except Exception:
+            pool_counts["all"] = None
+        try:
+            pool_counts["applied"] = (
+                _db.session.query(_db.func.count(_db.distinct(JobApplication.candidate_id)))
+                .join(Job, Job.id == JobApplication.job_id)
+                .filter(JobApplication.employer_id == employer_id)
+                .scalar() or 0
+            )
+        except Exception:
+            pool_counts["applied"] = None
+        try:
+            from app.models.employer_candidate_favorite import EmployerCandidateFavorite as _Fav
+            pool_counts["favorited"] = (
+                _db.session.query(_db.func.count(_Fav.id))
+                .filter(_Fav.employer_id == employer_id)
+                .scalar() or 0
+            )
+        except Exception:
+            pool_counts["favorited"] = None
+        for k in ("personal_headhunter", "team_headhunter", "entrusted"):
+            pool_counts[k] = None
 
     return jsonify({
         "success": True,
@@ -552,6 +601,7 @@ def list_candidates():
         "page": result["page"],
         "page_size": result["page_size"],
         "total_pages": result["total_pages"],
+        "pool_counts": pool_counts,
     })
 
 
@@ -711,3 +761,108 @@ def upload_resume():
         "uploaded_at": profile.resume_uploaded_at.isoformat(),
         "profile": profile.to_dict(),
     }), 201
+
+
+# ── 收藏 toggle ───────────────────────────────────────────────────────────────
+
+@candidates_bp.post("/<int:candidate_id>/favorite")
+@jwt_required()
+def toggle_favorite(candidate_id):
+    """POST /api/candidates/:id/favorite — 切换收藏状态，返回 {favorited: bool}"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role != "employer":
+        return _err("仅企业账号可收藏候选人", 403)
+
+    from app.models.employer_candidate_favorite import EmployerCandidateFavorite
+    from datetime import datetime, timezone
+
+    existing = EmployerCandidateFavorite.query.filter_by(
+        employer_id=user.id, candidate_id=candidate_id
+    ).first()
+
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify({"success": True, "favorited": False})
+    else:
+        fav = EmployerCandidateFavorite(
+            employer_id=user.id,
+            candidate_id=candidate_id,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.session.add(fav)
+        db.session.commit()
+        return jsonify({"success": True, "favorited": True})
+
+
+@candidates_bp.post("/favorites/sync")
+@jwt_required()
+def sync_favorites():
+    """POST /api/candidates/favorites/sync
+    body: { candidate_ids: [1,2,3] }
+    用于前端迁移 localStorage → 后端，批量写入不存在的收藏记录，已有的跳过。
+    返回 { synced: N, already_existed: M, favorited_ids: [...] }
+    """
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role != "employer":
+        return _err("仅企业账号可同步收藏", 403)
+
+    data = request.get_json(silent=True) or {}
+    ids = data.get("candidate_ids", [])
+    if not isinstance(ids, list):
+        return _err("candidate_ids 必须为数组")
+
+    from app.models.employer_candidate_favorite import EmployerCandidateFavorite
+    from app.models.candidate import Candidate
+    from datetime import datetime, timezone
+
+    # 只保留实际存在的 candidate id
+    valid_ids = {
+        r.id for r in db.session.query(Candidate.id).filter(Candidate.id.in_(ids)).all()
+    }
+    existing_ids = {
+        r.candidate_id
+        for r in EmployerCandidateFavorite.query.filter_by(employer_id=user.id)
+        .filter(EmployerCandidateFavorite.candidate_id.in_(valid_ids))
+        .all()
+    }
+
+    now = datetime.now(timezone.utc)
+    synced = 0
+    for cid in valid_ids:
+        if cid not in existing_ids:
+            db.session.add(EmployerCandidateFavorite(
+                employer_id=user.id, candidate_id=cid, created_at=now,
+            ))
+            synced += 1
+    db.session.commit()
+
+    all_fav_ids = [
+        r.candidate_id
+        for r in EmployerCandidateFavorite.query.filter_by(employer_id=user.id).all()
+    ]
+    return jsonify({
+        "success": True,
+        "synced": synced,
+        "already_existed": len(existing_ids),
+        "favorited_ids": all_fav_ids,
+    })
+
+
+@candidates_bp.get("/favorites")
+@jwt_required()
+def get_favorites():
+    """GET /api/candidates/favorites — 返回该企业收藏的所有 candidate_id 列表"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role != "employer":
+        return _err("仅企业账号可查看收藏", 403)
+
+    from app.models.employer_candidate_favorite import EmployerCandidateFavorite
+    rows = EmployerCandidateFavorite.query.filter_by(employer_id=user.id).all()
+    return jsonify({"success": True, "favorited_ids": [r.candidate_id for r in rows]})

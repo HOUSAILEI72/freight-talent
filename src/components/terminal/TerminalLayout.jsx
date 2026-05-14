@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { getRoleHome } from '../../router/roleHome'
 import { EMPLOYER_ICON_NAV } from './navItems'
+import { useTerminalTheme } from '../../context/TerminalThemeContext'
 
 /**
  * TerminalLayout
@@ -33,6 +34,7 @@ function PricingButton({ onClick }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       title="订阅方案"
+      className="terminal-pricing-btn"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -52,7 +54,7 @@ function PricingButton({ onClick }) {
         flexShrink: 0,
       }}
     >
-      VIEW PRICING
+      <span className="pricing-text">VIEW PRICING</span>
     </button>
   )
 }
@@ -65,7 +67,7 @@ function IconRail({ activeId = 'dashboard', navItems = EMPLOYER_ICON_NAV }) {
   return (
     <aside
       className="flex h-full w-[60px] shrink-0 flex-col items-center justify-between border-r border-[var(--t-border)] py-3"
-      style={{ background: '#070a10' }}
+      style={{ background: 'var(--t-bg-panel)' }}
     >
       {/* Logo */}
       <div className="flex flex-col items-center gap-2">
@@ -134,23 +136,23 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
   return (
     <header
       className="flex h-[60px] shrink-0 items-center justify-between border-b border-[var(--t-border)] px-5"
-      style={{ background: '#0a0f17' }}
+      style={{ background: 'var(--t-bg-elevated)' }}
     >
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 terminal-header-brand">
         <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] font-bold uppercase tracking-[0.18em] text-[color:var(--t-chart-cyan)]">
           ACE×
         </span>
-        <span className="text-[color:var(--t-text-muted)]">·</span>
-        <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] uppercase tracking-[0.16em] text-[color:var(--t-text-secondary)]">
+        <span className="brand-sep text-[color:var(--t-text-muted)]">·</span>
+        <span className="brand-terminal font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] uppercase tracking-[0.16em] text-[color:var(--t-text-secondary)]">
           TERMINAL
         </span>
-        <span className="text-[color:var(--t-text-muted)]">·</span>
-        <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold uppercase tracking-wider text-[color:var(--t-text)]">
+        <span className="brand-sep text-[color:var(--t-text-muted)]">·</span>
+        <span className="brand-page font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold uppercase tracking-wider text-[color:var(--t-text)] truncate">
           {title}
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {/* Pricing button — employer only */}
         {user?.role === 'employer' && (
           <PricingButton onClick={() => navigate('/employer/pricing')} />
@@ -166,15 +168,15 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
 
         <div className="mx-1 h-5 w-px bg-[var(--t-border)]" />
 
-        <div className="flex items-center gap-2 rounded-[var(--t-radius)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] px-2.5 py-1">
+        <div className="terminal-header-user flex items-center gap-2 rounded-[var(--t-radius)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] px-2.5 py-1">
           <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[color:var(--t-primary)] text-[10px] font-bold text-white">
             {(user?.name?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
           </div>
-          <span className="max-w-[120px] truncate text-[length:var(--t-text-xs)] font-medium text-[color:var(--t-text)]">
+          <span className="user-name max-w-[120px] truncate text-[length:var(--t-text-xs)] font-medium text-[color:var(--t-text)]">
             {companyName}
           </span>
           {roleLabel && (
-            <span className="rounded border border-[var(--t-border)] px-1 text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
+            <span className="role-badge rounded border border-[var(--t-border)] px-1 text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
               {roleLabel}
             </span>
           )}
@@ -199,6 +201,8 @@ export default function TerminalLayout({
   navItems = EMPLOYER_ICON_NAV,
   children,
 }) {
+  const { effectiveTheme } = useTerminalTheme()
+
   // Lock html/body overflow so the terminal truly fills 100vh without
   // the global `html { overflow-y: scroll }` reserving a scrollbar gutter.
   useEffect(() => {
@@ -209,17 +213,24 @@ export default function TerminalLayout({
     html.style.overflow = 'hidden'
     html.style.scrollbarGutter = 'auto'
     body.style.overflow = 'hidden'
-    body.style.background = 'var(--t-bg)'
     return () => {
       html.style.cssText = prevHtml
       body.style.cssText = prevBody
     }
   }, [])
 
+  // Sync body background to avoid color bleed around shell edges.
+  // body is outside .terminal-shell so can't inherit scoped tokens.
+  useEffect(() => {
+    const BG = { dark: '#0b0e13', light: '#f6f8fb' }
+    document.body.style.background = BG[effectiveTheme] ?? BG.dark
+  }, [effectiveTheme])
+
   return (
     <div
-      className="flex overflow-hidden text-[color:var(--t-text)]"
-      style={{ width: '100vw', height: '100vh', background: 'var(--t-bg)' }}
+      className="terminal-shell text-[color:var(--t-text)]"
+      data-terminal-theme={effectiveTheme}
+      style={{ background: 'var(--t-bg)' }}
     >
       <IconRail activeId={activeIconId} navItems={navItems} />
       <div className="flex min-w-0 flex-1 flex-col">

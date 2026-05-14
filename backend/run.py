@@ -7,6 +7,9 @@ MESSAGES FEATURE DISABLED: 设置 ENABLE_SOCKETIO=true 可重新启用 Socket.IO
 默认以普通 Flask dev server 启动（不需要 eventlet）。
 """
 import os
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 _enable_socketio = os.getenv("ENABLE_SOCKETIO", "false").lower() == "true"
 
