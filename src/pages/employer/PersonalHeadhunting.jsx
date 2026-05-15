@@ -141,8 +141,8 @@ function formatThousand(val) {
 // ─── Design tokens (shared across sub-components) ──────────────────────────────
 
 const T = {
-  label:    { display: 'block', fontSize: 11, color: 'var(--t-text-secondary)', marginBottom: 4, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.05em' },
-  helper:   { fontSize: 10, color: 'var(--t-text-muted)', marginTop: 3, fontFamily: 'var(--t-font-mono)' },
+  label:    { display: 'block', fontSize: 11, color: 'var(--t-text-secondary)', marginBottom: 4, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.02em' },
+  helper:   { fontSize: 10, color: 'var(--t-text-muted)', marginTop: 3, fontFamily: 'var(--t-font-sans)' },
   input:    { width: '100%', padding: '7px 10px', borderRadius: 4, background: 'var(--t-bg-input)', border: '1px solid var(--t-border)', color: 'var(--t-text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' },
   textarea: { width: '100%', padding: '7px 10px', borderRadius: 4, background: 'var(--t-bg-input)', border: '1px solid var(--t-border)', color: 'var(--t-text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' },
   card:     { background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 16px', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'visible' },
@@ -166,7 +166,7 @@ function SectionHeader({ icon: Icon, title, sub }) {
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--t-text)', lineHeight: 1.2 }}>{title}</div>
         {sub && (
-          <div style={{ fontSize: 9, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginTop: 2 }}>{sub}</div>
+          <div style={{ fontSize: 9, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginTop: 2 }}>{sub}</div>
         )}
       </div>
     </div>
@@ -198,8 +198,8 @@ function disabledInput() {
 
 function chipStyle(active) {
   return active
-    ? { padding: '4px 11px', borderRadius: 4, border: '1px solid var(--t-primary)', background: 'var(--t-primary)', color: '#fff', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.04em' }
-    : { padding: '4px 11px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.04em' }
+    ? { padding: '4px 11px', borderRadius: 4, border: '1px solid var(--t-primary)', background: 'var(--t-primary)', color: '#fff', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em' }
+    : { padding: '4px 11px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em' }
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────────────
@@ -207,9 +207,9 @@ function chipStyle(active) {
 function TermLabel({ children, style }) {
   return (
     <div style={{
-      fontFamily: 'var(--t-font-mono)',
+      fontFamily: 'var(--t-font-sans)',
       fontSize: 9,
-      letterSpacing: '0.18em',
+      letterSpacing: '0.04em',
       textTransform: 'uppercase',
       color: 'var(--t-text-muted)',
       borderBottom: '1px solid var(--t-border-subtle)',
@@ -228,8 +228,8 @@ function FeeRow({ label, low, high, accent }) {
   const display = sameVal ? fmtCNY(low) : `${fmtCNY(low)} – ${fmtCNY(high)}`
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
-      <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 12, color, fontFamily: 'var(--t-font-mono)', fontWeight: accent ? 600 : 400, textAlign: 'right' }}>
+      <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 12, color, fontFamily: 'var(--t-font-sans)', fontWeight: accent ? 600 : 400, textAlign: 'right' }}>
         {display}
       </span>
     </div>
@@ -243,7 +243,7 @@ function TagPill({ text }) {
       padding: '2px 7px', borderRadius: 3,
       background: 'var(--t-primary-muted)', border: '1px solid var(--t-border)',
       color: 'var(--t-chart-blue)', fontSize: 10,
-      fontFamily: 'var(--t-font-mono)', letterSpacing: '0.04em',
+      fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em',
     }}>
       {text}
     </span>
@@ -258,7 +258,7 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
   const [email,  setEmail]  = useState(user?.email || '')
   const [wechat, setWechat] = useState('')
 
-  const labelStyle = { display: 'block', fontSize: 11, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.1em', color: 'var(--t-text-muted)', marginBottom: 4 }
+  const labelStyle = { display: 'block', fontSize: 11, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -271,7 +271,7 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
           <div>
-            <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 4 }}>
+            <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 4 }}>
               CONTACT INFO
             </div>
             <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)', margin: 0 }}>确认联系信息</h3>
@@ -298,7 +298,7 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
         </div>
 
         {error && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', background: 'var(--t-danger-muted)', border: '1px solid var(--t-danger)', borderRadius: 4, color: 'var(--t-danger)', fontSize: 12, fontFamily: 'var(--t-font-mono)', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', background: 'var(--t-danger-muted)', border: '1px solid var(--t-danger)', borderRadius: 4, color: 'var(--t-danger)', fontSize: 12, fontFamily: 'var(--t-font-sans)', marginBottom: 14 }}>
             <AlertCircle size={13} style={{ flexShrink: 0 }} />
             {error}
           </div>
@@ -306,11 +306,11 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onCancel} disabled={submitting}
-            style={{ flex: 1, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: 'transparent', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.05em' }}>
+            style={{ flex: 1, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: 'transparent', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.02em' }}>
             返回修改
           </button>
           <button onClick={() => onConfirm({ name, phone, email, wechat })} disabled={submitting}
-            style={{ flex: 2, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: submitting ? 'var(--t-primary-muted)' : 'var(--t-primary)', border: 'none', color: '#fff', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            style={{ flex: 2, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: submitting ? 'var(--t-primary-muted)' : 'var(--t-primary)', border: 'none', color: '#fff', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             {submitting && <Loader2 size={13} className="animate-spin" />}
             {submitting ? '提交中...' : '确认并提交'}
           </button>
@@ -339,7 +339,7 @@ function SuccessModal({ onClose }) {
         }}>
           <CheckCircle size={24} style={{ color: 'var(--t-success)' }} />
         </div>
-        <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 10 }}>
+        <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 10 }}>
           REQUEST SUBMITTED
         </div>
         <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--t-text)', marginBottom: 10 }}>需求已提交</h3>
@@ -349,7 +349,7 @@ function SuccessModal({ onClose }) {
         <button onClick={onClose} style={{
           width: '100%', height: 36, borderRadius: 4,
           background: 'var(--t-primary)', border: 'none', color: '#fff',
-          fontFamily: 'var(--t-font-mono)', fontSize: 12, letterSpacing: '0.1em',
+          fontFamily: 'var(--t-font-sans)', fontSize: 12, letterSpacing: '0.04em',
           textTransform: 'uppercase', cursor: 'pointer',
         }}>
           返回 Dashboard
@@ -395,6 +395,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
   const [salaryMaxFocused,        setSalaryMaxFocused]        = useState(false)
   const [commissionBonusPeriod,   setCommissionBonusPeriod]   = useState('not_applicable')
   const [commissionBonusAmount,   setCommissionBonusAmount]   = useState('')
+  const [commissionAmountFocused, setCommissionAmountFocused] = useState(false)
   const [hasYearEndBonus,         setHasYearEndBonus]         = useState('')
   const [yearEndBonusQuickSelect, setYearEndBonusQuickSelect] = useState(null)
   const [yearEndBonusCustom,      setYearEndBonusCustom]      = useState('')
@@ -433,17 +434,18 @@ export default function PersonalHeadhunting({ terminal = false }) {
 
   const salaryMinDisplay  = salaryMinFocused ? salaryMin : formatThousand(salaryMin)
   const salaryMaxDisplay  = salaryMaxFocused ? salaryMax : formatThousand(salaryMax)
+  const commissionAmountDisplay = commissionAmountFocused ? commissionBonusAmount : formatThousand(commissionBonusAmount)
   const commissionAmountDisabled = commissionBonusPeriod === 'not_applicable'
 
   // ── Validate ──────────────────────────────────────────────────────────────
   function validateJob() {
     if (!title.trim())        return '请填写岗位名称'
     if (!selectedFunction)    return '请选择岗位板块'
-    if (isManagementRole !== 'true' && isManagementRole !== 'false') return '请选择该岗位是否属于管理行列'
+    if (isManagementRole !== 'true' && isManagementRole !== 'false') return '请选择该岗位是否带团队'
     if (isManagementRole === 'true') {
-      if (!managementHeadcount.trim()) return '请填写预计管理人数'
-      if (!/^\d+$/.test(managementHeadcount.trim())) return '预计管理人数必须为纯数字'
-      if (Number(managementHeadcount) <= 0) return '预计管理人数必须大于 0'
+      if (!managementHeadcount.trim()) return '请填写预计团队人数'
+      if (!/^\d+$/.test(managementHeadcount.trim())) return '预计团队人数必须为纯数字'
+      if (Number(managementHeadcount) <= 0) return '预计团队人数必须大于 0'
     }
     if (!location?.location_code)  return '请选择岗位工作城市'
     if (!location.location_name || !location.location_path || !location.location_type) return '地区数据不完整，请重新选择'
@@ -584,26 +586,26 @@ export default function PersonalHeadhunting({ terminal = false }) {
         style={{ borderBottom: '1px solid var(--t-border-subtle)' }}
       >
         <div>
-          <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 3 }}>
+          <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 3 }}>
             PERSONAL · HEADHUNTING REQUEST
           </div>
           <h1 className="terminal-page-title-safe" style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)', margin: 0 }}>个人猎头服务</h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>
+          <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>
             提交后 24h 内联系
           </span>
           <div style={{ width: 1, height: 16, background: 'var(--t-border)' }} />
           <button
             onClick={() => navigate('/employer/dashboard')}
-            style={{ height: 30, padding: '0 12px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-mono)', fontSize: 11, cursor: 'pointer', letterSpacing: '0.06em' }}
+            style={{ height: 30, padding: '0 12px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)', fontSize: 11, cursor: 'pointer', letterSpacing: '0.06em' }}
           >
             取消
           </button>
           <button
             onClick={handleConfirmPublish}
             disabled={submitting}
-            style={{ height: 30, display: 'flex', alignItems: 'center', gap: 5, padding: '0 14px', borderRadius: 4, border: 'none', background: submitting ? 'var(--t-primary-muted)' : 'var(--t-primary)', color: '#fff', fontFamily: 'var(--t-font-mono)', fontSize: 11, cursor: submitting ? 'not-allowed' : 'pointer', letterSpacing: '0.08em', fontWeight: 600, opacity: submitting ? 0.75 : 1 }}
+            style={{ height: 30, display: 'flex', alignItems: 'center', gap: 5, padding: '0 14px', borderRadius: 4, border: 'none', background: submitting ? 'var(--t-primary-muted)' : 'var(--t-primary)', color: '#fff', fontFamily: 'var(--t-font-sans)', fontSize: 11, cursor: submitting ? 'not-allowed' : 'pointer', letterSpacing: '0.08em', fontWeight: 600, opacity: submitting ? 0.75 : 1 }}
           >
             {submitting && <Loader2 size={12} className="animate-spin" />}
             {submitting ? '提交中...' : '确认发布'}
@@ -616,7 +618,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
       {pageError && (
         <div
           className="flex-shrink-0 flex items-center gap-2 mx-6 mt-2"
-          style={{ padding: '7px 12px', background: 'var(--t-danger-muted)', border: '1px solid var(--t-danger)', borderRadius: 4, color: 'var(--t-danger)', fontSize: 12, fontFamily: 'var(--t-font-mono)' }}
+          style={{ padding: '7px 12px', background: 'var(--t-danger-muted)', border: '1px solid var(--t-danger)', borderRadius: 4, color: 'var(--t-danger)', fontSize: 12, fontFamily: 'var(--t-font-sans)' }}
         >
           <AlertCircle size={13} style={{ flexShrink: 0 }} />
           {pageError}
@@ -653,7 +655,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                 <FileText size={13} style={{ color: 'var(--t-text-muted)', flexShrink: 0 }} />
-                <span style={{ fontSize: 11, color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-mono)', truncate: true }}>
+                <span style={{ fontSize: 11, color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)', truncate: true }}>
                   《个人猎头服务合同》模板
                 </span>
               </div>
@@ -667,7 +669,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                     background: 'var(--t-bg-elevated)',
                     border: '1px solid var(--t-border)',
                     color: 'var(--t-text-secondary)',
-                    fontSize: 10, fontFamily: 'var(--t-font-mono)',
+                    fontSize: 10, fontFamily: 'var(--t-font-sans)',
                     cursor: 'pointer',
                     letterSpacing: '0.04em',
                   }}
@@ -686,7 +688,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                     background: 'var(--t-bg-elevated)',
                     border: '1px solid var(--t-border)',
                     color: 'var(--t-text-secondary)',
-                    fontSize: 10, fontFamily: 'var(--t-font-mono)',
+                    fontSize: 10, fontFamily: 'var(--t-font-sans)',
                     cursor: 'pointer', textDecoration: 'none',
                     letterSpacing: '0.04em',
                   }}
@@ -710,7 +712,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                   style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--t-primary)', width: 13, height: 13 }} />
                 <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>⚡ 加速服务</span>
-                  <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>
+                  <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>
                     1 个月内成功入职 · A 类 28% / B 类 +30%
                   </span>
                 </span>
@@ -724,12 +726,12 @@ export default function PersonalHeadhunting({ terminal = false }) {
                     style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--t-primary)', width: 13, height: 13 }} />
                   <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>候选人背调</span>
-                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>¥500 / 份</span>
+                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>¥500 / 份</span>
                   </span>
                 </label>
                 {backgroundCheck && (
                   <div style={{ marginTop: 7, marginLeft: 21, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>数量</span>
+                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>数量</span>
                     <input type="number" min={1} max={99}
                       style={{ ...T.input, width: 64, padding: '4px 8px', fontSize: 12 }}
                       value={backgroundCheckCount}
@@ -746,12 +748,12 @@ export default function PersonalHeadhunting({ terminal = false }) {
                     style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--t-primary)', width: 13, height: 13 }} />
                   <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>性格测试 &amp; 职业报告</span>
-                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>¥100 / 份</span>
+                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>¥100 / 份</span>
                   </span>
                 </label>
                 {personalityReport && (
                   <div style={{ marginTop: 7, marginLeft: 21, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>数量</span>
+                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>数量</span>
                     <input type="number" min={1} max={99}
                       style={{ ...T.input, width: 64, padding: '4px 8px', fontSize: 12 }}
                       value={personalityReportCount}
@@ -791,10 +793,10 @@ export default function PersonalHeadhunting({ terminal = false }) {
               </select>
             </div>
 
-            {/* 管理行列 */}
+            {/* 是否带团队 */}
             <div style={{ display: 'grid', gridTemplateColumns: isManagementRole === 'true' ? '1fr 1fr' : '1fr', gap: 8 }}>
               <div>
-                <label style={T.label}>是否管理行列 *</label>
+                <label style={T.label}>是否带团队 *</label>
                 <select style={T.input} value={isManagementRole}
                   onChange={e => { setIsManagementRole(e.target.value); if (e.target.value !== 'true') setManagementHeadcount('') }}>
                   <option value="">请选择</option>
@@ -804,7 +806,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
               </div>
               {isManagementRole === 'true' && (
                 <div>
-                  <label style={T.label}>预计管理人数 *</label>
+                  <label style={T.label}>预计团队人数 *</label>
                   <input style={T.input} inputMode="numeric" pattern="[0-9]*" placeholder="例：5"
                     value={managementHeadcount}
                     onChange={e => { const v = e.target.value; if (v === '' || /^\d*$/.test(v)) setManagementHeadcount(v) }} />
@@ -872,7 +874,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <label style={{ ...T.label, marginBottom: 0 }}>{sk.label}</label>
                   {sk.arr.length > 0 && (
-                    <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-mono)' }}>
+                    <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-sans)' }}>
                       {sk.arr.length} 项
                     </span>
                   )}
@@ -882,7 +884,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                 {sk.arr.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
                     {sk.arr.slice(0, 8).map(p => <TagPill key={p} text={p} />)}
-                    {sk.arr.length > 8 && <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', alignSelf: 'center' }}>+{sk.arr.length - 8}</span>}
+                    {sk.arr.length > 8 && <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', alignSelf: 'center' }}>+{sk.arr.length - 8}</span>}
                   </div>
                 )}
               </div>
@@ -893,7 +895,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <label style={{ ...T.label, marginBottom: 0 }}>对标公司</label>
                 {targetCompaniesArr.length > 0 && (
-                  <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-mono)' }}>
+                  <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-sans)' }}>
                     {targetCompaniesArr.length} 家
                   </span>
                 )}
@@ -910,7 +912,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
                   {targetCompaniesArr.slice(0, 8).map(p => <TagPill key={p} text={p} />)}
                   {targetCompaniesArr.length > 8 && (
-                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', alignSelf: 'center' }}>
+                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', alignSelf: 'center' }}>
                       +{targetCompaniesArr.length - 8}
                     </span>
                   )}
@@ -954,9 +956,15 @@ export default function PersonalHeadhunting({ terminal = false }) {
               </div>
               <div>
                 <label style={T.label}>预估平均额</label>
-                <input type="number" style={commissionAmountDisabled ? disabledInput() : T.input}
-                  placeholder="例：5,000" value={commissionBonusAmount} disabled={commissionAmountDisabled}
-                  onChange={e => setCommissionBonusAmount(e.target.value)} />
+                <input type="text" inputMode="numeric" style={commissionAmountDisabled ? disabledInput() : T.input}
+                  placeholder="例：5,000" value={commissionAmountDisabled ? '' : commissionAmountDisplay}
+                  disabled={commissionAmountDisabled}
+                  onFocus={() => setCommissionAmountFocused(true)}
+                  onBlur={() => setCommissionAmountFocused(false)}
+                  onChange={e => {
+                    const r = e.target.value.replace(/,/g, '')
+                    if (r === '' || /^\d+$/.test(r)) setCommissionBonusAmount(r)
+                  }} />
                 {commissionAmountDisabled && <p style={T.helper}>请先选择奖金周期</p>}
               </div>
             </div>
@@ -1019,12 +1027,12 @@ export default function PersonalHeadhunting({ terminal = false }) {
                 <div style={{ marginBottom: 14 }}>
                   <TermLabel>服务分类</TermLabel>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>类型</span>
-                    <span style={{ fontSize: 12, color: 'var(--t-text)', fontFamily: 'var(--t-font-mono)', fontWeight: 600 }}>{feeResult.typeLabel} 类</span>
+                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>类型</span>
+                    <span style={{ fontSize: 12, color: 'var(--t-text)', fontFamily: 'var(--t-font-sans)', fontWeight: 600 }}>{feeResult.typeLabel} 类</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>保证期</span>
-                    <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-mono)' }}>{feeResult.guaranteeLabel}</span>
+                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>保证期</span>
+                    <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)' }}>{feeResult.guaranteeLabel}</span>
                   </div>
                 </div>
 
@@ -1047,15 +1055,15 @@ export default function PersonalHeadhunting({ terminal = false }) {
                 <div style={{ borderRadius: 6, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', padding: '12px 12px 10px', marginBottom: 12 }}>
                   <TermLabel style={{ marginBottom: 10 }}>合计预估</TermLabel>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.08em' }}>最低</span>
-                    <span style={{ fontSize: 18, color: 'var(--t-chart-amber)', fontFamily: 'var(--t-font-mono)', fontWeight: 700, letterSpacing: '-0.01em' }}>
+                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>最低</span>
+                    <span style={{ fontSize: 18, color: 'var(--t-chart-amber)', fontFamily: 'var(--t-font-sans)', fontWeight: 700, letterSpacing: '-0.01em' }}>
                       {fmtCNY(feeResult.totalLow)}
                     </span>
                   </div>
                   <div style={{ height: 1, background: 'var(--t-border-subtle)', marginBottom: 6 }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.08em' }}>最高</span>
-                    <span style={{ fontSize: 18, color: 'var(--t-chart-amber)', fontFamily: 'var(--t-font-mono)', fontWeight: 700, letterSpacing: '-0.01em' }}>
+                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>最高</span>
+                    <span style={{ fontSize: 18, color: 'var(--t-chart-amber)', fontFamily: 'var(--t-font-sans)', fontWeight: 700, letterSpacing: '-0.01em' }}>
                       {fmtCNY(feeResult.totalHigh)}
                     </span>
                   </div>
@@ -1063,7 +1071,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
 
                 {/* Disclaimer */}
                 <div style={{ padding: '9px 10px', background: 'var(--t-bg-input)', border: '1px solid var(--t-border-subtle)', borderRadius: 4, marginBottom: 14 }}>
-                  <p style={{ fontSize: 10, color: 'var(--t-text-muted)', lineHeight: 1.65, margin: 0, fontFamily: 'var(--t-font-mono)' }}>
+                  <p style={{ fontSize: 10, color: 'var(--t-text-muted)', lineHeight: 1.65, margin: 0, fontFamily: 'var(--t-font-sans)' }}>
                     以上为预估费用，实际服务费以候选人入职时的实际薪酬为准。增值服务费（背调 / 测评）不纳入 60% / 40% 分期，入职后单独结算。
                   </p>
                 </div>
@@ -1075,10 +1083,10 @@ export default function PersonalHeadhunting({ terminal = false }) {
                   <Calculator size={18} style={{ color: 'var(--t-text-muted)' }} />
                 </div>
                 <div>
-                  <p style={{ fontSize: 12, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.06em', color: 'var(--t-text-secondary)', marginBottom: 4 }}>
+                  <p style={{ fontSize: 12, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.06em', color: 'var(--t-text-secondary)', marginBottom: 4 }}>
                     填写薪资后自动试算
                   </p>
-                  <p style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>
+                  <p style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>
                     最低月薪 + 最高月薪 → 费用区间
                   </p>
                 </div>
@@ -1087,7 +1095,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
 
             {/* Submit hint */}
             <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: 12 }}>
-              <span style={{ fontSize: 9, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--t-text-muted)', display: 'block', marginBottom: 4 }}>SUBMIT</span>
+              <span style={{ fontSize: 9, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t-text-muted)', display: 'block', marginBottom: 4 }}>SUBMIT</span>
               <p style={{ fontSize: 11, color: 'var(--t-text-muted)', lineHeight: 1.6, margin: 0 }}>
                 点击右上角「确认发布」填写联系信息，我们将在 24 小时内与您取得联系。
               </p>
@@ -1128,7 +1136,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '8px 14px', borderBottom: '1px solid var(--t-border-subtle)', flexShrink: 0,
             }}>
-              <span style={{ fontSize: 11, fontFamily: 'var(--t-font-mono)', color: 'var(--t-text-secondary)', letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: 11, fontFamily: 'var(--t-font-sans)', color: 'var(--t-text-secondary)', letterSpacing: '0.04em' }}>
                 《个人猎头服务合同》模板
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1140,7 +1148,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                     height: 26, padding: '0 10px', borderRadius: 3,
                     background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)',
                     color: 'var(--t-text-secondary)', fontSize: 10,
-                    fontFamily: 'var(--t-font-mono)', cursor: 'pointer', textDecoration: 'none',
+                    fontFamily: 'var(--t-font-sans)', cursor: 'pointer', textDecoration: 'none',
                     letterSpacing: '0.04em',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--t-chart-blue)'; e.currentTarget.style.color = 'var(--t-chart-blue)' }}

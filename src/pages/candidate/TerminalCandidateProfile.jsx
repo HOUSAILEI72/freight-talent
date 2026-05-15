@@ -26,16 +26,16 @@ export default function TerminalCandidateProfile() {
         {/* Sub-header: username + role badge */}
         <div className="flex h-11 shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-5">
           <div className="flex items-center gap-3">
-            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+            <span className="font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
               PROFILE
             </span>
             {user?.name && (
-              <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)] truncate">
+              <span className="font-[var(--t-font-sans)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)] truncate">
                 {user.name}
               </span>
             )}
           </div>
-          <span className="rounded border border-[var(--t-border)] px-2 py-0.5 font-[var(--t-font-mono)] text-[10px] uppercase tracking-widest text-[color:var(--t-text-muted)]">
+          <span className="rounded border border-[var(--t-border)] px-2 py-0.5 font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
             Candidate
           </span>
         </div>
@@ -47,7 +47,7 @@ export default function TerminalCandidateProfile() {
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`flex h-full items-center px-5 font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.18em] border-b-2 transition-colors duration-[var(--t-transition)] ${
+              className={`flex h-full items-center px-5 font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] border-b-2 transition-colors duration-[var(--t-transition)] ${
                 tab === t.id
                   ? 'border-[color:var(--t-primary)] text-[color:var(--t-text)]'
                   : 'border-transparent text-[color:var(--t-text-muted)] hover:text-[color:var(--t-text-secondary)]'

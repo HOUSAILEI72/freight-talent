@@ -170,7 +170,7 @@ function Cell({ icon: Icon, label, value, terminal, accentValue }) {
       <div className="px-2.5 py-1.5" style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}>
         <div className="flex items-center gap-1 mb-0.5">
           <Icon size={10} style={{ color: 'var(--t-text-muted)' }} />
-          <span className="font-mono text-xs uppercase tracking-widest" style={{ color: 'var(--t-text-muted)' }}>{label}</span>
+          <span className="font-sans text-xs uppercase tracking-[0.04em]" style={{ color: 'var(--t-text-muted)' }}>{label}</span>
         </div>
         <p className="text-xs truncate" style={accentValue ? { color: 'var(--t-chart-blue)' } : { color: 'var(--t-text-secondary)' }}>
           {value}
@@ -314,7 +314,7 @@ export default function MyApplications({ terminal = false }) {
             style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}
           >
             <Send size={14} />
-            <span className="text-[11px] tracking-[0.2em] uppercase">APPLICATIONS · ME</span>
+            <span className="text-[11px] tracking-[0.04em] uppercase">APPLICATIONS · ME</span>
           </div>
           <h1
             className={terminal ? 'text-2xl font-semibold' : 'text-2xl font-semibold text-slate-800'}

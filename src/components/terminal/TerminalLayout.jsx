@@ -4,6 +4,9 @@ import { useEffect } from 'react'
 import {
   Bell,
   LogOut,
+  Sun,
+  Moon,
+  SunMoon,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { getRoleHome } from '../../router/roleHome'
@@ -42,12 +45,12 @@ function PricingButton({ onClick }) {
         padding: '0 14px',
         borderRadius: 'var(--t-radius)',
         border: 'none',
-        background: hover ? '#1d4ed8' : '#2563eb',
-        color: '#fff',
-        fontFamily: 'var(--t-font-mono)',
-        fontSize: 10,
+        background: hover ? 'var(--t-pricing-bg-hover)' : 'var(--t-pricing-bg)',
+        color: 'var(--t-pricing-text)',
+        fontFamily: 'var(--t-font-sans)',
+        fontSize: 12,
         fontWeight: 700,
-        letterSpacing: '0.14em',
+        letterSpacing: '0.08em',
         textTransform: 'uppercase',
         cursor: 'pointer',
         transition: 'background 120ms',
@@ -62,7 +65,9 @@ function PricingButton({ onClick }) {
 function IconRail({ activeId = 'dashboard', navItems = EMPLOYER_ICON_NAV }) {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { effectiveTheme } = useTerminalTheme()
   const [hoveredId, setHoveredId] = useState(null)
+  const logoSrc = effectiveTheme === 'light' ? '/logo.svg' : '/logo-white.svg'
 
   return (
     <aside
@@ -77,7 +82,7 @@ function IconRail({ activeId = 'dashboard', navItems = EMPLOYER_ICON_NAV }) {
           className="flex h-9 w-9 items-center justify-center"
           title="Logistics Talent"
         >
-          <img src="/logo-white.svg" alt="Logistics Talent" className="h-8 w-8" />
+          <img src={logoSrc} alt="Logistics Talent" className="h-8 w-8" />
         </button>
 
         <div className="my-2 h-px w-6 bg-[var(--t-border)]" />
@@ -121,6 +126,45 @@ function IconRail({ activeId = 'dashboard', navItems = EMPLOYER_ICON_NAV }) {
   )
 }
 
+const THEME_CYCLE = ['dark', 'light', 'system']
+const THEME_META = {
+  dark:   { Icon: Moon,    label: '深色模式' },
+  light:  { Icon: Sun,     label: '浅色模式' },
+  system: { Icon: SunMoon, label: '跟随系统' },
+}
+
+function ThemeToggleButton() {
+  const { themeMode, setThemeMode } = useTerminalTheme()
+  const [hover, setHover] = useState(false)
+  const { Icon, label } = THEME_META[themeMode] ?? THEME_META.dark
+
+  function handleClick() {
+    const idx = THEME_CYCLE.indexOf(themeMode)
+    setThemeMode(THEME_CYCLE[(idx + 1) % THEME_CYCLE.length])
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      title={label}
+      className="flex h-8 w-8 items-center justify-center rounded-[var(--t-radius)]"
+      style={{
+        background: hover ? 'var(--t-bg-hover)' : 'transparent',
+        color: hover ? 'var(--t-text)' : 'var(--t-text-secondary)',
+        border: 'none',
+        cursor: 'pointer',
+        transition: 'background 120ms, color 120ms',
+        flexShrink: 0,
+      }}
+    >
+      <Icon size={15} />
+    </button>
+  )
+}
+
 function TerminalHeader({ title = 'DASHBOARD' }) {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
@@ -139,15 +183,15 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
       style={{ background: 'var(--t-bg-elevated)' }}
     >
       <div className="flex items-center gap-3 min-w-0 terminal-header-brand">
-        <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] font-bold uppercase tracking-[0.18em] text-[color:var(--t-chart-cyan)]">
-          ACE×
+        <span className="font-[var(--t-font-sans)] text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--t-chart-cyan)]">
+          ACE
+        </span>
+        <span className="brand-sep font-[var(--t-font-sans)] text-[12px] font-bold text-[color:var(--t-chart-cyan)]">×</span>
+        <span className="brand-terminal font-[var(--t-font-sans)] text-[11px] uppercase tracking-[0.08em] text-[color:var(--t-text-secondary)]">
+          LOGISTICS
         </span>
         <span className="brand-sep text-[color:var(--t-text-muted)]">·</span>
-        <span className="brand-terminal font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] uppercase tracking-[0.16em] text-[color:var(--t-text-secondary)]">
-          TERMINAL
-        </span>
-        <span className="brand-sep text-[color:var(--t-text-muted)]">·</span>
-        <span className="brand-page font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold uppercase tracking-wider text-[color:var(--t-text)] truncate">
+        <span className="brand-page font-[var(--t-font-sans)] text-[14px] font-semibold uppercase tracking-[0.08em] text-[color:var(--t-text)] truncate">
           {title}
         </span>
       </div>
@@ -166,6 +210,8 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
           <Bell size={15} />
         </button>
 
+        <ThemeToggleButton />
+
         <div className="mx-1 h-5 w-px bg-[var(--t-border)]" />
 
         <div className="terminal-header-user flex items-center gap-2 rounded-[var(--t-radius)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] px-2.5 py-1">
@@ -176,7 +222,7 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
             {companyName}
           </span>
           {roleLabel && (
-            <span className="role-badge rounded border border-[var(--t-border)] px-1 text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
+            <span className="role-badge rounded border border-[var(--t-border)] px-1 text-[10px] text-[color:var(--t-text-muted)]">
               {roleLabel}
             </span>
           )}
@@ -199,6 +245,8 @@ export default function TerminalLayout({
   title = 'DASHBOARD',
   activeIconId = 'dashboard',
   navItems = EMPLOYER_ICON_NAV,
+  shellClassName = '',
+  bodyBackground,
   children,
 }) {
   const { effectiveTheme } = useTerminalTheme()
@@ -222,13 +270,13 @@ export default function TerminalLayout({
   // Sync body background to avoid color bleed around shell edges.
   // body is outside .terminal-shell so can't inherit scoped tokens.
   useEffect(() => {
-    const BG = { dark: '#0b0e13', light: '#f6f8fb' }
+    const BG = { dark: bodyBackground ?? '#0b0e13', light: '#f6f8fb' }
     document.body.style.background = BG[effectiveTheme] ?? BG.dark
-  }, [effectiveTheme])
+  }, [effectiveTheme, bodyBackground])
 
   return (
     <div
-      className="terminal-shell text-[color:var(--t-text)]"
+      className={`terminal-shell${shellClassName ? ` ${shellClassName}` : ''} text-[color:var(--t-text)]`}
       data-terminal-theme={effectiveTheme}
       style={{ background: 'var(--t-bg)' }}
     >

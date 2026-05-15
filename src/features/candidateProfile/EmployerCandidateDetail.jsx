@@ -28,9 +28,9 @@ function buildTagGroups(profile) {
 function SectionLabel({ children }) {
   return (
     <div style={{
-      fontFamily: 'var(--t-font-mono)',
+      fontFamily: 'var(--t-font-sans)',
       fontSize: 10,
-      letterSpacing: '0.18em',
+      letterSpacing: '0.04em',
       textTransform: 'uppercase',
       color: 'var(--t-text-muted)',
       borderBottom: '1px solid var(--t-border-subtle)',
@@ -46,7 +46,7 @@ function Tag({ label, color = 'blue' }) {
   return (
     <span style={{
       ...TAG_STYLES[color],
-      fontFamily: 'var(--t-font-mono)',
+      fontFamily: 'var(--t-font-sans)',
       fontSize: 11,
       padding: '2px 8px',
       borderRadius: 3,
@@ -76,7 +76,7 @@ function FreshnessChip({ days }) {
   const color = fresh ? 'var(--t-success)' : 'var(--t-text-muted)'
   const label = days === 0 ? '今日更新' : `${days}天前更新`
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color, fontFamily: 'var(--t-font-mono)', fontSize: 11 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color, fontFamily: 'var(--t-font-sans)', fontSize: 11 }}>
       <Dot color={color} />
       {label}
     </span>
@@ -92,7 +92,7 @@ function AvailChip({ status }) {
   }
   const cfg = map[status] || map.closed
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: cfg.color, fontFamily: 'var(--t-font-mono)', fontSize: 11 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: cfg.color, fontFamily: 'var(--t-font-sans)', fontSize: 11 }}>
       <Dot color={cfg.color} />
       {cfg.label}
     </span>
@@ -103,7 +103,7 @@ function MetaRow({ label, value }) {
   if (!value) return null
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-      <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--t-text-muted)', flexShrink: 0 }}>
+      <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, letterSpacing: '0.04em', color: 'var(--t-text-muted)', flexShrink: 0 }}>
         {label}
       </span>
       <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', textAlign: 'right' }}>{value}</span>
@@ -153,10 +153,10 @@ function LockedProfilePreview({ onViewPricing }) {
               <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--t-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>{w.title}</span>
-                  <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0 }}>{w.period}</span>
+                  <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0 }}>{w.period}</span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--t-text-secondary)', marginBottom: 4 }}>{w.company}</div>
-                <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11, color: 'var(--t-chart-amber)' }}>{w.salary}</div>
+                <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 11, color: 'var(--t-chart-amber)' }}>{w.salary}</div>
               </div>
             ))}
           </div>
@@ -171,9 +171,9 @@ function LockedProfilePreview({ onViewPricing }) {
                 <div>
                   <span style={{ fontSize: 13, color: 'var(--t-text)' }}>{e.school}</span>
                   <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', marginLeft: 8 }}>{e.major}</span>
-                  <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11, color: 'var(--t-chart-blue)', marginLeft: 8 }}>{e.degree}</span>
+                  <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 11, color: 'var(--t-chart-blue)', marginLeft: 8 }}>{e.degree}</span>
                 </div>
-                <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0 }}>{e.period}</span>
+                <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0 }}>{e.period}</span>
               </div>
             ))}
           </div>
@@ -218,7 +218,7 @@ function LockedProfilePreview({ onViewPricing }) {
           justifyContent: 'center',
           color: 'var(--t-text-muted)',
           fontSize: 18,
-          fontFamily: 'var(--t-font-mono)',
+          fontFamily: 'var(--t-font-sans)',
           letterSpacing: 0,
         }}>
           ⊘
@@ -226,9 +226,9 @@ function LockedProfilePreview({ onViewPricing }) {
 
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            fontFamily: 'var(--t-font-mono)',
+            fontFamily: 'var(--t-font-sans)',
             fontSize: 11,
-            letterSpacing: '0.2em',
+            letterSpacing: '0.04em',
             textTransform: 'uppercase',
             color: 'var(--t-text-muted)',
             marginBottom: 6,
@@ -252,9 +252,9 @@ function LockedProfilePreview({ onViewPricing }) {
             border: 'none',
             borderRadius: 4,
             color: '#fff',
-            fontFamily: 'var(--t-font-mono)',
+            fontFamily: 'var(--t-font-sans)',
             fontSize: 12,
-            letterSpacing: '0.14em',
+            letterSpacing: '0.04em',
             padding: '9px 28px',
             cursor: 'pointer',
             textTransform: 'uppercase',
@@ -264,10 +264,10 @@ function LockedProfilePreview({ onViewPricing }) {
         </button>
 
         <div style={{
-          fontFamily: 'var(--t-font-mono)',
+          fontFamily: 'var(--t-font-sans)',
           fontSize: 10,
           color: 'var(--t-text-muted)',
-          letterSpacing: '0.1em',
+          letterSpacing: '0.04em',
         }}>
           以上预览为示意数据，非真实信息
         </div>
@@ -335,7 +335,7 @@ export default function EmployerCandidateDetail() {
   if (loading) {
     return (
       <TerminalPageSurface>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', fontSize: 13 }}>
           LOADING...
         </div>
       </TerminalPageSurface>
@@ -345,7 +345,7 @@ export default function EmployerCandidateDetail() {
   if (error || !profile) {
     return (
       <TerminalPageSurface>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: 'var(--t-danger)', fontFamily: 'var(--t-font-mono)', fontSize: 13 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: 'var(--t-danger)', fontFamily: 'var(--t-font-sans)', fontSize: 13 }}>
           <span>{error || '候选人不存在'}</span>
           <button onClick={() => navigate(-1)} style={{ color: 'var(--t-text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}>← 返回</button>
         </div>
@@ -380,7 +380,7 @@ export default function EmployerCandidateDetail() {
               border: '1px solid var(--t-border)',
               borderRadius: 4,
               color: 'var(--t-text-secondary)',
-              fontFamily: 'var(--t-font-mono)',
+              fontFamily: 'var(--t-font-sans)',
               fontSize: 11,
               padding: '4px 10px',
               cursor: 'pointer',
@@ -397,7 +397,7 @@ export default function EmployerCandidateDetail() {
                 <span style={{ fontSize: 13, color: 'var(--t-text-secondary)' }}>{profile.current_title}</span>
               )}
               {profile.current_city && (
-                <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11, color: 'var(--t-text-muted)' }}>
+                <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 11, color: 'var(--t-text-muted)' }}>
                   @ {profile.current_city}
                 </span>
               )}
@@ -413,7 +413,7 @@ export default function EmployerCandidateDetail() {
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             {inviteMsg && (
               <span style={{
-                fontFamily: 'var(--t-font-mono)',
+                fontFamily: 'var(--t-font-sans)',
                 fontSize: 11,
                 color: inviteMsg.ok ? 'var(--t-success)' : 'var(--t-danger)',
                 alignSelf: 'center',
@@ -429,7 +429,7 @@ export default function EmployerCandidateDetail() {
                 border: 'none',
                 borderRadius: 4,
                 color: '#fff',
-                fontFamily: 'var(--t-font-mono)',
+                fontFamily: 'var(--t-font-sans)',
                 fontSize: 11,
                 padding: '5px 14px',
                 cursor: inviting ? 'not-allowed' : 'pointer',
@@ -459,10 +459,9 @@ export default function EmployerCandidateDetail() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontFamily: 'var(--t-font-mono)',
+                  fontFamily: 'var(--t-font-sans)',
                   fontSize: 17,
                   color: 'var(--t-text-secondary)',
-                  letterSpacing: 1,
                   flexShrink: 0,
                 }}>
                   {initials}
@@ -473,7 +472,7 @@ export default function EmployerCandidateDetail() {
                     <div style={{ fontSize: 12, color: 'var(--t-text-secondary)', marginTop: 3 }}>{profile.current_title}</div>
                   )}
                   {profile.current_city && (
-                    <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11, color: 'var(--t-text-muted)', marginTop: 2 }}>
+                    <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 11, color: 'var(--t-text-muted)', marginTop: 2 }}>
                       @ {profile.current_city}
                     </div>
                   )}
@@ -493,10 +492,10 @@ export default function EmployerCandidateDetail() {
                 <MetaRow label="英语水平" value={profile.english_level} />
                 {profile.expected_salary_label && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginTop: 6, paddingTop: 8, borderTop: '1px solid var(--t-border-subtle)' }}>
-                    <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--t-text-muted)', flexShrink: 0 }}>
+                    <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, letterSpacing: '0.04em', color: 'var(--t-text-muted)', flexShrink: 0 }}>
                       期望薪资
                     </span>
-                    <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 13, color: 'var(--t-chart-amber)', fontWeight: 600 }}>
+                    <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 13, color: 'var(--t-chart-amber)', fontWeight: 600 }}>
                       {profile.expected_salary_label}
                     </span>
                   </div>
@@ -520,7 +519,7 @@ export default function EmployerCandidateDetail() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {tagGroups.map(g => (
                       <div key={g.label}>
-                        <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, color: 'var(--t-text-muted)', letterSpacing: '0.12em', marginBottom: 4 }}>
+                        <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, color: 'var(--t-text-muted)', letterSpacing: '0.04em', marginBottom: 4 }}>
                           {g.label}
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -528,7 +527,7 @@ export default function EmployerCandidateDetail() {
                             <Tag key={t} label={t} color={g.color} />
                           ))}
                           {g.tags.length > 4 && (
-                            <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', alignSelf: 'center' }}>
+                            <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, color: 'var(--t-text-muted)', alignSelf: 'center' }}>
                               +{g.tags.length - 4}
                             </span>
                           )}
@@ -550,7 +549,7 @@ export default function EmployerCandidateDetail() {
                     border: 'none',
                     borderRadius: 4,
                     color: '#fff',
-                    fontFamily: 'var(--t-font-mono)',
+                    fontFamily: 'var(--t-font-sans)',
                     fontSize: 12,
                     padding: '8px 0',
                     cursor: inviting ? 'not-allowed' : 'pointer',
@@ -569,11 +568,11 @@ export default function EmployerCandidateDetail() {
                       border: '1px solid var(--t-border)',
                       borderRadius: 4,
                       color: 'var(--t-text-secondary)',
-                      fontFamily: 'var(--t-font-mono)',
+                      fontFamily: 'var(--t-font-sans)',
                       fontSize: 11,
                       padding: '7px 0',
                       cursor: 'pointer',
-                      letterSpacing: '0.1em',
+                      letterSpacing: '0.04em',
                       textTransform: 'uppercase',
                     }}
                   >
@@ -582,7 +581,7 @@ export default function EmployerCandidateDetail() {
                 )}
                 {!unlocked && (
                   <div style={{
-                    fontFamily: 'var(--t-font-mono)',
+                    fontFamily: 'var(--t-font-sans)',
                     fontSize: 10,
                     color: 'var(--t-text-muted)',
                     lineHeight: 1.6,
@@ -594,7 +593,7 @@ export default function EmployerCandidateDetail() {
                 )}
                 {inviteMsg && (
                   <div style={{
-                    fontFamily: 'var(--t-font-mono)',
+                    fontFamily: 'var(--t-font-sans)',
                     fontSize: 11,
                     color: inviteMsg.ok ? 'var(--t-success)' : 'var(--t-danger)',
                     textAlign: 'center',
@@ -618,7 +617,7 @@ export default function EmployerCandidateDetail() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {tagGroups.map(group => (
                         <div key={group.label}>
-                          <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', marginBottom: 5, letterSpacing: '0.12em' }}>
+                          <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, color: 'var(--t-text-muted)', marginBottom: 5, letterSpacing: '0.04em' }}>
                             {group.label}
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -666,10 +665,10 @@ export default function EmployerCandidateDetail() {
                           <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--t-border)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
                               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>{exp.title}</span>
-                              {period && <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0 }}>{period}</span>}
+                              {period && <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0 }}>{period}</span>}
                             </div>
                             {company && <div style={{ fontSize: 12, color: 'var(--t-text-secondary)', marginBottom: 4 }}>{company}</div>}
-                            {expSalary && <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11, color: 'var(--t-chart-amber)', marginBottom: 4 }}>{expSalary}</div>}
+                            {expSalary && <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 11, color: 'var(--t-chart-amber)', marginBottom: 4 }}>{expSalary}</div>}
                             {exp.responsibilities && (
                               <p style={{ fontSize: 12, color: 'var(--t-text-muted)', lineHeight: 1.6, margin: 0 }}>{exp.responsibilities}</p>
                             )}
@@ -694,9 +693,9 @@ export default function EmployerCandidateDetail() {
                             <div>
                               <span style={{ fontSize: 13, color: 'var(--t-text)' }}>{edu.school}</span>
                               {edu.major && <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', marginLeft: 8 }}>{edu.major}</span>}
-                              {edu.degree && <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11, color: 'var(--t-chart-blue)', marginLeft: 8 }}>{edu.degree}</span>}
+                              {edu.degree && <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 11, color: 'var(--t-chart-blue)', marginLeft: 8 }}>{edu.degree}</span>}
                             </div>
-                            {edu.period && <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0 }}>{edu.period}</span>}
+                            {edu.period && <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0 }}>{edu.period}</span>}
                           </div>
                         ))}
                       </div>

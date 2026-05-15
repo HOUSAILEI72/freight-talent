@@ -61,7 +61,7 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
                   fontSize: 9,
                   fontWeight: 700,
                   lineHeight: 1,
-                  fontFamily: 'var(--t-font-mono)',
+                  fontFamily: 'var(--t-font-sans)',
                   letterSpacing: 0,
                 }}
               >
@@ -72,6 +72,7 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
           <p className={terminal ? 'text-xs truncate' : 'text-xs text-slate-500 truncate'} style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}>
             {getSubtitleText(c)}
           </p>
+          {/* 行1：城市 / 年龄 / 经验 / 简历更新时间 / 求职状态 badge */}
           <div className={terminal ? 'flex items-center gap-2 text-xs mt-0.5 flex-wrap' : 'flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap'} style={terminal ? { color: 'var(--t-text-muted)' } : undefined}>
             {(c.current_city || c.tags_by_category?.['意向城市']?.[0]) && (
               <span className="flex items-center gap-0.5">
@@ -86,24 +87,55 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
                 {c.freshness_days <= 1 ? '今日更新' : `${c.freshness_days}天前更新`}
               </span>
             )}
-            {terminal && c.availability_status && (
-              <span style={{
-                color: c.availability_status === 'open' ? 'var(--t-success)' : c.availability_status === 'passive' ? 'var(--t-chart-blue)' : 'var(--t-text-muted)',
-                fontFamily: 'var(--t-font-mono)',
-                fontSize: 10,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                fontWeight: 600,
-              }}>
-                {c.availability_status === 'open' ? 'OPEN' : c.availability_status === 'passive' ? 'PASSIVE' : 'CLOSED'}
-              </span>
-            )}
-            {c.expected_salary_label && (
-              <span className={terminal ? 'font-semibold' : 'font-semibold text-blue-600'} style={terminal ? { color: 'var(--t-chart-blue)' } : undefined}>
-                {c.expected_salary_label}
+            {terminal && c.availability_status && (() => {
+              const isOpen = c.availability_status === 'open'
+              const isPassive = c.availability_status === 'passive'
+              const label = isOpen ? '求职中' : isPassive ? '机会优先' : '暂不考虑'
+              const color = isOpen ? 'var(--t-success)' : isPassive ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
+              const bg = isOpen ? 'var(--t-success-muted)' : isPassive ? 'rgba(96,165,250,0.12)' : 'rgba(148,163,184,0.1)'
+              const border = isOpen ? 'var(--t-success)' : isPassive ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
+              return (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center',
+                  padding: '1px 6px',
+                  borderRadius: 'var(--t-radius-sm)',
+                  border: `1px solid ${border}`,
+                  background: bg,
+                  color,
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  lineHeight: '16px',
+                }}>
+                  {label}
+                </span>
+              )
+            })()}
+            {!terminal && c.availability_status && (
+              <span className={
+                c.availability_status === 'open' ? 'text-emerald-600 font-semibold' :
+                c.availability_status === 'passive' ? 'text-blue-500 font-semibold' : 'text-slate-400'
+              }>
+                {c.availability_status === 'open' ? '求职中' : c.availability_status === 'passive' ? '机会优先' : '暂不考虑'}
               </span>
             )}
           </div>
+
+          {/* 行2：目标岗位 + 期望薪资（仅在有值时渲染） */}
+          {(c.desired_position || c.expected_salary_label) && (
+            <div className="flex items-center gap-2 text-xs mt-0.5 flex-wrap" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#64748b' }}>
+              {c.desired_position && (
+                <span style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}>
+                  {c.desired_position}
+                </span>
+              )}
+              {c.expected_salary_label && (
+                <span className={terminal ? 'font-semibold' : 'font-semibold text-blue-600'} style={terminal ? { color: 'var(--t-chart-blue)' } : undefined}>
+                  {c.expected_salary_label}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 右侧按钮 */}

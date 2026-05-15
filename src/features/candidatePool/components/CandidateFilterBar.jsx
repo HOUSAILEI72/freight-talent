@@ -56,8 +56,8 @@ export function CandidateFilterBar({
           />
           <span
             style={terminal
-              ? { fontFamily: 'var(--t-font-mono)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--t-text-muted)' }
-              : { fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }
+              ? { fontFamily: 'var(--t-font-sans)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)' }
+              : { fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }
             }
           >
             {terminal ? 'FILTER' : '筛选条件'}
@@ -66,7 +66,7 @@ export function CandidateFilterBar({
             <span
               style={{
                 marginLeft: 'auto',
-                fontFamily: 'var(--t-font-mono)',
+                fontFamily: 'var(--t-font-sans)',
                 fontSize: 9,
                 color: 'var(--t-primary)',
                 fontWeight: 700,
@@ -108,7 +108,7 @@ export function CandidateFilterBar({
           <div className="mb-3">
             <label
               style={terminal
-                ? { display: 'block', fontSize: 9, fontFamily: 'var(--t-font-mono)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--t-text-muted)', marginBottom: 4 }
+                ? { display: 'block', fontSize: 9, fontFamily: 'var(--t-font-sans)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }
                 : { display: 'block', fontSize: 11, color: '#94a3b8', marginBottom: 4 }
               }
             >
@@ -175,7 +175,7 @@ export function CandidateFilterBar({
 
           {/* Section label */}
           {terminal && (
-            <p style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--t-text-muted)', marginBottom: 4 }}>
+            <p style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }}>
               属性筛选
             </p>
           )}
@@ -220,7 +220,7 @@ export function CandidateFilterBar({
 
           {/* Section label */}
           {terminal && (
-            <p style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--t-text-muted)', marginBottom: 4 }}>
+            <p style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }}>
               互动状态
             </p>
           )}
@@ -260,7 +260,7 @@ export function CandidateFilterBar({
                     color: '#fff',
                     border: 'none',
                     borderRadius: 'var(--t-radius-sm)',
-                    fontFamily: 'var(--t-font-mono)',
+                    fontFamily: 'var(--t-font-sans)',
                     fontWeight: 700,
                     letterSpacing: '0.06em',
                     cursor: 'pointer',

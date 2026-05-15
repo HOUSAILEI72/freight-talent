@@ -59,8 +59,8 @@ function fmtCNY(n) {
 // ─── Design tokens ───────────────────────────────────────────────────────────
 
 const T = {
-  label:    { display: 'block', fontSize: 11, color: 'var(--t-text-secondary)', marginBottom: 4, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.05em' },
-  helper:   { fontSize: 10, color: 'var(--t-text-muted)', marginTop: 3, fontFamily: 'var(--t-font-mono)' },
+  label:    { display: 'block', fontSize: 11, color: 'var(--t-text-secondary)', marginBottom: 4, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.02em' },
+  helper:   { fontSize: 10, color: 'var(--t-text-muted)', marginTop: 3, fontFamily: 'var(--t-font-sans)' },
   input:    { width: '100%', padding: '7px 10px', borderRadius: 4, background: 'var(--t-bg-input)', border: '1px solid var(--t-border)', color: 'var(--t-text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' },
   textarea: { width: '100%', padding: '7px 10px', borderRadius: 4, background: 'var(--t-bg-input)', border: '1px solid var(--t-border)', color: 'var(--t-text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' },
   card:     { background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 16px', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'visible' },
@@ -84,7 +84,7 @@ function SectionHeader({ icon: Icon, title, sub }) {
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--t-text)', lineHeight: 1.2 }}>{title}</div>
         {sub && (
-          <div style={{ fontSize: 9, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginTop: 2 }}>{sub}</div>
+          <div style={{ fontSize: 9, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginTop: 2 }}>{sub}</div>
         )}
       </div>
     </div>
@@ -113,7 +113,7 @@ function AddOnsHeader({ icon: Icon, title }) {
 function TermLabel({ children, style }) {
   return (
     <div style={{
-      fontFamily: 'var(--t-font-mono)', fontSize: 9, letterSpacing: '0.18em',
+      fontFamily: 'var(--t-font-sans)', fontSize: 9, letterSpacing: '0.04em',
       textTransform: 'uppercase', color: 'var(--t-text-muted)',
       borderBottom: '1px solid var(--t-border-subtle)', paddingBottom: 5, marginBottom: 8,
       ...style,
@@ -126,8 +126,8 @@ function TermLabel({ children, style }) {
 function FeeRow({ label, value, accent }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
-      <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 12, color: accent ? 'var(--t-chart-amber)' : 'var(--t-text-secondary)', fontFamily: 'var(--t-font-mono)', fontWeight: accent ? 600 : 400 }}>
+      <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 12, color: accent ? 'var(--t-chart-amber)' : 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)', fontWeight: accent ? 600 : 400 }}>
         {fmtCNY(value)}
       </span>
     </div>
@@ -141,7 +141,7 @@ function TagPill({ text }) {
       padding: '2px 7px', borderRadius: 3,
       background: 'var(--t-primary-muted)', border: '1px solid var(--t-border)',
       color: 'var(--t-chart-blue)', fontSize: 10,
-      fontFamily: 'var(--t-font-mono)', letterSpacing: '0.04em',
+      fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em',
     }}>
       {text}
     </span>
@@ -157,7 +157,7 @@ function TokenTextArea({ label, value, onChange, placeholder, required }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <label style={{ ...T.label, marginBottom: 0 }}>{label}{required ? ' *' : ''}</label>
         {tokens.length > 0 && (
-          <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-mono)' }}>
+          <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-sans)' }}>
             已识别 {tokens.length} 项
           </span>
         )}
@@ -173,7 +173,7 @@ function TokenTextArea({ label, value, onChange, placeholder, required }) {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
           {tokens.slice(0, 8).map(t => <TagPill key={t} text={t} />)}
           {tokens.length > 8 && (
-            <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', alignSelf: 'center' }}>
+            <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', alignSelf: 'center' }}>
               +{tokens.length - 8}
             </span>
           )}
@@ -210,7 +210,7 @@ function CityPickerSection({ cities, onChange }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <label style={{ ...T.label, marginBottom: 0 }}>所在城市偏向 *</label>
         {cities.length > 0 && (
-          <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-mono)' }}>
+          <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-sans)' }}>
             已添加 {cities.length} 个
           </span>
         )}
@@ -222,7 +222,7 @@ function CityPickerSection({ cities, onChange }) {
           {cities.map((entry, idx) => (
             <div key={entry.id} style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 4, padding: '8px 10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <span style={{ fontSize: 9, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.12em', color: 'var(--t-text-muted)', textTransform: 'uppercase', flexShrink: 0 }}>
+                <span style={{ fontSize: 9, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em', color: 'var(--t-text-muted)', textTransform: 'uppercase', flexShrink: 0 }}>
                   城市 {idx + 1}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -264,7 +264,7 @@ function CityPickerSection({ cities, onChange }) {
       <button
         type="button"
         onClick={addCity}
-        style={{ display: 'flex', alignItems: 'center', gap: 5, height: 32, padding: '0 12px', borderRadius: 4, border: '1px dashed var(--t-border)', background: 'transparent', color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', fontSize: 11, cursor: 'pointer', letterSpacing: '0.06em', width: '100%', justifyContent: 'center' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 5, height: 32, padding: '0 12px', borderRadius: 4, border: '1px dashed var(--t-border)', background: 'transparent', color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', fontSize: 11, cursor: 'pointer', letterSpacing: '0.06em', width: '100%', justifyContent: 'center' }}
       >
         <Plus size={12} />
         添加城市
@@ -281,7 +281,7 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
   const [email,  setEmail]  = useState(user?.email || '')
   const [wechat, setWechat] = useState('')
 
-  const labelStyle = { display: 'block', fontSize: 11, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.1em', color: 'var(--t-text-muted)', marginBottom: 4 }
+  const labelStyle = { display: 'block', fontSize: 11, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -294,7 +294,7 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
           <div>
-            <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 4 }}>
+            <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 4 }}>
               CONTACT INFO
             </div>
             <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)', margin: 0 }}>确认联系信息</h3>
@@ -321,7 +321,7 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
         </div>
 
         {error && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', background: 'var(--t-danger-muted)', border: '1px solid var(--t-danger)', borderRadius: 4, color: 'var(--t-danger)', fontSize: 12, fontFamily: 'var(--t-font-mono)', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', background: 'var(--t-danger-muted)', border: '1px solid var(--t-danger)', borderRadius: 4, color: 'var(--t-danger)', fontSize: 12, fontFamily: 'var(--t-font-sans)', marginBottom: 14 }}>
             <AlertCircle size={13} style={{ flexShrink: 0 }} />
             {error}
           </div>
@@ -329,11 +329,11 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onCancel} disabled={submitting}
-            style={{ flex: 1, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: 'transparent', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.05em' }}>
+            style={{ flex: 1, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: 'transparent', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.02em' }}>
             返回修改
           </button>
           <button onClick={() => onConfirm({ name, phone, email, wechat })} disabled={submitting}
-            style={{ flex: 2, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: submitting ? 'var(--t-primary-muted)' : 'var(--t-primary)', border: 'none', color: '#fff', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            style={{ flex: 2, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: submitting ? 'var(--t-primary-muted)' : 'var(--t-primary)', border: 'none', color: '#fff', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             {submitting && <Loader2 size={13} className="animate-spin" />}
             {submitting ? '提交中...' : '确认并提交'}
           </button>
@@ -358,14 +358,14 @@ function SuccessModal({ onClose }) {
         <div style={{ width: 52, height: 52, borderRadius: '50%', margin: '0 auto 18px', background: 'var(--t-success-muted)', border: '1px solid var(--t-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <CheckCircle size={24} style={{ color: 'var(--t-success)' }} />
         </div>
-        <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 10 }}>
+        <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 10 }}>
           REQUEST SUBMITTED
         </div>
         <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--t-text)', marginBottom: 10 }}>需求已提交</h3>
         <p style={{ fontSize: 13, color: 'var(--t-text-secondary)', lineHeight: 1.7, marginBottom: 24 }}>
           您的需求我们已收到，专业顾问将于 <span style={{ color: 'var(--t-text)', fontWeight: 600 }}>24 小时</span>内与您取得联系，谢谢！
         </p>
-        <button onClick={onClose} style={{ width: '100%', height: 36, borderRadius: 4, background: 'var(--t-primary)', border: 'none', color: '#fff', fontFamily: 'var(--t-font-mono)', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>
+        <button onClick={onClose} style={{ width: '100%', height: 36, borderRadius: 4, background: 'var(--t-primary)', border: 'none', color: '#fff', fontFamily: 'var(--t-font-sans)', fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase', cursor: 'pointer' }}>
           我知道了
         </button>
       </div>
@@ -517,25 +517,25 @@ export default function TeamHeadhunting() {
         style={{ borderBottom: '1px solid var(--t-border-subtle)' }}
       >
         <div>
-          <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 3 }}>
+          <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t-text-muted)', marginBottom: 3 }}>
             TEAM · HEADHUNTING REQUEST
           </div>
           <h1 className="terminal-page-title-safe" style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)', margin: 0 }}>团队猎头服务</h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>
+          <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>
             提交后 24h 内联系
           </span>
           <div style={{ width: 1, height: 16, background: 'var(--t-border)' }} />
           <button
             onClick={() => navigate('/employer/dashboard')}
-            style={{ height: 30, padding: '0 12px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-mono)', fontSize: 11, cursor: 'pointer', letterSpacing: '0.06em' }}
+            style={{ height: 30, padding: '0 12px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)', fontSize: 11, cursor: 'pointer', letterSpacing: '0.06em' }}
           >
             取消
           </button>
           <button
             onClick={handleConfirmSubmit}
-            style={{ height: 30, display: 'flex', alignItems: 'center', gap: 5, padding: '0 14px', borderRadius: 4, border: 'none', background: 'var(--t-primary)', color: '#fff', fontFamily: 'var(--t-font-mono)', fontSize: 11, cursor: 'pointer', letterSpacing: '0.08em', fontWeight: 600 }}
+            style={{ height: 30, display: 'flex', alignItems: 'center', gap: 5, padding: '0 14px', borderRadius: 4, border: 'none', background: 'var(--t-primary)', color: '#fff', fontFamily: 'var(--t-font-sans)', fontSize: 11, cursor: 'pointer', letterSpacing: '0.08em', fontWeight: 600 }}
           >
             确认提交 <ChevronRight size={12} />
           </button>
@@ -546,7 +546,7 @@ export default function TeamHeadhunting() {
       {pageError && (
         <div
           className="flex-shrink-0 flex items-center gap-2 mx-6 mt-2"
-          style={{ padding: '7px 12px', background: 'var(--t-danger-muted)', border: '1px solid var(--t-danger)', borderRadius: 4, color: 'var(--t-danger)', fontSize: 12, fontFamily: 'var(--t-font-mono)' }}
+          style={{ padding: '7px 12px', background: 'var(--t-danger-muted)', border: '1px solid var(--t-danger)', borderRadius: 4, color: 'var(--t-danger)', fontSize: 12, fontFamily: 'var(--t-font-sans)' }}
         >
           <AlertCircle size={13} style={{ flexShrink: 0 }} />
           {pageError}
@@ -583,7 +583,7 @@ export default function TeamHeadhunting() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                 <FileText size={13} style={{ color: 'var(--t-text-muted)', flexShrink: 0 }} />
-                <span style={{ fontSize: 11, color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-mono)' }}>
+                <span style={{ fontSize: 11, color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)' }}>
                   《团队猎头服务合同》模板
                 </span>
               </div>
@@ -597,7 +597,7 @@ export default function TeamHeadhunting() {
                     background: 'var(--t-bg-elevated)',
                     border: '1px solid var(--t-border)',
                     color: 'var(--t-text-secondary)',
-                    fontSize: 10, fontFamily: 'var(--t-font-mono)',
+                    fontSize: 10, fontFamily: 'var(--t-font-sans)',
                     cursor: 'pointer',
                     letterSpacing: '0.04em',
                   }}
@@ -615,7 +615,7 @@ export default function TeamHeadhunting() {
                     background: 'var(--t-bg-elevated)',
                     border: '1px solid var(--t-border)',
                     color: 'var(--t-text-secondary)',
-                    fontSize: 10, fontFamily: 'var(--t-font-mono)',
+                    fontSize: 10, fontFamily: 'var(--t-font-sans)',
                     cursor: 'pointer', textDecoration: 'none',
                     letterSpacing: '0.04em',
                   }}
@@ -639,7 +639,7 @@ export default function TeamHeadhunting() {
                   style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--t-primary)', width: 13, height: 13 }} />
                 <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>⚡ 加速服务</span>
-                  <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>
+                  <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>
                     1 个月内负责人接受 Offer · 总费 210,000 / 月付 17,500
                   </span>
                 </span>
@@ -653,12 +653,12 @@ export default function TeamHeadhunting() {
                     style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--t-primary)', width: 13, height: 13 }} />
                   <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>团队负责人背调</span>
-                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>¥500 / 份</span>
+                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>¥500 / 份</span>
                   </span>
                 </label>
                 {leaderBackgroundCheck && (
                   <div style={{ marginTop: 7, marginLeft: 21, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>数量</span>
+                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>数量</span>
                     <input type="number" min={1} max={99}
                       style={{ ...T.input, width: 64, padding: '4px 8px', fontSize: 12 }}
                       value={leaderBackgroundCheckCount}
@@ -675,12 +675,12 @@ export default function TeamHeadhunting() {
                     style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--t-primary)', width: 13, height: 13 }} />
                   <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>团队成员背调</span>
-                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>¥500 / 份</span>
+                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>¥500 / 份</span>
                   </span>
                 </label>
                 {memberBackgroundCheck && (
                   <div style={{ marginTop: 7, marginLeft: 21, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>数量</span>
+                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>数量</span>
                     <input type="number" min={1} max={99}
                       style={{ ...T.input, width: 64, padding: '4px 8px', fontSize: 12 }}
                       value={memberBackgroundCheckCount}
@@ -697,12 +697,12 @@ export default function TeamHeadhunting() {
                     style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--t-primary)', width: 13, height: 13 }} />
                   <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>团队成员测评报告</span>
-                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>¥100 / 份</span>
+                    <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>¥100 / 份</span>
                   </span>
                 </label>
                 {memberPersonalityReport && (
                   <div style={{ marginTop: 7, marginLeft: 21, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>数量</span>
+                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>数量</span>
                     <input type="number" min={1} max={99}
                       style={{ ...T.input, width: 64, padding: '4px 8px', fontSize: 12 }}
                       value={memberPersonalityReportCount}
@@ -798,8 +798,8 @@ export default function TeamHeadhunting() {
               <FeeRow label="总固定服务费" value={feeResult.baseTotal} accent />
               <FeeRow label="月固定服务费" value={feeResult.monthlyFee} />
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)' }}>支付周期</span>
-                <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-mono)' }}>12 个月</span>
+                <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>支付周期</span>
+                <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)' }}>12 个月</span>
               </div>
             </div>
 
@@ -826,8 +826,8 @@ export default function TeamHeadhunting() {
             <div style={{ borderRadius: 6, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', padding: '12px 12px 10px', marginBottom: 12 }}>
               <TermLabel style={{ marginBottom: 10 }}>合计预估</TermLabel>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.08em' }}>固定服务费</span>
-                <span style={{ fontSize: 16, color: 'var(--t-chart-amber)', fontFamily: 'var(--t-font-mono)', fontWeight: 700 }}>
+                <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>固定服务费</span>
+                <span style={{ fontSize: 16, color: 'var(--t-chart-amber)', fontFamily: 'var(--t-font-sans)', fontWeight: 700 }}>
                   {fmtCNY(feeResult.baseTotal)}
                 </span>
               </div>
@@ -835,8 +835,8 @@ export default function TeamHeadhunting() {
                 <>
                   <div style={{ height: 1, background: 'var(--t-border-subtle)', marginBottom: 6 }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.08em' }}>增值服务费</span>
-                    <span style={{ fontSize: 14, color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-mono)', fontWeight: 600 }}>
+                    <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>增值服务费</span>
+                    <span style={{ fontSize: 14, color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)', fontWeight: 600 }}>
                       {fmtCNY(feeResult.addonFee)}
                     </span>
                   </div>
@@ -844,8 +844,8 @@ export default function TeamHeadhunting() {
               )}
               <div style={{ height: 1, background: 'var(--t-border-subtle)', marginBottom: 6 }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.08em' }}>总计</span>
-                <span style={{ fontSize: 18, color: 'var(--t-chart-amber)', fontFamily: 'var(--t-font-mono)', fontWeight: 700, letterSpacing: '-0.01em' }}>
+                <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>总计</span>
+                <span style={{ fontSize: 18, color: 'var(--t-chart-amber)', fontFamily: 'var(--t-font-sans)', fontWeight: 700, letterSpacing: '-0.01em' }}>
                   {fmtCNY(feeResult.total)}
                 </span>
               </div>
@@ -853,7 +853,7 @@ export default function TeamHeadhunting() {
 
             {/* Disclaimer */}
             <div style={{ padding: '9px 10px', background: 'var(--t-bg-input)', border: '1px solid var(--t-border-subtle)', borderRadius: 4 }}>
-              <p style={{ fontSize: 10, color: 'var(--t-text-muted)', lineHeight: 1.65, margin: 0, fontFamily: 'var(--t-font-mono)' }}>
+              <p style={{ fontSize: 10, color: 'var(--t-text-muted)', lineHeight: 1.65, margin: 0, fontFamily: 'var(--t-font-sans)' }}>
                 若团队整体离职，则自离职次月起剩余固定服务费不再继续支付，实际应付以服务进度为准。增值服务费不摊入 12 个月固定服务费，入职后单独结算。
               </p>
             </div>
@@ -861,7 +861,7 @@ export default function TeamHeadhunting() {
             {/* Contact quick-info */}
             <div style={{ ...T.divider, marginTop: 14 }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ fontSize: 9, fontFamily: 'var(--t-font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--t-text-muted)' }}>
+              <span style={{ fontSize: 9, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t-text-muted)' }}>
                 SUBMIT
               </span>
               <p style={{ fontSize: 11, color: 'var(--t-text-muted)', lineHeight: 1.6, margin: 0 }}>
@@ -904,7 +904,7 @@ export default function TeamHeadhunting() {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '8px 14px', borderBottom: '1px solid var(--t-border-subtle)', flexShrink: 0,
             }}>
-              <span style={{ fontSize: 11, fontFamily: 'var(--t-font-mono)', color: 'var(--t-text-secondary)', letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: 11, fontFamily: 'var(--t-font-sans)', color: 'var(--t-text-secondary)', letterSpacing: '0.04em' }}>
                 《团队猎头服务合同》模板
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -916,7 +916,7 @@ export default function TeamHeadhunting() {
                     height: 26, padding: '0 10px', borderRadius: 3,
                     background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)',
                     color: 'var(--t-text-secondary)', fontSize: 10,
-                    fontFamily: 'var(--t-font-mono)', cursor: 'pointer', textDecoration: 'none',
+                    fontFamily: 'var(--t-font-sans)', cursor: 'pointer', textDecoration: 'none',
                     letterSpacing: '0.04em',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--t-chart-blue)'; e.currentTarget.style.color = 'var(--t-chart-blue)' }}

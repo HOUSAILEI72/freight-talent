@@ -16,10 +16,56 @@ import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 
 const FUNCTION_OPTIONS = DEFAULT_FUNCTIONS.filter(f => f.key !== 'ALL')
 
+const AVAIL_LABEL = {
+  open: '离职-随时到岗', passive_now: '在职-月内到岗', passive: '在职-考虑机会',
+}
+
+function formatEducationLevel(education) {
+  if (!education) return null
+  return education.split(/[·・\s]/)[0].trim() || education
+}
+
+function formatAvailabilityText(status) {
+  if (status === 'open')        return '离职-随时到岗'
+  if (status === 'passive_now') return '在职-当月到岗'
+  if (status === 'passive')     return '在职-考虑机会'
+  if (status === 'closed')      return '暂不考虑'
+  return null
+}
+
+function calcExperienceYears(workExperiences) {
+  if (!Array.isArray(workExperiences) || workExperiences.length === 0) return null
+  // 按 start_month 找最早的一段
+  let earliest = null
+  for (const w of workExperiences) {
+    const sm = w.start_month || ''
+    if (!sm) continue
+    const match = sm.match(/(\d{4})/)
+    if (!match) continue
+    const year = parseInt(match[1], 10)
+    if (earliest === null || year < earliest) earliest = year
+  }
+  if (earliest === null) return null
+  return new Date().getFullYear() - earliest
+}
+
+function buildCandidateMeta(c) {
+  const parts = []
+  const expYears = calcExperienceYears(c.work_experiences) ?? c.experience_years
+  if (expYears != null) parts.push(`${expYears}年`)
+  const edu = formatEducationLevel(c.education)
+  if (edu) parts.push(edu)
+  if (c.age != null) parts.push(`${c.age}岁`)
+  const avail = formatAvailabilityText(c.availability_status)
+  if (avail) parts.push(avail)
+  return parts.join(' | ')
+}
+
 const AVAIL_OPTIONS = [
-  { value: 'open',    label: '开放机会' },
-  { value: 'passive', label: '被动寻找' },
-  { value: 'all',     label: '全部' },
+  { value: 'open',        label: '离职-随时到岗' },
+  { value: 'passive_now', label: '在职-当月到岗' },
+  { value: 'passive',     label: '在职-考虑机会' },
+  { value: 'all',         label: '全部' },
 ]
 
 function FreshBadge({ days, terminal }) {
@@ -37,7 +83,7 @@ function FreshBadge({ days, terminal }) {
   if (days > 7) return null
   return (
     <span
-      className="font-mono text-[10px] uppercase tracking-wider"
+      className="font-sans text-[10px] uppercase tracking-wider"
       style={{ color: days <= 3 ? 'var(--t-success)' : 'var(--t-chart-blue)' }}
     >
       {days <= 1 ? 'NEW' : `${days}D`}
@@ -47,14 +93,15 @@ function FreshBadge({ days, terminal }) {
 
 function AvailBadge({ status, terminal }) {
   if (!terminal) {
-    if (status === 'open')    return <Badge color="green">开放机会</Badge>
-    if (status === 'passive') return <Badge color="blue">被动寻找</Badge>
+    if (status === 'open')        return <Badge color="green">离职-随时到岗</Badge>
+    if (status === 'passive_now') return <Badge color="blue">在职-当月到岗</Badge>
+    if (status === 'passive')     return <Badge color="blue">在职-考虑机会</Badge>
     return <Badge color="gray">暂不考虑</Badge>
   }
-  const label = status === 'open' ? 'OPEN' : status === 'passive' ? 'PASSIVE' : 'CLOSED'
-  const color = status === 'open' ? 'var(--t-success)' : status === 'passive' ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
+  const label = status === 'open' ? 'OPEN' : status === 'passive_now' ? 'NOW' : status === 'passive' ? 'PASSIVE' : 'CLOSED'
+  const color = status === 'open' ? 'var(--t-success)' : status === 'passive_now' ? 'var(--t-warning)' : status === 'passive' ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
   return (
-    <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color }}>
+    <span className="font-sans text-[10px] uppercase tracking-wider" style={{ color }}>
       {label}
     </span>
   )
@@ -95,7 +142,7 @@ function CandidateDetailPanel({
         <div
           className={
             terminal
-              ? 'w-12 h-12 rounded flex items-center justify-center font-mono font-bold text-base flex-shrink-0'
+              ? 'w-12 h-12 rounded flex items-center justify-center font-sans font-bold text-base flex-shrink-0'
               : `w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0 ${
                   isInvited ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-blue-400 to-blue-600'
                 }`
@@ -127,12 +174,12 @@ function CandidateDetailPanel({
                 <FreshBadge days={candidate.freshness_days} terminal />
                 {candidate.availability_status && <AvailBadge status={candidate.availability_status} terminal />}
                 {isInvited && (
-                  <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--t-success)' }}>
+                  <span className="font-sans text-[10px] uppercase tracking-wider" style={{ color: 'var(--t-success)' }}>
                     INVITED
                   </span>
                 )}
                 {!isPrivate && (
-                  <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>
+                  <span className="font-sans text-[10px] uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>
                     ANON
                   </span>
                 )}
@@ -155,23 +202,53 @@ function CandidateDetailPanel({
             )}
           </div>
 
-          {/* 职位行 */}
-          {(candidate.current_title || (isPrivate && candidate.current_company)) && (
-            <p className={terminal ? 'text-xs mt-0.5' : 'text-sm text-slate-500 mt-0.5'} style={subColor}>
-              {candidate.current_title}
-              {isPrivate && candidate.current_company ? ` · ${candidate.current_company}` : ''}
-            </p>
-          )}
-
-          {/* 薪资期望 */}
-          {candidate.expected_salary_label && (
-            <p
-              className={terminal ? 'text-sm font-semibold mt-1' : 'text-base font-bold text-blue-600 mt-1'}
-              style={terminal ? accentColor : undefined}
-            >
-              {candidate.expected_salary_label}
-            </p>
-          )}
+          {/* 行1: 目标岗位 | 期望薪资 */}
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            {candidate.desired_position && (
+              <span className={terminal ? 'text-xs font-medium' : 'text-sm font-medium text-slate-700'} style={terminal ? subColor : undefined}>
+                {candidate.desired_position}
+              </span>
+            )}
+            {candidate.desired_position && candidate.expected_salary_label && (
+              <span style={{ color: terminal ? 'var(--t-text-muted)' : '#cbd5e1' }}>|</span>
+            )}
+            {candidate.expected_salary_label && (
+              <span className={terminal ? 'text-xs font-semibold' : 'text-sm font-bold text-blue-600'} style={terminal ? accentColor : undefined}>
+                {candidate.expected_salary_label}
+              </span>
+            )}
+          </div>
+          {/* 行2: 经验 | 城市 | 学历 | 求职状态 */}
+          {(() => {
+            const sep = <span style={{ color: terminal ? 'var(--t-text-muted)' : '#cbd5e1', margin: '0 2px' }}>|</span>
+            const city = candidate.expected_city || candidate.location_name || candidate.current_city
+            const items = []
+            if (candidate.experience_years != null)
+              items.push(<span key="exp" className="text-xs" style={terminal ? mutedColor : { color: '#64748b' }}>{candidate.experience_years}年经验</span>)
+            if (city)
+              items.push(<span key="city" className="text-xs" style={terminal ? mutedColor : { color: '#64748b' }}>{city}</span>)
+            if (isPrivate && candidate.education)
+              items.push(<span key="edu" className="text-xs" style={terminal ? mutedColor : { color: '#64748b' }}>{candidate.education}</span>)
+            else if (!isPrivate)
+              items.push(<span key="edu" className="inline-flex items-center gap-0.5 text-xs" style={{ color: terminal ? 'var(--t-text-muted)' : '#94a3b8' }}><Lock size={9} />学历</span>)
+            if (isPrivate && candidate.availability_status)
+              items.push(
+                <span key="avail" className="text-xs font-semibold" style={{
+                  color: candidate.availability_status === 'open' ? (terminal ? 'var(--t-success)' : '#16a34a')
+                    : candidate.availability_status === 'passive_now' ? (terminal ? 'var(--t-warning)' : '#d97706')
+                    : candidate.availability_status === 'passive' ? (terminal ? 'var(--t-chart-blue)' : '#2563eb')
+                    : (terminal ? 'var(--t-text-muted)' : '#94a3b8'),
+                }}>
+                  {AVAIL_LABEL[candidate.availability_status] ?? candidate.availability_status}
+                </span>
+              )
+            if (items.length === 0) return null
+            return (
+              <div className="flex items-center flex-wrap mt-1">
+                {items.map((el, i) => <span key={i} className="flex items-center">{i > 0 && sep}{el}</span>)}
+              </div>
+            )
+          })()}
         </div>
       </div>
 
@@ -192,7 +269,7 @@ function CandidateDetailPanel({
               className="px-3 py-2"
               style={{ background: 'var(--t-bg-panel)' }}
             >
-              <p className="font-mono text-xs uppercase tracking-widest mb-0.5" style={mutedColor}>{item.label}</p>
+              <p className="font-sans text-xs uppercase tracking-[0.04em] mb-0.5" style={mutedColor}>{item.label}</p>
               <p
                 className="text-sm"
                 style={item.value == null ? { color: 'var(--t-text-muted)' } : subColor}
@@ -216,7 +293,7 @@ function CandidateDetailPanel({
         || (candidate.soft_skill_tags?.length ?? 0) > 0) && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-mono text-\[10px\] uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'PROFILE' : '能力画像'}
@@ -226,7 +303,7 @@ function CandidateDetailPanel({
               {candidate.function_name && (
                 terminal ? (
                   <span
-                    className="font-mono text-[10px] px-2 py-0.5"
+                    className="font-sans text-[10px] px-2 py-0.5"
                     style={{ color: 'var(--t-chart-blue)', background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}
                   >
                     {candidate.function_name}
@@ -240,7 +317,7 @@ function CandidateDetailPanel({
               {candidate.is_management_role != null && (
                 terminal ? (
                   <span
-                    className="font-mono text-[10px] px-2 py-0.5"
+                    className="font-sans text-[10px] px-2 py-0.5"
                     style={{ color: 'var(--t-text-muted)', background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}
                   >
                     {candidate.is_management_role ? 'MGT' : 'IC'}
@@ -262,7 +339,7 @@ function CandidateDetailPanel({
           ].filter(g => Array.isArray(g.tags) && g.tags.length > 0).map(g => (
             <div key={g.label} className="mb-2 last:mb-0">
               <p
-                className={terminal ? 'font-mono text-\[10px\] uppercase tracking-widest mb-1' : 'text-xs text-slate-400 mb-1'}
+                className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-1' : 'text-xs text-slate-400 mb-1'}
                 style={mutedColor}
               >
                 {g.label}
@@ -272,7 +349,7 @@ function CandidateDetailPanel({
                   terminal ? (
                     <span
                       key={i}
-                      className="font-mono text-[10px] px-2 py-0.5"
+                      className="font-sans text-[10px] px-2 py-0.5"
                       style={{ color: 'var(--t-text-secondary)', background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}
                     >
                       {n}
@@ -291,16 +368,16 @@ function CandidateDetailPanel({
       {isPrivate && (candidate.email || candidate.phone) && (
         terminal ? (
           <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' }}>
-            <p className="font-mono text-\[10px\] uppercase tracking-widest mb-2" style={mutedColor}>CONTACT</p>
+            <p className="font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2" style={mutedColor}>CONTACT</p>
             {candidate.phone && (
               <p className="text-xs flex items-center gap-3" style={subColor}>
-                <span className="font-mono text-\[10px\] uppercase tracking-widest w-8 flex-shrink-0" style={mutedColor}>TEL</span>
+                <span className="font-sans text-\[10px\] uppercase tracking-[0.04em] w-8 flex-shrink-0" style={mutedColor}>TEL</span>
                 {candidate.phone}
               </p>
             )}
             {candidate.email && (
               <p className="text-xs flex items-center gap-3 mt-1" style={subColor}>
-                <span className="font-mono text-\[10px\] uppercase tracking-widest w-8 flex-shrink-0" style={mutedColor}>MAIL</span>
+                <span className="font-sans text-\[10px\] uppercase tracking-[0.04em] w-8 flex-shrink-0" style={mutedColor}>MAIL</span>
                 {candidate.email}
               </p>
             )}
@@ -349,7 +426,7 @@ function CandidateDetailPanel({
       ) && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-mono text-\[10px\] uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'CURRENT ROLE' : '当前任职'}
@@ -382,7 +459,7 @@ function CandidateDetailPanel({
                   { label: 'YE-BONUS', value: candidate.current_has_year_end_bonus ? (candidate.current_year_end_bonus_months != null ? `${candidate.current_year_end_bonus_months}M` : 'YES') : (candidate.current_has_year_end_bonus === false ? 'NO' : '—') },
                 ].map(item => (
                   <div key={item.label} className="px-3 py-2" style={{ background: 'var(--t-bg-panel)' }}>
-                    <p className="font-mono text-\[10px\] uppercase tracking-widest mb-0.5" style={mutedColor}>{item.label}</p>
+                    <p className="font-sans text-\[10px\] uppercase tracking-[0.04em] mb-0.5" style={mutedColor}>{item.label}</p>
                     <p className="text-xs" style={subColor}>{item.value}</p>
                   </div>
                 ))}
@@ -410,7 +487,7 @@ function CandidateDetailPanel({
       {isPrivate && (candidate.work_experiences?.length > 0) && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-mono text-\[10px\] uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'EXPERIENCE' : '工作经历'}
@@ -471,7 +548,7 @@ function CandidateDetailPanel({
       {isPrivate && (candidate.education_experiences?.length > 0) && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-mono text-\[10px\] uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'EDUCATION' : '教育经历'}
@@ -500,7 +577,7 @@ function CandidateDetailPanel({
       {isPrivate && (candidate.certificates?.length > 0) && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-mono text-\[10px\] uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'CERTS' : '资格证书'}
@@ -510,7 +587,7 @@ function CandidateDetailPanel({
               terminal ? (
                 <span
                   key={i}
-                  className="font-mono text-[10px] px-2 py-0.5"
+                  className="font-sans text-[10px] px-2 py-0.5"
                   style={{ color: 'var(--t-text-secondary)', background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}
                 >
                   {c}
@@ -527,7 +604,7 @@ function CandidateDetailPanel({
       {Object.keys(tagsByCat).length > 0 && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-mono text-\[10px\] uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'TAGS' : '标签'}
@@ -535,13 +612,13 @@ function CandidateDetailPanel({
           <div className="space-y-2">
             {Object.entries(tagsByCat).map(([cat, names]) => (
               <div key={cat}>
-                <p className={terminal ? 'font-mono text-\[10px\] uppercase tracking-widest mb-1' : 'text-xs text-slate-400 mb-1'} style={mutedColor}>{cat}</p>
+                <p className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-1' : 'text-xs text-slate-400 mb-1'} style={mutedColor}>{cat}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {names.map((n, i) => (
                     terminal ? (
                       <span
                         key={i}
-                        className="font-mono text-[10px] px-2 py-0.5"
+                        className="font-sans text-[10px] px-2 py-0.5"
                         style={{ color: 'var(--t-text-secondary)', background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}
                       >
                         {n}
@@ -561,7 +638,7 @@ function CandidateDetailPanel({
       {candidate.summary && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-mono text-\[10px\] uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'SUMMARY' : '个人简介'}
@@ -1002,107 +1079,163 @@ export default function CandidatePool({ terminal = false, messagesBasePath = '/m
               const isArchived = archivedSet.has(c.id)
               const canInvite = !!selectedJob && !isInvited
 
-              const rowClass = terminal
-                ? `p-4 cursor-pointer transition-all border-l-4 ${isSelected ? '' : 'border-l-transparent'}`
-                : `p-4 cursor-pointer border-b border-slate-100 transition-all ${
-                    isSelected
-                      ? 'border-l-4 border-l-blue-500 bg-blue-50'
-                      : 'border-l-4 border-l-transparent hover:bg-slate-50'
-                  }`
-              const rowStyle = terminal
-                ? {
-                    borderBottom: '1px solid var(--t-border-subtle)',
-                    background: isSelected ? 'var(--t-bg-active)' : 'transparent',
-                    borderLeftColor: isSelected ? 'var(--t-primary)' : 'transparent',
-                  }
-                : undefined
+              // ── non-terminal: legacy list row ────────────────────────────
+              if (!terminal) {
+                const rowClass = `p-4 cursor-pointer border-b border-slate-100 transition-all ${
+                  isSelected
+                    ? 'border-l-4 border-l-blue-500 bg-blue-50'
+                    : 'border-l-4 border-l-transparent hover:bg-slate-50'
+                }`
+                return (
+                  <div key={c.id} onClick={() => setSelected(c)} className={rowClass}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0 bg-blue-500">
+                        {c.full_name?.[0] ?? '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-slate-800 truncate">{c.full_name}</p>
+                        <p className="text-xs text-slate-500 truncate">
+                          {c.current_title || (c.education && c.experience_years != null
+                            ? `${c.education} · ${c.experience_years}年`
+                            : c.education || (c.experience_years != null ? `${c.experience_years}年经验` : '匿名候选人'))}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap">
+                          {(c.current_city || c.tags_by_category?.['意向城市']?.[0]) && (
+                            <span className="flex items-center gap-0.5">
+                              <MapPin size={9} />
+                              {c.current_city || c.tags_by_category['意向城市'][0]}
+                            </span>
+                          )}
+                          {c.age != null && <span>{c.age}岁</span>}
+                          {c.experience_years != null && c.current_title && <span>{c.experience_years}年</span>}
+                          {c.expected_salary_label && (
+                            <span className="font-semibold text-blue-600">{c.expected_salary_label}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleArchive(c.id) }}
+                          className={`text-xs px-2 py-0.5 rounded border transition-colors w-18 text-center ${
+                            isArchived
+                              ? 'border-emerald-300 text-emerald-600 bg-emerald-50'
+                              : 'border-slate-200 text-slate-500 bg-white hover:border-slate-300 hover:text-slate-700'
+                          }`}
+                        >
+                          {isArchived ? '已收藏' : '收藏'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!canInvite && !isInvited}
+                          title={!selectedJob && !isInvited ? '请先选择岗位' : undefined}
+                          onClick={(e) => { e.stopPropagation(); if (canInvite) setModal(c) }}
+                          className={`text-xs px-2 py-0.5 rounded border transition-colors w-18 text-center ${
+                            isInvited
+                              ? 'border-blue-300 text-blue-600 bg-blue-50 cursor-default'
+                              : canInvite
+                                ? 'border-slate-200 text-slate-500 bg-white hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
+                                : 'border-slate-100 text-slate-300 bg-white cursor-not-allowed'
+                          }`}
+                        >
+                          {isInvited ? '已邀约' : '面议邀约'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              // ── terminal: resume-style card ───────────────────────────────
+              const avatarUrl = c.avatar_url || c.photo_url || c.headshot_url
+              const jobTitle  = c.function_name || c.current_title || '候选人'
+              const salary    = c.expected_salary_label || '面议'
+              const metaLine  = buildCandidateMeta(c)
 
               return (
                 <div
                   key={c.id}
                   onClick={() => setSelected(c)}
-                  className={rowClass}
-                  style={rowStyle}
+                  className="mx-3 my-2 cursor-pointer relative group"
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: '14px',
+                    boxShadow: isSelected
+                      ? '0 0 0 2px #16a39a, 0 2px 8px rgba(0,0,0,0.08)'
+                      : '0 1px 4px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
+                    transition: 'box-shadow 0.15s',
+                    minHeight: '86px',
+                  }}
                   onMouseEnter={(e) => {
-                    if (terminal && !isSelected) e.currentTarget.style.background = 'var(--t-bg-hover)'
+                    if (!isSelected) e.currentTarget.style.boxShadow = '0 0 0 1.5px #16a39a80, 0 4px 12px rgba(0,0,0,0.10)'
                   }}
                   onMouseLeave={(e) => {
-                    if (terminal && !isSelected) e.currentTarget.style.background = 'transparent'
+                    if (!isSelected) e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)'
                   }}
                 >
-                  {/* 单行：头像 + 信息 + 右侧竖排按钮 */}
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={
-                        terminal
-                          ? 'w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0'
-                          : 'w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0 bg-blue-500'
-                      }
-                      style={terminal ? { background: 'var(--t-primary)' } : undefined}
-                    >
-                      {c.full_name?.[0] ?? '?'}
+                  {/* selected left accent */}
+                  {isSelected && (
+                    <div style={{
+                      position: 'absolute', left: 0, top: '12px', bottom: '12px',
+                      width: '3px', borderRadius: '0 2px 2px 0', background: '#16a39a',
+                    }} />
+                  )}
+
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    {/* avatar */}
+                    <div className="flex-shrink-0" style={{ width: 56, height: 56 }}>
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt=""
+                          style={{ width: 56, height: 56, borderRadius: '12px', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: 56, height: 56, borderRadius: '12px',
+                          background: isInvited ? '#d1fae5' : '#e0f2f1',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '20px', fontWeight: 700,
+                          color: isInvited ? '#059669' : '#16a39a',
+                        }}>
+                          {c.full_name?.[0] ?? '?'}
+                        </div>
+                      )}
                     </div>
+
+                    {/* info */}
                     <div className="flex-1 min-w-0">
-                      <p
-                        className={terminal ? 'font-medium text-sm truncate' : 'font-medium text-sm text-slate-800 truncate'}
-                        style={terminal ? { color: 'var(--t-text)' } : undefined}
-                      >
-                        {c.full_name}
-                      </p>
-                      <p
-                        className={terminal ? 'text-xs truncate' : 'text-xs text-slate-500 truncate'}
-                        style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}
-                      >
-                        {c.current_title || (c.education && c.experience_years != null
-                          ? `${c.education} · ${c.experience_years}年`
-                          : c.education || (c.experience_years != null ? `${c.experience_years}年经验` : '匿名候选人'))}
-                      </p>
-                      <div
-                        className={terminal ? 'flex items-center gap-2 text-xs mt-0.5 flex-wrap' : 'flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap'}
-                        style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
-                      >
-                        {(c.current_city || (c.tags_by_category?.['意向城市']?.[0])) && (
-                          <span className="flex items-center gap-0.5">
-                            <MapPin size={9} />
-                            {c.current_city || c.tags_by_category['意向城市'][0]}
-                          </span>
-                        )}
-                        {c.age != null && <span>{c.age}岁</span>}
-                        {c.experience_years != null && c.current_title && <span>{c.experience_years}年</span>}
-                        {c.expected_salary_label && (
-                          <span className={terminal ? 'font-semibold' : 'font-semibold text-blue-600'} style={terminal ? { color: 'var(--t-chart-blue)' } : undefined}>{c.expected_salary_label}</span>
-                        )}
+                      {/* row 1: 期望职位 + 薪资 */}
+                      <div className="flex items-baseline gap-1.5 flex-wrap" style={{ marginBottom: '5px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1a1f2e' }}>
+                          期望：{jobTitle}
+                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#16a39a' }}>
+                          {salary}
+                        </span>
                       </div>
+                      {/* row 2: meta */}
+                      {metaLine && (
+                        <p style={{ fontSize: '13px', color: '#8a8f98', lineHeight: 1.4, margin: 0 }}>
+                          {metaLine}
+                        </p>
+                      )}
                     </div>
-                    {/* 右侧竖排按钮 */}
-                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+
+                    {/* hover action chips */}
+                    <div
+                      className="flex flex-col items-end gap-1.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ minWidth: 52 }}
+                    >
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); handleArchive(c.id); }}
-                        className={terminal
-                          ? 'text-xs px-2 py-0.5 rounded w-18 text-center'
-                          : `text-xs px-2 py-0.5 rounded border transition-colors w-18 text-center ${
-                              isArchived
-                                ? 'border-emerald-300 text-emerald-600 bg-emerald-50'
-                                : 'border-slate-200 text-slate-500 bg-white hover:border-slate-300 hover:text-slate-700'
-                            }`
-                        }
-                        style={terminal ? {
-                          border: isArchived ? '1px solid var(--t-success)' : '1px solid var(--t-text-muted)',
-                          color: isArchived ? 'var(--t-success)' : 'var(--t-text-secondary)',
-                          background: isArchived ? 'var(--t-success-muted)' : 'transparent',
-                          borderRadius: 'var(--t-radius-sm)',
-                          outline: 'none',
-                        } : undefined}
-                        onMouseEnter={(e) => {
-                          if (!terminal || isArchived) return
-                          e.currentTarget.style.borderColor = 'var(--t-text)'
-                          e.currentTarget.style.color = 'var(--t-text)'
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!terminal || isArchived) return
-                          e.currentTarget.style.borderColor = 'var(--t-text-muted)'
-                          e.currentTarget.style.color = 'var(--t-text-secondary)'
+                        onClick={(e) => { e.stopPropagation(); handleArchive(c.id) }}
+                        style={{
+                          fontSize: '11px', padding: '2px 7px', borderRadius: '6px',
+                          border: isArchived ? '1px solid #16a39a' : '1px solid #d1d5db',
+                          color: isArchived ? '#16a39a' : '#6b7280',
+                          background: isArchived ? '#e0f2f1' : '#f9fafb',
+                          cursor: 'pointer', whiteSpace: 'nowrap',
                         }}
                       >
                         {isArchived ? '已收藏' : '收藏'}
@@ -1111,40 +1244,18 @@ export default function CandidatePool({ terminal = false, messagesBasePath = '/m
                         type="button"
                         disabled={!canInvite && !isInvited}
                         title={!selectedJob && !isInvited ? '请先选择岗位' : undefined}
-                        onClick={(e) => { e.stopPropagation(); if (canInvite) setModal(c); }}
-                        className={terminal
-                          ? 'text-xs px-2 py-0.5 rounded w-18 text-center'
-                          : `text-xs px-2 py-0.5 rounded border transition-colors w-18 text-center ${
-                              isInvited
-                                ? 'border-blue-300 text-blue-600 bg-blue-50 cursor-default'
-                                : canInvite
-                                  ? 'border-slate-200 text-slate-500 bg-white hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
-                                  : 'border-slate-100 text-slate-300 bg-white cursor-not-allowed'
-                            }`
-                        }
-                        style={terminal ? {
-                          border: isInvited ? '1px solid var(--t-primary)' : '1px solid var(--t-text-muted)',
-                          color: isInvited ? 'var(--t-primary)' : canInvite ? 'var(--t-text-secondary)' : 'var(--t-text-muted)',
-                          background: isInvited ? 'var(--t-primary-muted)' : 'transparent',
-                          opacity: (!canInvite && !isInvited) ? 0.4 : 1,
+                        onClick={(e) => { e.stopPropagation(); if (canInvite) setModal(c) }}
+                        style={{
+                          fontSize: '11px', padding: '2px 7px', borderRadius: '6px',
+                          border: isInvited ? '1px solid #16a39a' : canInvite ? '1px solid #d1d5db' : '1px solid #e5e7eb',
+                          color: isInvited ? '#16a39a' : canInvite ? '#6b7280' : '#d1d5db',
+                          background: isInvited ? '#e0f2f1' : '#f9fafb',
+                          opacity: !canInvite && !isInvited ? 0.5 : 1,
                           cursor: isInvited ? 'default' : !canInvite ? 'not-allowed' : 'pointer',
-                          borderRadius: 'var(--t-radius-sm)',
-                          outline: 'none',
-                        } : undefined}
-                        onMouseEnter={(e) => {
-                          if (!terminal || !canInvite || isInvited) return
-                          e.currentTarget.style.borderColor = 'var(--t-primary)'
-                          e.currentTarget.style.color = 'var(--t-primary)'
-                          e.currentTarget.style.background = 'var(--t-primary-muted)'
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!terminal || !canInvite || isInvited) return
-                          e.currentTarget.style.borderColor = 'var(--t-text-muted)'
-                          e.currentTarget.style.color = 'var(--t-text-secondary)'
-                          e.currentTarget.style.background = 'transparent'
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        {isInvited ? '已邀约' : '面议邀约'}
+                        {isInvited ? '已邀约' : '邀约'}
                       </button>
                     </div>
                   </div>

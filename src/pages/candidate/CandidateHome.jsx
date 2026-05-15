@@ -12,7 +12,7 @@ import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
 
 const DEFAULT_FUNCTION = 'ALL'
-const DEFAULT_AREA = 'Global'
+const DEFAULT_AREA = 'China'
 
 const FUNCTION_KEYWORDS = {
   Sea: ['海运', '海', 'sea', 'ocean', 'shipping'],
@@ -24,14 +24,7 @@ const FUNCTION_KEYWORDS = {
 }
 
 const AREA_KEYWORDS = {
-  'China': ['中国', 'china', '上海', '北京', '广州', '深圳', '宁波', '青岛', '厦门', '天津', '香港', '台湾', '澳门'],
-  'East China': ['华东', '上海', '江苏', '南京', '苏州', '浙江', '杭州', '宁波', '安徽', '山东', '青岛'],
-  'North China': ['华北', '北京', '天津', '河北', '山西', '内蒙古'],
-  'South China': ['华南', '广东', '广州', '深圳', '福建', '厦门', '广西', '海南'],
-  'West China': ['西部', '西南', '西北', '四川', '成都', '重庆', '陕西', '西安', '云南', '贵州', '新疆'],
-  Taiwan: ['台湾', 'taiwan', '台北'],
-  'Hong Kong': ['香港', 'hong kong', 'hk'],
-  Macau: ['澳门', 'macau', 'macao', 'mo'],
+  China: ['中国', 'china', '上海', '北京', '广州', '深圳', '宁波', '青岛', '厦门', '天津', '香港', '台湾', '澳门'],
 }
 
 function textOfJob(job) {
@@ -70,7 +63,7 @@ function matchesArea(job, areaKey) {
 
 function inferAreas(job) {
   const areas = DEFAULT_AREAS
-    .filter((area) => area.key !== DEFAULT_AREA && matchesArea(job, area.key))
+    .filter((area) => !area.type && area.key !== DEFAULT_AREA && matchesArea(job, area.key))
     .map((area) => area.key)
   return areas.length > 0 ? areas : [DEFAULT_AREA]
 }
@@ -235,18 +228,18 @@ export default function CandidateHome() {
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto terminal-scrollbar">
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-5 py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+            <span className="font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
               ACCOUNT
             </span>
-            <span className="truncate font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)]">
+            <span className="truncate font-[var(--t-font-sans)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)]">
               {displayName}
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+            <span className="font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
               UPDATED
             </span>
-            <span className="font-[var(--t-font-mono)] text-[10px] text-[color:var(--t-text-secondary)]">
+            <span className="font-[var(--t-font-sans)] text-[10px] text-[color:var(--t-text-secondary)]">
               {updatedAt}
             </span>
           </div>

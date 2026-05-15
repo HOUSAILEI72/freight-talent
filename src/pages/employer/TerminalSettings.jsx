@@ -10,7 +10,7 @@ import ThemeModeSelector from '../../components/terminal/ThemeModeSelector'
 function SectionHead({ label }) {
   return (
     <div className="flex h-8 shrink-0 items-center border-b border-[var(--t-border-subtle)] px-5">
-      <span className="font-[var(--t-font-mono)] text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+      <span className="font-[var(--t-font-sans)] text-[10px] font-bold uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
         {label}
       </span>
     </div>
@@ -84,7 +84,7 @@ function EditBtn({ onClick, label = '编辑' }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1 rounded-[var(--t-radius-sm)] border border-[var(--t-border)] px-2.5 py-1 text-[10px] font-[var(--t-font-mono)] uppercase tracking-wider text-[color:var(--t-text-muted)] transition-colors hover:border-[color:var(--t-primary)] hover:text-[color:var(--t-primary)]"
+      className="flex items-center gap-1 rounded-[var(--t-radius-sm)] border border-[var(--t-border)] px-2.5 py-1 text-[10px] font-[var(--t-font-sans)] text-[color:var(--t-text-muted)] transition-colors hover:border-[color:var(--t-primary)] hover:text-[color:var(--t-primary)]"
     >
       <Edit3 size={11} />
       {label}
@@ -162,14 +162,14 @@ export default function TerminalSettings() {
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex h-11 shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-5">
           <div className="flex items-center gap-3">
-            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+            <span className="font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
               ACCOUNT
             </span>
-            <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)] truncate">
+            <span className="font-[var(--t-font-sans)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)] truncate">
               {user?.company_name ?? user?.name}
             </span>
           </div>
-          <span className="rounded border border-[var(--t-border)] px-2 py-0.5 font-[var(--t-font-mono)] text-[10px] uppercase tracking-widest text-[color:var(--t-text-muted)]">
+          <span className="rounded border border-[var(--t-border)] px-2 py-0.5 font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
             Employer
           </span>
         </div>
@@ -185,7 +185,7 @@ export default function TerminalSettings() {
               <Row label="邮箱"><Val>{user?.email}</Val></Row>
               <Row label="注册日期"><Val>{joinDate}</Val></Row>
               <Row label="账号角色">
-                <span className="rounded border border-[var(--t-border)] px-2 py-0.5 font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
+                <span className="rounded border border-[var(--t-border)] px-2 py-0.5 font-[var(--t-font-sans)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
                   Employer
                 </span>
               </Row>
@@ -194,7 +194,7 @@ export default function TerminalSettings() {
             {/* ── 企业资料（可编辑）── */}
             <section className="border border-[var(--t-border)]" style={{ borderRadius: 'var(--t-radius)' }}>
               <div className="flex items-center justify-between border-b border-[var(--t-border-subtle)] px-5 h-8">
-                <span className="font-[var(--t-font-mono)] text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+                <span className="font-[var(--t-font-sans)] text-[10px] font-bold uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
                   Profile
                 </span>
                 {!editProfile && <EditBtn onClick={openProfile} />}
@@ -231,7 +231,7 @@ export default function TerminalSettings() {
             {/* ── 安全（修改密码）── */}
             <section className="border border-[var(--t-border)]" style={{ borderRadius: 'var(--t-radius)' }}>
               <div className="flex items-center justify-between border-b border-[var(--t-border-subtle)] px-5 h-8">
-                <span className="font-[var(--t-font-mono)] text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+                <span className="font-[var(--t-font-sans)] text-[10px] font-bold uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
                   Security
                 </span>
                 {!editPwd && <EditBtn onClick={openPwd} label="改密码" />}

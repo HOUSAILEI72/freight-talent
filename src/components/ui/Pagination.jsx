@@ -8,7 +8,7 @@ export default function Pagination({ page, totalPages, onPageChange, terminal = 
   if (totalPages <= 1) return null
 
   const btnBase = terminal
-    ? 'w-7 h-7 flex items-center justify-center rounded font-mono text-xs transition-colors'
+    ? 'w-7 h-7 flex items-center justify-center rounded font-sans text-xs transition-colors'
     : 'w-7 h-7 flex items-center justify-center rounded text-xs transition-colors'
 
   function btnStyle(active, disabled) {

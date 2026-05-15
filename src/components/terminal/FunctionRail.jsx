@@ -44,14 +44,14 @@ export default function FunctionRail({
       >
         {/* collapsed label */}
         <span
-          className="font-[var(--t-font-mono)] text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--t-text-muted)] whitespace-nowrap absolute"
+          className="text-[11px] font-semibold tracking-[0.04em] text-[color:var(--t-text-muted)] whitespace-nowrap absolute"
           style={{ opacity: open ? 0 : 1, transition: 'opacity 120ms', pointerEvents: 'none', left: '50%', transform: 'translateX(-50%)' }}
         >
           FN
         </span>
         {/* expanded label */}
         <span
-          className="font-[var(--t-font-mono)] text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--t-text-muted)] whitespace-nowrap absolute"
+          className="text-[11px] font-semibold tracking-[0.04em] text-[color:var(--t-text-muted)] whitespace-nowrap absolute"
           style={{ opacity: open ? 1 : 0, transition: `opacity 200ms ${open ? '160ms' : '0ms'}`, pointerEvents: 'none', left: 12 }}
         >
           Function
@@ -111,7 +111,7 @@ export default function FunctionRail({
                   whiteSpace: 'nowrap',
                 }}
               >
-                <span className="min-w-0 flex-1 truncate font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] font-semibold uppercase tracking-wider">
+                <span className="min-w-0 flex-1 truncate text-[13px] font-medium tracking-[0.01em]">
                   {f.label}
                 </span>
                 {locked && (

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle, AlertCircle, Loader2, ChevronRight, Briefcase, Mail } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
@@ -6,6 +6,18 @@ import { jobsApi } from '../../api/jobs'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 import RegionSelector from '../../components/RegionSelector'
 import { useAuth } from '../../context/AuthContext'
+
+// ─── Auto-resize textarea hook ─────────────────────────────────────────────────
+function useAutoResize(value) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [value])
+  return ref
+}
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -112,12 +124,19 @@ export default function PostJob({ terminal = false }) {
 
   const [commissionBonusPeriod, setCommissionBonusPeriod] = useState('not_applicable')
   const [commissionBonusAmount, setCommissionBonusAmount] = useState('')
+  const [commissionAmountFocused, setCommissionAmountFocused] = useState(false)
 
   const [hasYearEndBonus,     setHasYearEndBonus]    = useState('')
   const [yearEndBonusQuickSelect, setYearEndBonusQuickSelect] = useState(null)
   const [yearEndBonusCustom, setYearEndBonusCustom]  = useState('')
 
   const [description,  setDescription]  = useState('')
+
+  // ── Auto-resize refs ──────────────────────────────────────────────────────
+  const descRef      = useAutoResize(description)
+  const knowledgeRef = useAutoResize(knowledgeText)
+  const hardSkillRef = useAutoResize(hardSkillText)
+  const softSkillRef = useAutoResize(softSkillText)
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const knowledgeArr   = useMemo(() => splitTokens(knowledgeText), [knowledgeText])
@@ -130,11 +149,11 @@ export default function PostJob({ terminal = false }) {
   function validate() {
     if (!title.trim())                return '请填写岗位名称'
     if (!selectedFunction)            return '请选择板块'
-    if (isManagementRole !== 'true' && isManagementRole !== 'false') return '请选择该岗位是否属于管理行列'
+    if (isManagementRole !== 'true' && isManagementRole !== 'false') return '请选择该岗位是否带团队'
     if (isManagementRole === 'true') {
-      if (!managementHeadcount.trim()) return '请填写预计管理人数'
-      if (!/^\d+$/.test(managementHeadcount.trim())) return '预计管理人数必须为纯数字'
-      if (Number(managementHeadcount) <= 0) return '预计管理人数必须大于 0'
+      if (!managementHeadcount.trim()) return '请填写预计团队人数'
+      if (!/^\d+$/.test(managementHeadcount.trim())) return '预计团队人数必须为纯数字'
+      if (Number(managementHeadcount) <= 0) return '预计团队人数必须大于 0'
     }
     if (!location || !location.location_code) return '请选择地区'
     if (!location.location_name || !location.location_path || !location.location_type) {
@@ -298,7 +317,7 @@ export default function PostJob({ terminal = false }) {
     : undefined
 
   const sectionTitleClass = terminal
-    ? 'flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-1'
+    ? 'flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.04em] mb-1'
     : 'flex items-center gap-2 text-sm font-semibold text-slate-800 mb-2.5'
   const sectionTitleStyle = terminal ? { color: 'var(--t-text-muted)' } : undefined
 
@@ -459,6 +478,7 @@ export default function PostJob({ terminal = false }) {
   // ── Computed display values for salary (thousand separator) ───────────────
   const salaryMinDisplay = salaryMinFocused ? salaryMin : formatThousand(salaryMin)
   const salaryMaxDisplay = salaryMaxFocused ? salaryMax : formatThousand(salaryMax)
+  const commissionAmountDisplay = commissionAmountFocused ? commissionBonusAmount : formatThousand(commissionBonusAmount)
 
   // ── Commission bonus amount disabled ──────────────────────────────────────
   const commissionAmountDisabled = commissionBonusPeriod === 'not_applicable'
@@ -508,7 +528,7 @@ export default function PostJob({ terminal = false }) {
 
   const fieldManagement = (
     <div>
-      <label className={labelClass} style={labelStyle}>是否管理行列 *</label>
+      <label className={labelClass} style={labelStyle}>是否带团队 *</label>
       <select className={inputClass} style={inputStyle} value={isManagementRole}
         onChange={(e) => { setIsManagementRole(e.target.value); if (e.target.value !== 'true') setManagementHeadcount('') }}>
         <option value="">请选择</option>
@@ -520,13 +540,13 @@ export default function PostJob({ terminal = false }) {
 
   const fieldHeadcount = isManagementRole === 'true' ? (
     <div>
-      <label className={labelClass} style={labelStyle}>预计管理人数 *</label>
+      <label className={labelClass} style={labelStyle}>预计团队人数 *</label>
       <input className={inputClass} style={inputStyle} inputMode="numeric" pattern="[0-9]*"
         placeholder="例：5" value={managementHeadcount}
         onChange={(e) => {
           const next = e.target.value
           if (next === '' || /^\d*$/.test(next)) setManagementHeadcount(next)
-          else setSubmitError('预计管理人数必须为纯数字')
+          else setSubmitError('预计团队人数必须为纯数字')
         }}
       />
     </div>
@@ -566,9 +586,9 @@ export default function PostJob({ terminal = false }) {
   )
 
   const fieldDescription = (
-    <div className={terminal ? 'flex flex-col flex-1 min-h-0' : ''}>
+    <div>
       <label className={labelClass} style={labelStyle}>岗位职责 *</label>
-      <textarea rows={terminal ? 7 : 6} className={textareaClass + (terminal ? ' flex-1 min-h-0' : '')}
+      <textarea ref={descRef} rows={1} className={textareaClass + ' overflow-hidden'}
         style={textareaStyle} placeholder="描述该岗位的主要工作职责..."
         value={description} onChange={(e) => setDescription(e.target.value)} />
     </div>
@@ -577,7 +597,7 @@ export default function PostJob({ terminal = false }) {
   const fieldKnowledge = (
     <div>
       <label className={labelClass} style={labelStyle}>知识 *</label>
-      <textarea rows={2} className={textareaClass} style={textareaStyle}
+      <textarea ref={knowledgeRef} rows={1} className={textareaClass + ' overflow-hidden'} style={textareaStyle}
         placeholder="例：国际贸易, HS编码, 危险品分类"
         value={knowledgeText} onChange={(e) => setKnowledgeText(e.target.value)} />
       <p className={helperClass} style={helperStyle}>已识别 {knowledgeArr.length} 项</p>
@@ -587,7 +607,7 @@ export default function PostJob({ terminal = false }) {
   const fieldHardSkill = (
     <div>
       <label className={labelClass} style={labelStyle}>硬技能 *</label>
-      <textarea rows={2} className={textareaClass} style={textareaStyle}
+      <textarea ref={hardSkillRef} rows={1} className={textareaClass + ' overflow-hidden'} style={textareaStyle}
         placeholder="例：Cargowise, Excel, SAP"
         value={hardSkillText} onChange={(e) => setHardSkillText(e.target.value)} />
       <p className={helperClass} style={helperStyle}>已识别 {hardSkillArr.length} 项</p>
@@ -597,7 +617,7 @@ export default function PostJob({ terminal = false }) {
   const fieldSoftSkill = (
     <div>
       <label className={labelClass} style={labelStyle}>软技能 *</label>
-      <textarea rows={2} className={textareaClass} style={textareaStyle}
+      <textarea ref={softSkillRef} rows={1} className={textareaClass + ' overflow-hidden'} style={textareaStyle}
         placeholder="例：英语沟通, 抗压能力, 团队协作"
         value={softSkillText} onChange={(e) => setSoftSkillText(e.target.value)} />
       <p className={helperClass} style={helperStyle}>已识别 {softSkillArr.length} 项</p>
@@ -652,10 +672,16 @@ export default function PostJob({ terminal = false }) {
       </div>
       <div>
         <label className={labelClass} style={labelStyle}>预估平均额</label>
-        <input type="number" className={commissionAmountDisabled ? disabledInputClass : inputClass}
+        <input type="text" inputMode="numeric" className={commissionAmountDisabled ? disabledInputClass : inputClass}
           style={commissionAmountDisabled ? disabledInputStyle : inputStyle}
-          placeholder="例：5000" value={commissionBonusAmount} disabled={commissionAmountDisabled}
-          onChange={(e) => setCommissionBonusAmount(e.target.value)} />
+          placeholder="例：5,000" value={commissionAmountDisabled ? '' : commissionAmountDisplay}
+          disabled={commissionAmountDisabled}
+          onFocus={() => setCommissionAmountFocused(true)}
+          onBlur={() => setCommissionAmountFocused(false)}
+          onChange={(e) => {
+            const r = e.target.value.replace(/,/g, '')
+            if (r === '' || /^\d+$/.test(r)) setCommissionBonusAmount(r)
+          }} />
         {commissionAmountDisabled && <p className={helperClass} style={helperStyle}>请先选择周期</p>}
       </div>
     </div>
@@ -778,7 +804,7 @@ export default function PostJob({ terminal = false }) {
             {/* ── Col 2: 岗位描述 ── */}
             <div className={cardClass} style={cardStyle}>
               <div className={sectionTitleClass} style={sectionTitleStyle}><Briefcase size={11} /> 岗位描述</div>
-              <div className="flex flex-col flex-1 min-h-0 space-y-3">
+              <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
                 {fieldDescription}
                 {fieldKnowledge}
                 {fieldHardSkill}

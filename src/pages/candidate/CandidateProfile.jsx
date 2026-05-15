@@ -96,7 +96,7 @@ function SectionTitle({ icon: Icon, iconColor, children, terminal, action, mb })
       <div className="flex items-center justify-between pb-2.5 mb-3" style={{ borderBottom: '1px solid var(--t-border-subtle)' }}>
         <div className="flex items-center gap-1.5">
           {Icon && <Icon size={12} style={{ color: 'var(--t-text-muted)' }} />}
-          <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--t-text-muted)' }}>
+          <span className="font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em]" style={{ color: 'var(--t-text-muted)' }}>
             {children}
           </span>
         </div>
@@ -251,7 +251,7 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
             <div
               className="w-20 h-20 rounded-2xl flex items-center justify-center font-bold text-3xl mx-auto mb-4"
               style={terminal
-                ? { background: 'var(--t-primary-muted)', color: 'var(--t-primary)', border: '1px solid var(--t-border)', fontFamily: 'var(--t-font-mono)' }
+                ? { background: 'var(--t-primary-muted)', color: 'var(--t-primary)', border: '1px solid var(--t-border)', fontFamily: 'var(--t-font-sans)' }
                 : { background: 'linear-gradient(135deg, #60a5fa, #2563eb)', color: '#fff' }
               }
             >
@@ -260,7 +260,7 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
             <h1
               className="text-xl font-bold"
               style={terminal
-                ? { color: 'var(--t-text)', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.02em' }
+                ? { color: 'var(--t-text)', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.02em' }
                 : { color: '#1e293b' }
               }
             >
@@ -335,7 +335,7 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
                   {profile.function_name || profile.business_type}
                   {profile.is_management_role != null && (
                     <span className="ml-1 text-xs" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>
-                      · {profile.is_management_role ? '管理岗' : '执行岗'}
+                      · {profile.is_management_role ? '带团队' : '执行岗'}
                     </span>
                   )}
                 </div>

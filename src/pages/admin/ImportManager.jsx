@@ -179,7 +179,7 @@ function PreviewPanel({ result, onConfirm, onDryRun, confirming, dryRunning }) {
           <div className="grid sm:grid-cols-2 gap-2">
             {new_fields.map(f => (
               <div key={f.field_key} className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg text-xs">
-                <span className="font-mono text-blue-700 font-semibold">{f.field_key}</span>
+                <span className="font-sans text-blue-700 font-semibold">{f.field_key}</span>
                 <span className="text-slate-400">·</span>
                 <span className="text-slate-600">{f.label}</span>
                 <span className="ml-auto text-blue-400">{f.inferred_type}</span>

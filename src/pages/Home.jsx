@@ -83,13 +83,13 @@ export default function Home() {
                 货代行业垂直人才撮合平台，精准连接优质货代企业。
               </div>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-[56px] font-bold leading-[1.08] tracking-[-0.01em] mb-6">
                 找到下一个
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400"> 精准匹配 </span>
                 的<br className="hidden sm:block" />物流人才
               </h1>
 
-              <p className="text-slate-300 text-lg md:text-xl leading-relaxed mb-10 max-w-2xl">
+              <p className="text-slate-300 text-lg leading-[1.6] mb-10 max-w-2xl">
                 专为货代、物流行业设计的人才匹配系统。精准标签 · 简历鲜度优先 · 行业经验验证，助您快速实现岗位人才匹配。
               </p>
 

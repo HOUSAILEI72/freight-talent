@@ -31,7 +31,7 @@ export default function ThemeModeSelector() {
                 : '1px solid var(--t-border)',
               background: active ? 'var(--t-bg-active)' : 'transparent',
               color: active ? 'var(--t-primary)' : 'var(--t-text-secondary)',
-              fontFamily: 'var(--t-font-mono)',
+              fontFamily: 'var(--t-font-sans)',
               fontSize: 11,
               fontWeight: active ? 700 : 500,
               cursor: 'pointer',

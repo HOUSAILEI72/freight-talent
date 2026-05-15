@@ -4,7 +4,7 @@ export function LockedBadge({ terminal }) {
   if (terminal) {
     return (
       <span
-        className="inline-flex items-center gap-1 font-mono text-[10px] px-2 py-0.5"
+        className="inline-flex items-center gap-1 font-sans text-[10px] px-2 py-0.5"
         style={{
           color: 'var(--t-text-muted)',
           background: 'var(--t-bg-elevated)',
@@ -27,7 +27,7 @@ export function LockedSection({ label, terminal }) {
   if (terminal) {
     return (
       <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' }}>
-        <p className="font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--t-text-muted)' }}>
+        <p className="font-sans text-[10px] uppercase tracking-[0.04em] mb-2" style={{ color: 'var(--t-text-muted)' }}>
           {label}
         </p>
         <div
@@ -35,7 +35,7 @@ export function LockedSection({ label, terminal }) {
           style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)' }}
         >
           <Lock size={12} style={{ color: 'var(--t-text-muted)' }} />
-          <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>
+          <span className="font-sans text-[10px] uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>
             LOCKED — 订阅后可见
           </span>
         </div>

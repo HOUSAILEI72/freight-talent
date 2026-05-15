@@ -8,7 +8,7 @@ import { applicationsApi } from '../../../api/applications'
 function SectionHeader({ terminal, mutedColor, titleColor, children }) {
   return (
     <p
-      className={terminal ? 'font-mono text-[10px] uppercase tracking-widest mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+      className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
       style={terminal ? mutedColor : titleColor}
     >
       {children}
@@ -19,7 +19,7 @@ function SectionHeader({ terminal, mutedColor, titleColor, children }) {
 function TerminalTag({ children, colorStyle }) {
   return (
     <span
-      className="font-mono text-[10px] px-2 py-0.5"
+      className="font-sans text-[10px] px-2 py-0.5"
       style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)', ...colorStyle }}
     >
       {children}
@@ -79,7 +79,7 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
         <div
           className={
             terminal
-              ? 'w-12 h-12 rounded flex items-center justify-center font-mono font-bold text-base flex-shrink-0'
+              ? 'w-12 h-12 rounded flex items-center justify-center font-sans font-bold text-base flex-shrink-0'
               : `w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0 ${isInvited ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-blue-400 to-blue-600'}`
           }
           style={terminal ? { background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', color: isInvited ? 'var(--t-success)' : 'var(--t-text)' } : undefined}
@@ -96,7 +96,7 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
                 <FreshBadge days={candidate.freshness_days} terminal />
                 {isPrivate && candidate.availability_status && <AvailBadge status={candidate.availability_status} terminal />}
                 {!isPrivate && <LockedBadge terminal />}
-                {isInvited && <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--t-success)' }}>INVITED</span>}
+                {isInvited && <span className="font-sans text-[10px] uppercase tracking-wider" style={{ color: 'var(--t-success)' }}>INVITED</span>}
               </>
             ) : (
               <>
@@ -111,16 +111,71 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
               </>
             )}
           </div>
-          {(candidate.current_title || (isPrivate && candidate.current_company)) && (
-            <p className={terminal ? 'text-xs mt-0.5' : 'text-sm text-slate-500 mt-0.5'} style={subColor}>
-              {candidate.current_title}{isPrivate && candidate.current_company ? ` · ${candidate.current_company}` : ''}
-            </p>
-          )}
-          {candidate.expected_salary_label && (
-            <p className={terminal ? 'text-sm font-semibold mt-1' : 'text-base font-bold text-blue-600 mt-1'} style={terminal ? accentColor : undefined}>
-              {candidate.expected_salary_label}
-            </p>
-          )}
+          {/* 行1: 目标岗位 | 期望薪资 */}
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            {candidate.function_name && (
+              <span className={terminal ? 'text-xs font-medium' : 'text-sm font-medium text-slate-700'} style={terminal ? subColor : undefined}>
+                {candidate.function_name}
+              </span>
+            )}
+            {candidate.function_name && candidate.expected_salary_label && (
+              <span style={{ color: terminal ? 'var(--t-border)' : '#cbd5e1' }}>|</span>
+            )}
+            {candidate.expected_salary_label && (
+              <span className={terminal ? 'text-xs font-semibold' : 'text-sm font-bold text-blue-600'} style={terminal ? accentColor : undefined}>
+                {candidate.expected_salary_label}
+              </span>
+            )}
+          </div>
+          {/* 行2: 任职时长 | 城市 | 学历 | 求职状态 */}
+          {(() => {
+            const sep = <span style={{ color: terminal ? 'var(--t-text-muted)' : '#cbd5e1', margin: '0 2px' }}>|</span>
+            const city = candidate.expected_city || candidate.location_name || candidate.current_city
+            const items = []
+
+            if (candidate.experience_years != null) {
+              items.push(<span key="exp" className={terminal ? 'text-xs' : 'text-xs text-slate-500'} style={terminal ? mutedColor : undefined}>{candidate.experience_years}年经验</span>)
+            }
+
+            if (city) {
+              items.push(<span key="city" className={terminal ? 'text-xs' : 'text-xs text-slate-500'} style={terminal ? mutedColor : undefined}>{city}</span>)
+            }
+
+            if (isPrivate && candidate.education) {
+              items.push(<span key="edu" className={terminal ? 'text-xs' : 'text-xs text-slate-500'} style={terminal ? mutedColor : undefined}>{candidate.education}</span>)
+            } else if (!isPrivate) {
+              items.push(
+                <span key="edu" className="inline-flex items-center gap-0.5 text-xs" style={{ color: terminal ? 'var(--t-text-muted)' : '#94a3b8' }}>
+                  <Lock size={9} />学历
+                </span>
+              )
+            }
+
+            if (isPrivate && candidate.availability_status) {
+              items.push(
+                <span key="avail" className="text-xs font-semibold" style={{
+                  color: candidate.availability_status === 'open'
+                    ? (terminal ? 'var(--t-success)' : '#16a34a')
+                    : candidate.availability_status === 'passive'
+                      ? (terminal ? 'var(--t-chart-blue)' : '#2563eb')
+                      : (terminal ? 'var(--t-text-muted)' : '#94a3b8'),
+                }}>
+                  {candidate.availability_status === 'open' ? '积极求职' : candidate.availability_status === 'passive' ? '被动求职' : '暂不考虑'}
+                </span>
+              )
+            }
+
+            return (
+              <div className="flex items-center flex-wrap mt-1">
+                {items.map((el, i) => (
+                  <span key={i} className="flex items-center">
+                    {i > 0 && sep}
+                    {el}
+                  </span>
+                ))}
+              </div>
+            )
+          })()}
         </div>
       </div>
 
@@ -136,7 +191,7 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 height: 20, padding: '0 8px', borderRadius: 999,
                 fontSize: 11, fontWeight: 700,
-                fontFamily: terminal ? 'var(--t-font-mono)' : undefined,
+                fontFamily: terminal ? 'var(--t-font-sans)' : undefined,
                 background: `${APP_STATUS_COLOR[appStatus]}22`,
                 border: `1px solid ${APP_STATUS_COLOR[appStatus]}55`,
                 color: APP_STATUS_COLOR[appStatus],
@@ -154,7 +209,7 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
                 style={{
                   height: 20, padding: '0 8px', borderRadius: 999,
                   fontSize: 11, fontWeight: 600, cursor: updating ? 'not-allowed' : 'pointer',
-                  fontFamily: terminal ? 'var(--t-font-mono)' : undefined,
+                  fontFamily: terminal ? 'var(--t-font-sans)' : undefined,
                   background: terminal ? 'var(--t-bg-elevated)' : '#f1f5f9',
                   border: terminal ? '1px solid var(--t-border)' : '1px solid #cbd5e1',
                   color: terminal ? 'var(--t-text-secondary)' : '#475569',
@@ -179,9 +234,9 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
         ].map(item => (
           terminal ? (
             <div key={item.label} className="px-3 py-2" style={{ background: 'var(--t-bg-panel)' }}>
-              <p className="font-mono text-xs uppercase tracking-widest mb-0.5" style={mutedColor}>{item.label}</p>
+              <p className="font-sans text-xs uppercase tracking-[0.04em] mb-0.5" style={mutedColor}>{item.label}</p>
               {item.locked
-                ? <span className="inline-flex items-center gap-1 font-mono text-[10px]" style={{ color: 'var(--t-text-muted)' }}><Lock size={9} />LOCKED</span>
+                ? <span className="inline-flex items-center gap-1 font-sans text-[10px]" style={{ color: 'var(--t-text-muted)' }}><Lock size={9} />LOCKED</span>
                 : <p className="text-sm" style={item.value == null ? { color: 'var(--t-text-muted)' } : subColor}>{item.value ?? '—'}</p>
               }
             </div>
@@ -232,7 +287,7 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
             { label: terminal ? 'SOFT' : '软技能', tags: candidate.soft_skill_tags },
           ].filter(g => Array.isArray(g.tags) && g.tags.length > 0).map(g => (
             <div key={g.label} className="mb-2 last:mb-0">
-              <p className={terminal ? 'font-mono text-[10px] uppercase tracking-widest mb-1' : 'text-xs text-slate-400 mb-1'} style={mutedColor}>{g.label}</p>
+              <p className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-1' : 'text-xs text-slate-400 mb-1'} style={mutedColor}>{g.label}</p>
               <div className="flex flex-wrap gap-1.5">
                 {g.tags.map((n, i) => (
                   terminal
@@ -250,16 +305,16 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
         (candidate.email || candidate.phone) ? (
           terminal ? (
             <div style={sectionDivider}>
-              <p className="font-mono text-[10px] uppercase tracking-widest mb-2" style={mutedColor}>联系方式</p>
+              <p className="font-sans text-[10px] uppercase tracking-[0.04em] mb-2" style={mutedColor}>联系方式</p>
               {candidate.phone && (
                 <p className="text-xs flex items-center gap-3" style={subColor}>
-                  <span className="font-mono text-[10px] uppercase tracking-widest w-8 flex-shrink-0" style={mutedColor}>TEL</span>
+                  <span className="font-sans text-[10px] uppercase tracking-[0.04em] w-8 flex-shrink-0" style={mutedColor}>TEL</span>
                   {candidate.phone}
                 </p>
               )}
               {candidate.email && (
                 <p className="text-xs flex items-center gap-3 mt-1" style={subColor}>
-                  <span className="font-mono text-[10px] uppercase tracking-widest w-8 flex-shrink-0" style={mutedColor}>MAIL</span>
+                  <span className="font-sans text-[10px] uppercase tracking-[0.04em] w-8 flex-shrink-0" style={mutedColor}>MAIL</span>
                   {candidate.email}
                 </p>
               )}
@@ -308,7 +363,7 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
                     { label: 'YE-BONUS', value: formatYearEndBonus(candidate.current_has_year_end_bonus, candidate.current_year_end_bonus_months) },
                   ].map(item => (
                     <div key={item.label} className="px-3 py-2" style={{ background: 'var(--t-bg-panel)' }}>
-                      <p className="font-mono text-[10px] uppercase tracking-widest mb-0.5" style={mutedColor}>{item.label}</p>
+                      <p className="font-sans text-[10px] uppercase tracking-[0.04em] mb-0.5" style={mutedColor}>{item.label}</p>
                       <p className="text-xs" style={subColor}>{item.value}</p>
                     </div>
                   ))}
@@ -425,7 +480,7 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
           <div className="space-y-2">
             {Object.entries(tagsByCat).map(([cat, names]) => (
               <div key={cat}>
-                <p className={terminal ? 'font-mono text-[10px] uppercase tracking-widest mb-1' : 'text-xs text-slate-400 mb-1'} style={mutedColor}>{cat}</p>
+                <p className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-1' : 'text-xs text-slate-400 mb-1'} style={mutedColor}>{cat}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {names.map((n, i) => (
                     terminal

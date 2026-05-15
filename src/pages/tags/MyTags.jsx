@@ -312,7 +312,7 @@ export default function MyTags({ terminal = false }) {
         <div>
           {terminal ? (
             <>
-              <h1 style={{ fontSize: 16, fontWeight: 600, color: 'var(--t-text)', fontFamily: 'var(--t-font-mono)' }}>标签申请</h1>
+              <h1 style={{ fontSize: 16, fontWeight: 600, color: 'var(--t-text)', fontFamily: 'var(--t-font-sans)' }}>标签申请</h1>
               <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginTop: 4 }}>
                 浏览所有可用标签；如果缺少需要的标签，可以提交申请，管理员通过后即可使用。
               </p>
@@ -368,7 +368,7 @@ export default function MyTags({ terminal = false }) {
         terminal ? (
           <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)', fontFamily: 'var(--t-font-mono)' }}>我的申请</h2>
+              <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)', fontFamily: 'var(--t-font-sans)' }}>我的申请</h2>
               <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
                 {activeCount > 0 && <span style={{ color: 'var(--t-success)' }}>已通过 {activeCount}</span>}
                 {pendingCount > 0 && <span style={{ color: 'var(--t-warning)' }}>审批中 {pendingCount}</span>}
@@ -453,7 +453,7 @@ export default function MyTags({ terminal = false }) {
       {terminal ? (
         <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)', fontFamily: 'var(--t-font-mono)' }}>所有可用标签</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)', fontFamily: 'var(--t-font-sans)' }}>所有可用标签</h2>
             <div style={{ position: 'relative' }}>
               <Search size={12} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-text-muted)', pointerEvents: 'none' }} />
               <input
@@ -481,7 +481,7 @@ export default function MyTags({ terminal = false }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {Object.entries(grouped).sort(([a],[b]) => a.localeCompare(b)).map(([cat, tags]) => (
                 <div key={cat}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{cat}（{tags.length}）</p>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{cat}（{tags.length}）</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {tags.map(t => (
                       <span key={t.id} style={{

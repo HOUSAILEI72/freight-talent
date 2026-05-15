@@ -44,7 +44,7 @@ export function AvailBadge({ status, terminal }) {
   const label = status === 'open' ? 'OPEN' : status === 'passive' ? 'PASSIVE' : 'CLOSED'
   const color = status === 'open' ? 'var(--t-success)' : status === 'passive' ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
   return (
-    <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color }}>
+    <span className="font-sans text-[10px] uppercase tracking-wider" style={{ color }}>
       {label}
     </span>
   )

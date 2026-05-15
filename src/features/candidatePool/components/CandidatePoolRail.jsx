@@ -33,8 +33,8 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
       }}>
         <span style={{
           position: 'absolute', left: '50%', transform: 'translateX(-50%)',
-          fontFamily: 'var(--t-font-mono)', fontSize: 10, fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.18em',
+          fontFamily: 'var(--t-font-sans)', fontSize: 10, fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: '0.04em',
           color: 'var(--t-text-muted)', whiteSpace: 'nowrap',
           opacity: open ? 0 : 1, transition: 'opacity 120ms',
           pointerEvents: 'none',
@@ -43,8 +43,8 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
         </span>
         <span style={{
           position: 'absolute', left: 12,
-          fontFamily: 'var(--t-font-mono)', fontSize: 10, fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.18em',
+          fontFamily: 'var(--t-font-sans)', fontSize: 10, fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: '0.04em',
           color: 'var(--t-text-muted)', whiteSpace: 'nowrap',
           opacity: open ? 1 : 0,
           transition: open ? 'opacity 200ms 160ms' : 'opacity 80ms',
@@ -123,9 +123,9 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
               }}>
                 <span style={{
                   flex: 1,
-                  fontFamily: 'var(--t-font-mono)', fontSize: 11,
+                  fontFamily: 'var(--t-font-sans)', fontSize: 11,
                   fontWeight: 600,
-                  textTransform: 'uppercase', letterSpacing: '0.1em',
+                  textTransform: 'uppercase', letterSpacing: '0.04em',
                   overflow: 'hidden', textOverflow: 'ellipsis',
                   textAlign: 'left',
                 }}>
@@ -133,7 +133,7 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
                 </span>
                 {count != null && (
                   <span style={{
-                    fontFamily: 'var(--t-font-mono)', fontSize: 10,
+                    fontFamily: 'var(--t-font-sans)', fontSize: 10,
                     padding: '1px 6px', borderRadius: 10,
                     background: active ? 'rgba(255,255,255,0.2)' : 'var(--t-bg-elevated)',
                     color: active ? '#fff' : 'var(--t-text-muted)',

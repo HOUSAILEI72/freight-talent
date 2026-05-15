@@ -16,7 +16,7 @@ function EmptyState({ terminal, text }) {
         style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#cbd5e1' }}
       />
       {terminal ? (
-        <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--t-text-muted)' }}>
+        <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)' }}>
           {text}
         </span>
       ) : (
@@ -44,7 +44,7 @@ export function CandidateList({
     >
       <Loader2 size={15} className="animate-spin" style={terminal ? { color: 'var(--t-primary)' } : undefined} />
       {terminal ? (
-        <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11, letterSpacing: '0.06em', color: 'var(--t-text-muted)' }}>
+        <span style={{ fontFamily: 'var(--t-font-sans)', fontSize: 11, letterSpacing: '0.06em', color: 'var(--t-text-muted)' }}>
           LOADING...
         </span>
       ) : (

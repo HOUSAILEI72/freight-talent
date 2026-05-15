@@ -31,7 +31,7 @@ export default function FunctionSidebar({
       style={{ background: 'var(--t-bg-elevated)', width: 'max-content', minWidth: 160 }}
     >
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-3">
-        <span className="font-[var(--t-font-mono)] text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--t-text-muted)]">
+        <span className="text-[11px] font-semibold tracking-[0.04em] text-[color:var(--t-text-muted)]">
           Function
         </span>
         <Layers size={12} className="text-[color:var(--t-text-muted)]" />
@@ -64,7 +64,7 @@ export default function FunctionSidebar({
                 />
               )}
               <Icon size={13} className="shrink-0 opacity-70" />
-              <span className="whitespace-nowrap font-[var(--t-font-mono)] text-[length:var(--t-text-xs)] uppercase tracking-wider">
+              <span className="whitespace-nowrap text-[13px] font-medium tracking-[0.01em]">
                 {f.label}
               </span>
               {locked && (

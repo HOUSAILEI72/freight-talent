@@ -108,7 +108,7 @@ function GateIncomplete({ missing, source }) {
       <div className="mx-auto w-full max-w-2xl">
         <div className="flex items-center gap-2 mb-1" style={{ color: 'var(--t-text-muted)' }}>
           <ListChecks size={14} />
-          <span className="text-[11px] tracking-[0.2em] uppercase">SUBSCRIPTIONS · GATE</span>
+          <span className="text-[11px] tracking-[0.04em] uppercase">SUBSCRIPTIONS · GATE</span>
         </div>
         <h1 className="text-2xl font-semibold mb-2" style={{ color: 'var(--t-text)' }}>
           {title}

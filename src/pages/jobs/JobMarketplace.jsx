@@ -4,7 +4,7 @@ import {
   MapPin, Briefcase, Clock, Search, X,
   Loader2, FolderOpen, AlertCircle,
   GraduationCap, Users, Zap, PlusCircle,
-  UserSearch, UsersRound, CheckCircle,
+  UserSearch, UsersRound, FileText,
 } from 'lucide-react'
 import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
@@ -116,23 +116,6 @@ function ReadTextarea({ label, value, empty = '—' }) {
 
 // ── headhunting read-only detail panels ──────────────────────────────────────
 
-const PERSONAL_TERM_LABELS = {
-  service_intro: '我方提供人才推荐服务',
-  type_a:        'A 类型（月收入 ≥ 1 万）',
-  type_b:        'B 类型（月收入 < 1 万）',
-  income_scope:  '收入范围界定',
-  replacement:   '替换保证',
-  advertising:   '广告及宣传授权',
-  invoice:       '发票条款',
-}
-
-const TEAM_TERM_LABELS = {
-  team_service_intro:    '团队搭建服务协议',
-  team_fixed_fee:        '固定服务费条款',
-  team_departure_clause: '离职及返费条款',
-  team_invoice:          '发票条款',
-}
-
 function fmtCNY(n) {
   if (!n && n !== 0) return '—'
   return `¥${Number(n).toLocaleString('zh-CN')}`
@@ -146,7 +129,7 @@ function StatusBadge({ status }) {
     : 'var(--t-text-muted)'
   return (
     <span style={{
-      fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+      fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
       padding: '2px 7px', borderRadius: 'var(--t-radius-sm)',
       border: `1px solid ${color}`, color, background: 'transparent',
     }}>
@@ -158,13 +141,12 @@ function StatusBadge({ status }) {
 function PersonalHdDetail({ req }) {
   if (!req) return null
   const job = req.job_payload || {}
-  const terms = req.terms_payload || {}
   const addOns = req.add_ons_payload || {}
   const fee = req.fee_snapshot || {}
 
   const cardClass = 'p-4 space-y-3 rounded-[var(--t-radius-lg)] border flex flex-col min-h-0'
   const cardStyle = { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' }
-  const secTitleClass = 'flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-1 flex-shrink-0'
+  const secTitleClass = 'flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.04em] mb-1 flex-shrink-0'
   const secTitleStyle = { color: 'var(--t-text-muted)' }
 
   return (
@@ -192,33 +174,7 @@ function PersonalHdDetail({ req }) {
       {/* 3-column grid */}
       <div className="terminal-form-grid-3 flex-1 min-h-0">
 
-        {/* Col 1: 服务条款 + 增值服务 */}
-        <div className={cardClass} style={cardStyle}>
-          <div className={secTitleClass} style={secTitleStyle}><CheckCircle size={11} /> 服务条款 &amp; 增值服务</div>
-          <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
-            <div className="space-y-1.5">
-              {Object.entries(PERSONAL_TERM_LABELS).map(([k, label]) => (
-                <div key={k} className="flex items-start gap-2 text-xs" style={{ color: terms[k] ? 'var(--t-text)' : 'var(--t-text-muted)' }}>
-                  <span style={{ color: terms[k] ? 'var(--t-success)' : 'var(--t-border)', flexShrink: 0, marginTop: 1 }}>✓</span>
-                  <span>{label}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: 10 }}>
-              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-muted)' }}>增值服务</div>
-              <div className="space-y-1">
-                {addOns.accelerated && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 加速通道（+5% 服务费）</div>}
-                {addOns.backgroundCheck && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 背景调查 × {addOns.backgroundCheckCount ?? 1}（¥3,500/人）</div>}
-                {addOns.personalityReport && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 性格测评 × {addOns.personalityReportCount ?? 1}（¥800/人）</div>}
-                {!addOns.accelerated && !addOns.backgroundCheck && !addOns.personalityReport && (
-                  <div className="text-xs" style={{ color: 'var(--t-text-muted)' }}>无增值服务</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Col 2: 岗位信息 */}
+        {/* Col 1: 岗位基础信息 + 薪酬 */}
         <div className={cardClass} style={cardStyle}>
           <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 岗位信息</div>
           <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
@@ -226,14 +182,54 @@ function PersonalHdDetail({ req }) {
             <ReadField label="岗位板块" value={job.function_name || job.function_code} />
             <ReadField label="岗位城市" value={job.location_path || job.location_name || job.location_code} />
             <ReadField label="详细地址" value={job.address} />
+            <ReadField label="应聘类型" value={job.employment_type} />
+            <ReadField label="经验要求" value={job.experience_required} />
+            <ReadField label="学历要求" value={job.degree_required} />
+            {job.is_management_role && (
+              <ReadField label="管理人数" value={job.management_headcount ? `${job.management_headcount} 人` : '管理岗'} />
+            )}
             <div className="grid grid-cols-2 gap-3">
               <ReadField label="最低月薪" value={job.salary_min ? `¥${Number(job.salary_min).toLocaleString()}` : null} />
               <ReadField label="最高月薪" value={job.salary_max ? `¥${Number(job.salary_max).toLocaleString()}` : null} />
             </div>
             <ReadField label="薪资月数" value={job.salary_months ? `${job.salary_months} 个月` : null} />
-            <ReadField label="经验要求" value={job.experience_required} />
-            <ReadField label="学历要求" value={job.degree_required} />
-            <ReadField label="应聘类型" value={job.employment_type} />
+            {job.commission_bonus_period && job.commission_bonus_period !== 'not_applicable' && (
+              <ReadField
+                label="佣金奖金周期"
+                value={COMMISSION_BONUS_PERIODS.find(o => o.value === job.commission_bonus_period)?.label ?? job.commission_bonus_period}
+              />
+            )}
+            {job.commission_bonus_amount > 0 && (
+              <ReadField label="佣金奖金金额" value={`¥${Number(job.commission_bonus_amount).toLocaleString()}`} />
+            )}
+            {job.has_year_end_bonus && (
+              <ReadField label="年终奖" value={job.year_end_bonus_months ? `${job.year_end_bonus_months} 个月` : '有'} />
+            )}
+          </div>
+        </div>
+
+        {/* Col 2: 岗位职责 + 技能要求 */}
+        <div className={cardClass} style={cardStyle}>
+          <div className={secTitleClass} style={secTitleStyle}><FileText size={11} /> 职责 &amp; 技能</div>
+          <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
+            <ReadTextarea label="岗位职责" value={job.description} />
+            <ReadChips label="知识要求" value={splitTokens(job.knowledge_requirements)} />
+            <ReadChips label="硬技能要求" value={splitTokens(job.hard_skill_requirements)} />
+            <ReadChips label="软技能要求" value={splitTokens(job.soft_skill_requirements)} />
+            {job.target_companies && job.target_companies.length > 0 && (
+              <ReadChips label="目标公司" value={Array.isArray(job.target_companies) ? job.target_companies : splitTokens(job.target_companies)} />
+            )}
+            <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: 10 }}>
+              <div className="text-xs font-semibold mb-2" style={{ color: 'var(--t-text-muted)' }}>增值服务</div>
+              <div className="space-y-1">
+                {addOns.accelerated && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 加速通道（+5% 服务费）</div>}
+                {addOns.background_check && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 背景调查 × {addOns.background_check_count ?? 1}（¥3,500/人）</div>}
+                {addOns.personality_report && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 性格测评 × {addOns.personality_report_count ?? 1}（¥800/人）</div>}
+                {!addOns.accelerated && !addOns.background_check && !addOns.personality_report && (
+                  <div className="text-xs" style={{ color: 'var(--t-text-muted)' }}>无增值服务</div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -243,11 +239,15 @@ function PersonalHdDetail({ req }) {
           <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
             {(fee.feeLow != null || fee.minFee != null) ? (
               <>
-                <ReadField label="服务费（低估）" value={fmtCNY(fee.feeLow ?? fee.minFee)} />
-                <ReadField label="服务费（高估）" value={fmtCNY(fee.feeHigh ?? fee.maxFee)} />
+                <div className="grid grid-cols-2 gap-3">
+                  <ReadField label="服务费（低估）" value={fmtCNY(fee.feeLow ?? fee.minFee)} />
+                  <ReadField label="服务费（高估）" value={fmtCNY(fee.feeHigh ?? fee.maxFee)} />
+                </div>
                 {(fee.addonFee ?? 0) > 0 && <ReadField label="增值服务费" value={fmtCNY(fee.addonFee)} />}
-                <ReadField label="合计（低）" value={fmtCNY(fee.totalLow ?? fee.totalMin ?? fee.feeLow ?? fee.minFee)} />
-                <ReadField label="合计（高）" value={fmtCNY(fee.totalHigh ?? fee.totalMax ?? fee.feeHigh ?? fee.maxFee)} />
+                <div className="grid grid-cols-2 gap-3">
+                  <ReadField label="合计（低）" value={fmtCNY(fee.totalLow ?? fee.totalMin ?? fee.feeLow ?? fee.minFee)} />
+                  <ReadField label="合计（高）" value={fmtCNY(fee.totalHigh ?? fee.totalMax ?? fee.feeHigh ?? fee.maxFee)} />
+                </div>
                 {fee.typeLabel && <ReadField label="服务类型" value={`${fee.typeLabel} 类`} />}
                 {fee.guaranteeLabel && <ReadField label="保证期" value={fee.guaranteeLabel} />}
               </>
@@ -270,13 +270,12 @@ function PersonalHdDetail({ req }) {
 function TeamHdDetail({ req }) {
   if (!req) return null
   const team = req.job_payload || {}
-  const terms = req.terms_payload || {}
   const addOns = req.add_ons_payload || {}
   const fee = req.fee_snapshot || {}
 
   const cardClass = 'p-4 space-y-3 rounded-[var(--t-radius-lg)] border flex flex-col min-h-0'
   const cardStyle = { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' }
-  const secTitleClass = 'flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-1 flex-shrink-0'
+  const secTitleClass = 'flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.04em] mb-1 flex-shrink-0'
   const secTitleStyle = { color: 'var(--t-text-muted)' }
 
   const preferredCities = Array.isArray(team.preferred_cities) ? team.preferred_cities : []
@@ -307,34 +306,7 @@ function TeamHdDetail({ req }) {
       {/* 3-column grid */}
       <div className="terminal-form-grid-3 flex-1 min-h-0">
 
-        {/* Col 1: 服务条款 + 增值服务 */}
-        <div className={cardClass} style={cardStyle}>
-          <div className={secTitleClass} style={secTitleStyle}><CheckCircle size={11} /> 服务条款 &amp; 增值服务</div>
-          <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
-            <div className="space-y-1.5">
-              {Object.entries(TEAM_TERM_LABELS).map(([k, label]) => (
-                <div key={k} className="flex items-start gap-2 text-xs" style={{ color: terms[k] ? 'var(--t-text)' : 'var(--t-text-muted)' }}>
-                  <span style={{ color: terms[k] ? 'var(--t-success)' : 'var(--t-border)', flexShrink: 0, marginTop: 1 }}>✓</span>
-                  <span>{label}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: 10 }}>
-              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-muted)' }}>增值服务</div>
-              <div className="space-y-1">
-                {addOns.accelerated && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 加速通道</div>}
-                {addOns.leaderBgCheck && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 领导层背景调查（¥3,500/人）</div>}
-                {addOns.memberBgCheck > 0 && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 成员背景调查 × {addOns.memberBgCheck}（¥1,800/人）</div>}
-                {addOns.memberReport > 0 && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 成员性格测评 × {addOns.memberReport}（¥800/人）</div>}
-                {!addOns.accelerated && !addOns.leaderBgCheck && !(addOns.memberBgCheck > 0) && !(addOns.memberReport > 0) && (
-                  <div className="text-xs" style={{ color: 'var(--t-text-muted)' }}>无增值服务</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Col 2: 团队需求 */}
+        {/* Col 1: 需求简述 + 城市偏向 */}
         <div className={cardClass} style={cardStyle}>
           <div className={secTitleClass} style={secTitleStyle}><UsersRound size={11} /> 团队需求</div>
           <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
@@ -357,11 +329,30 @@ function TeamHdDetail({ req }) {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Col 2: 业务侧重 + 其他偏好 + 增值服务 */}
+        <div className={cardClass} style={cardStyle}>
+          <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 偏好 &amp; 增值服务</div>
+          <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
             <ReadChips label="业务侧重" value={businessFocus} />
             <ReadField label="希望到岗时间" value={team.expected_onboard_time} />
             <ReadField label="团队规模" value={team.team_size} />
             <ReadField label="年龄偏好" value={team.age_preference} />
             <ReadTextarea label="背景偏好" value={team.background_preference} />
+            <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: 10 }}>
+              <div className="text-xs font-semibold mb-2" style={{ color: 'var(--t-text-muted)' }}>增值服务</div>
+              <div className="space-y-1">
+                {addOns.accelerated && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 加速通道</div>}
+                {addOns.leader_background_check && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 领导层背景调查 × {addOns.leader_background_check_count ?? 1}（¥3,500/人）</div>}
+                {addOns.member_background_check && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 成员背景调查 × {addOns.member_background_check_count ?? 1}（¥1,800/人）</div>}
+                {addOns.member_personality_report && <div className="text-xs" style={{ color: 'var(--t-text)' }}>✓ 成员性格测评 × {addOns.member_personality_report_count ?? 1}（¥800/人）</div>}
+                {!addOns.accelerated && !addOns.leader_background_check && !addOns.member_background_check && !addOns.member_personality_report && (
+                  <div className="text-xs" style={{ color: 'var(--t-text-muted)' }}>无增值服务</div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -413,7 +404,7 @@ function HdRequestRow({ req, selected, onSelect, serviceType }) {
       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--t-bg-hover)' }}
       onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
     >
-      <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--t-text)', marginBottom: 3 }}>
+      <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 12, fontWeight: 600, color: 'var(--t-text)', marginBottom: 3 }}>
         {title}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -446,7 +437,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
     // PostJob-matching style tokens
     const cardClass = 'p-4 space-y-3 rounded-[var(--t-radius-lg)] border flex flex-col min-h-0'
     const cardStyle = { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' }
-    const secTitleClass = 'flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-1 flex-shrink-0'
+    const secTitleClass = 'flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.04em] mb-1 flex-shrink-0'
     const secTitleStyle = { color: 'var(--t-text-muted)' }
 
     return (
@@ -461,7 +452,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
               <h1 className="text-base font-semibold truncate" style={{ color: 'var(--t-text)' }}>{job.title}</h1>
               {isClosed && (
                 <span style={{
-                  flexShrink: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em',
+                  flexShrink: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
                   padding: '2px 7px', borderRadius: 'var(--t-radius-sm)',
                   background: 'var(--t-danger-muted)', color: 'var(--t-danger)',
                   border: '1px solid var(--t-danger)', textTransform: 'uppercase',
@@ -494,7 +485,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
                   : '1px solid var(--t-danger)',
                 color: isClosed ? 'var(--t-success)' : 'var(--t-danger)',
                 background: isClosed ? 'var(--t-success-muted)' : 'var(--t-danger-muted)',
-                letterSpacing: '0.05em',
+                letterSpacing: '0.02em',
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.opacity = '0.8'
@@ -519,9 +510,9 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
               <ReadField label="岗位板块" value={job.function_name ?? job.business_type} />
               <ReadField label="经验要求" value={job.experience_required} />
               <ReadField label="最低学历要求" value={job.degree_required} />
-              <ReadField label="是否管理行列" value={job.is_management_role == null ? null : job.is_management_role ? '是' : '否'} />
+              <ReadField label="是否带团队" value={job.is_management_role == null ? null : job.is_management_role ? '是' : '否'} />
               {job.is_management_role && (
-                <ReadField label="预计管理人数" value={job.management_headcount ? String(job.management_headcount) : null} />
+                <ReadField label="预计团队人数" value={job.management_headcount ? String(job.management_headcount) : null} />
               )}
               <ReadField label="应聘类型" value={job.employment_type} />
               <ReadField label="岗位工作城市" value={
@@ -951,10 +942,26 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
         }}
       >
         <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--t-border-subtle)', flexShrink: 0 }}>
-          <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--t-text-muted)', marginBottom: 4, lineHeight: 1.4 }}>
-            {jobsTab === 'personal_headhunt' ? '个人猎头服务' : '团队猎头服务'}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', lineHeight: 1.4 }}>
+              {jobsTab === 'personal_headhunt' ? '个人猎头服务' : '团队猎头服务'}
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(jobsTab === 'personal_headhunt' ? '/employer/headhunting/personal' : '/employer/headhunting/team')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                height: 22, padding: '0 8px', borderRadius: 'var(--t-radius-sm)',
+                border: '1px solid var(--t-primary)', background: 'var(--t-primary)',
+                color: '#fff', fontFamily: 'var(--t-font-sans)', fontSize: 10,
+                fontWeight: 600, cursor: 'pointer', letterSpacing: '0.06em',
+              }}
+            >
+              <PlusCircle size={10} />
+              提交需求
+            </button>
           </div>
-          <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'var(--t-text-muted)', lineHeight: 1.4 }}>
+          <div style={{ fontFamily: 'var(--t-font-sans)', fontSize: 10, color: 'var(--t-text-muted)', lineHeight: 1.4 }}>
             {hdLoading ? '加载中…' : `共 ${hdRequests.length} 条需求`}
           </div>
         </div>
@@ -1047,7 +1054,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                 }}
               >
                 <PlusCircle size={12} />
-                <span className="font-[var(--t-font-mono)]">New Job</span>
+                <span className="font-[var(--t-font-sans)]">New Job</span>
               </button>
             )}
           </div>
@@ -1305,7 +1312,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                 {terminal && job.status === 'closed' && (
                   <span style={{
                     position: 'absolute', top: 6, right: 6,
-                    fontSize: 9, fontWeight: 700, letterSpacing: '0.12em',
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
                     padding: '2px 5px', borderRadius: 'var(--t-radius-sm)',
                     background: 'var(--t-danger-muted)', color: 'var(--t-danger)',
                     border: '1px solid var(--t-danger)', textTransform: 'uppercase',

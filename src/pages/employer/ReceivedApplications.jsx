@@ -137,7 +137,7 @@ function ApplicationCard({ app, terminal, onUpdateStatus, updating }) {
             terminal ? (
               <span
                 key={idx}
-                className="font-mono text-xs px-2 py-0.5"
+                className="font-sans text-xs px-2 py-0.5"
                 style={{ background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}
               >
                 {tag}

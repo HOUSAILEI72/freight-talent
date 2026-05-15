@@ -12,7 +12,7 @@ import ThemeModeSelector from '../../components/terminal/ThemeModeSelector'
 function SectionHead({ label, action }) {
   return (
     <div className="flex h-8 shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-5">
-      <span className="font-[var(--t-font-mono)] text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+      <span className="font-[var(--t-font-sans)] text-[10px] font-bold uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
         {label}
       </span>
       {action}
@@ -87,7 +87,7 @@ function EditBtn({ onClick, label = '编辑' }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1 rounded-[var(--t-radius-sm)] border border-[var(--t-border)] px-2.5 py-1 text-[10px] font-[var(--t-font-mono)] uppercase tracking-wider text-[color:var(--t-text-muted)] transition-colors hover:border-[color:var(--t-primary)] hover:text-[color:var(--t-primary)]"
+      className="flex items-center gap-1 rounded-[var(--t-radius-sm)] border border-[var(--t-border)] px-2.5 py-1 text-[10px] font-[var(--t-font-sans)] text-[color:var(--t-text-muted)] transition-colors hover:border-[color:var(--t-primary)] hover:text-[color:var(--t-primary)]"
     >
       <Edit3 size={11} />
       {label}
@@ -202,14 +202,14 @@ export default function TerminalCandidateSettings() {
         {/* sub-header */}
         <div className="flex h-11 shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-5">
           <div className="flex items-center gap-3">
-            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+            <span className="font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
               ACCOUNT
             </span>
-            <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)] truncate">
+            <span className="font-[var(--t-font-sans)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)] truncate">
               {user?.name}
             </span>
           </div>
-          <span className="rounded border border-[var(--t-border)] px-2 py-0.5 font-[var(--t-font-mono)] text-[10px] uppercase tracking-widest text-[color:var(--t-text-muted)]">
+          <span className="rounded border border-[var(--t-border)] px-2 py-0.5 font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
             Candidate
           </span>
         </div>

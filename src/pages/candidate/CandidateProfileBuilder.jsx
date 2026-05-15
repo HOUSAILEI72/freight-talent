@@ -27,6 +27,12 @@ function mergeUnique(...arrays) {
   return out
 }
 
+function formatThousand(val) {
+  if (!val && val !== 0) return ''
+  const n = parseInt(String(val).replace(/,/g, ''), 10)
+  return Number.isNaN(n) ? String(val) : n.toLocaleString('en-US')
+}
+
 // Coerce server values back to "raw textarea" string for builder hydration.
 function tagsToText(arr) {
   return Array.isArray(arr) ? arr.join('、') : ''
@@ -140,6 +146,8 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
   const [mgmtHeadcount, setMgmtHeadcount]               = useState('')
   const [csMin, setCsMin]                                = useState('')
   const [csMax, setCsMax]                                = useState('')
+  const [csMinFocused, setCsMinFocused]                  = useState(false)
+  const [csMaxFocused, setCsMaxFocused]                  = useState(false)
   const [csMonths, setCsMonths]                          = useState('')
   const [csAvgBonus, setCsAvgBonus]                      = useState('')
   const [csHasYeb, setCsHasYeb]                          = useState(false)
@@ -147,6 +155,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
 
   // ── Section 3: 工作经历 ─────────────────────────────────────────────────
   const [workRows, setWorkRows] = useState([{ ...EMPTY_WORK_EXPERIENCE }])
+  const [salaryFocusIdx, setSalaryFocusIdx] = useState(null)
 
   // ── Section 4: 能力画像 ─────────────────────────────────────────────────
   const [knowledgeText, setKnowledgeText] = useState('')
@@ -157,6 +166,8 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
   const [education, setEducation]                 = useState('')
   const [educationLines, setEducationLines]       = useState('')
   const [certificatesText, setCertificatesText]   = useState('')
+  const [expectedSalaryLabel, setExpectedSalaryLabel] = useState('')
+  const [desiredPosition, setDesiredPosition] = useState('')
 
   // ── Hydrate from server ─────────────────────────────────────────────────
   useEffect(() => {
@@ -224,6 +235,8 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
         setEducation(p.education || '')
         setEducationLines(educationLinesToText(p.education_experiences))
         setCertificatesText(tagsToText(p.certificates))
+        setExpectedSalaryLabel(p.expected_salary_label || '')
+        setDesiredPosition(p.desired_position || '')
       })
       .catch(err => {
         if (cancelled) return
@@ -270,7 +283,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
     if (!currentTitle.trim())            return '请填写当前职位'
     if (!currentResponsibilities.trim()) return '请填写岗位职责'
     if (!functionCode)                   return '请选择业务方向'
-    if (isManagementStr !== 'yes' && isManagementStr !== 'no') return '请选择是否管理岗位'
+    if (isManagementStr !== 'yes' && isManagementStr !== 'no') return '请选择是否带团队'
 
     if (csMin !== '' && !/^\d+$/.test(csMin)) return '当前薪资 min 必须为纯数字'
     if (csMax !== '' && !/^\d+$/.test(csMax)) return '当前薪资 max 必须为纯数字'
@@ -369,6 +382,9 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
       education: education.trim() || null,
       education_experiences: parseEducationLines(educationLines),
       certificates: certsArr,
+
+      expected_salary_label: expectedSalaryLabel.trim() || null,
+      desired_position: desiredPosition.trim() || null,
 
       availability_status: availability,
       ...(gender !== '' ? { gender } : {}),
@@ -513,7 +529,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
             style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}
           >
             <ListChecks size={14} />
-            <span className="text-[11px] tracking-[0.2em] uppercase">PROFILE · BUILDER</span>
+            <span className="text-[11px] tracking-[0.04em] uppercase">PROFILE · BUILDER</span>
           </div>
           <h1
             className={terminal ? 'text-2xl font-semibold' : 'text-2xl font-semibold text-slate-800'}
@@ -572,10 +588,24 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
                 <label className={labelClass} style={labelStyle}>求职状态</label>
                 <select className={inputClass} style={inputStyle}
                   value={availability} onChange={e => setAvailability(e.target.value)}>
-                  <option value="open">开放机会</option>
-                  <option value="passive">被动寻找</option>
-                  <option value="closed">暂不考虑</option>
+                  <option value="open">离职-随时到岗</option>
+                  <option value="passive_now">在职-月内到岗</option>
+                  <option value="passive">在职-考虑机会</option>
                 </select>
+              </div>
+              <div>
+                <label className={labelClass} style={labelStyle}>期望岗位</label>
+                <input className={inputClass} style={inputStyle}
+                  value={desiredPosition}
+                  onChange={e => setDesiredPosition(e.target.value)}
+                  placeholder="如：海运操作、报关员、销售" />
+              </div>
+              <div>
+                <label className={labelClass} style={labelStyle}>期望薪资</label>
+                <input className={inputClass} style={inputStyle}
+                  value={expectedSalaryLabel}
+                  onChange={e => setExpectedSalaryLabel(e.target.value)}
+                  placeholder="如：18k-25k、面议、35万/年" />
               </div>
               <div>
                 <label className={labelClass} style={labelStyle}>出生年月</label>
@@ -648,7 +678,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
                 </select>
               </div>
               <div>
-                <label className={labelClass} style={labelStyle}>是否管理岗位 *</label>
+                <label className={labelClass} style={labelStyle}>是否带团队 *</label>
                 <select className={inputClass} style={inputStyle}
                   value={isManagementStr} onChange={e => setIsManagementStr(e.target.value)}>
                   <option value="">请选择</option>
@@ -658,7 +688,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
               </div>
               {isManagementStr === 'yes' && (
                 <div>
-                  <label className={labelClass} style={labelStyle}>管理人数</label>
+                  <label className={labelClass} style={labelStyle}>团队人数</label>
                   <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
                     value={mgmtHeadcount}
                     onChange={e => setMgmtHeadcount(e.target.value.replace(/\D/g, ''))}
@@ -680,12 +710,18 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
                 <div>
                   <label className={helperClass} style={helperStyle}>min（元/月）</label>
                   <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
-                    value={csMin} onChange={e => setCsMin(e.target.value.replace(/\D/g, ''))} placeholder="如 18000" />
+                    value={csMinFocused ? csMin : formatThousand(csMin)}
+                    onFocus={() => setCsMinFocused(true)}
+                    onBlur={() => setCsMinFocused(false)}
+                    onChange={e => setCsMin(e.target.value.replace(/[^\d]/g, ''))} placeholder="如 18,000" />
                 </div>
                 <div>
                   <label className={helperClass} style={helperStyle}>max（元/月）</label>
                   <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
-                    value={csMax} onChange={e => setCsMax(e.target.value.replace(/\D/g, ''))} placeholder="如 25000" />
+                    value={csMaxFocused ? csMax : formatThousand(csMax)}
+                    onFocus={() => setCsMaxFocused(true)}
+                    onBlur={() => setCsMaxFocused(false)}
+                    onChange={e => setCsMax(e.target.value.replace(/[^\d]/g, ''))} placeholder="如 25,000" />
                 </div>
                 <div>
                   <label className={helperClass} style={helperStyle}>薪资月数</label>
@@ -756,7 +792,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
                 >
                   <div className="flex items-center justify-between">
                     <span
-                      className="text-xs font-semibold tracking-wider"
+                      className="text-xs font-semibold tracking-[0.01em]"
                       style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#64748b' }}
                     >
                       工作经历 #{i + 1}
@@ -814,9 +850,11 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
                     <div>
                       <label className={helperClass} style={helperStyle}>薪资</label>
                       <input className={inputClass} style={inputStyle} type="text" inputMode="numeric"
-                        placeholder="例：20000"
-                        value={r.salary}
-                        onChange={e => updateWorkRow(i, { salary: e.target.value.replace(/\D/g, '') })} />
+                        placeholder="例：20,000"
+                        value={salaryFocusIdx === i ? r.salary : formatThousand(r.salary)}
+                        onFocus={() => setSalaryFocusIdx(i)}
+                        onBlur={() => setSalaryFocusIdx(null)}
+                        onChange={e => updateWorkRow(i, { salary: e.target.value.replace(/[^\d]/g, '') })} />
                     </div>
                     <div>
                       <label className={helperClass} style={helperStyle}>薪资月数</label>

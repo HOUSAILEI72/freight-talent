@@ -92,7 +92,7 @@ function RowCell({ cell }) {
   }
   return (
     <span style={{
-      fontFamily: 'var(--t-font-mono)', fontSize: 11,
+      fontFamily: 'var(--t-font-sans)', fontSize: 11,
       color: 'var(--t-text-secondary)',
     }}>
       {cell.value}
@@ -107,8 +107,8 @@ function BillingToggle({ annual, onChange }) {
 
   const baseBtn = {
     height: 30, padding: '0 16px',
-    fontFamily: 'var(--t-font-mono)', fontSize: 10, fontWeight: 700,
-    letterSpacing: '0.12em', textTransform: 'uppercase',
+    fontFamily: 'var(--t-font-sans)', fontSize: 10, fontWeight: 700,
+    letterSpacing: '0.04em', textTransform: 'uppercase',
     border: '1px solid var(--t-border)',
     cursor: 'pointer', transition: 'all 120ms',
   }
@@ -190,7 +190,7 @@ function FunctionSelector({ value, onChange, disabled }) {
           border: `1px solid ${open ? 'var(--t-primary)' : hover ? 'var(--t-primary)' : 'var(--t-border)'}`,
           borderRadius: 'var(--t-radius-sm)',
           color: disabled ? 'var(--t-text-muted)' : 'var(--t-text)',
-          fontFamily: 'var(--t-font-mono)', fontSize: 12,
+          fontFamily: 'var(--t-font-sans)', fontSize: 12,
           cursor: disabled ? 'not-allowed' : 'pointer',
           transition: 'border-color 120ms, background 120ms',
         }}
@@ -224,7 +224,7 @@ function FunctionSelector({ value, onChange, disabled }) {
                 onMouseLeave={(e) => { e.target.style.background = 'transparent' }}
                 style={{
                   padding: '8px 12px',
-                  fontFamily: 'var(--t-font-mono)', fontSize: 12,
+                  fontFamily: 'var(--t-font-sans)', fontSize: 12,
                   color: f.code === value ? 'var(--t-chart-blue)' : 'var(--t-text-secondary)',
                   cursor: 'pointer',
                   borderBottom: '1px solid var(--t-border-subtle)',
@@ -295,21 +295,21 @@ function PlanCard({ plan, annual, selectedFunction, onSelectFunction, onActivate
         <div style={{ position: 'absolute', top: 16, right: 16 }}>
           {isCurrent ? (
             <span style={{
-              fontSize: 9, fontFamily: 'var(--t-font-mono)', fontWeight: 700,
+              fontSize: 9, fontFamily: 'var(--t-font-sans)', fontWeight: 700,
               color: 'var(--t-success)', background: 'rgba(34,197,94,0.12)',
               border: '1px solid rgba(34,197,94,0.3)',
               borderRadius: 9999, padding: '2px 9px',
-              letterSpacing: '0.1em', textTransform: 'uppercase',
+              letterSpacing: '0.04em', textTransform: 'uppercase',
             }}>
               ACTIVE
             </span>
           ) : isHighlighted ? (
             <span style={{
-              fontSize: 9, fontFamily: 'var(--t-font-mono)', fontWeight: 700,
+              fontSize: 9, fontFamily: 'var(--t-font-sans)', fontWeight: 700,
               color: '#2563eb', background: 'rgba(37,99,235,0.15)',
               border: '1px solid rgba(37,99,235,0.35)',
               borderRadius: 9999, padding: '2px 9px',
-              letterSpacing: '0.1em', textTransform: 'uppercase',
+              letterSpacing: '0.04em', textTransform: 'uppercase',
             }}>
               POPULAR
             </span>
@@ -328,7 +328,7 @@ function PlanCard({ plan, annual, selectedFunction, onSelectFunction, onActivate
 
         {/* Title */}
         <p style={{
-          fontFamily: 'var(--t-font-mono)',
+          fontFamily: 'var(--t-font-sans)',
           fontSize: 20,
           lineHeight: 1.12,
           letterSpacing: '0.08em',
@@ -357,7 +357,7 @@ function PlanCard({ plan, annual, selectedFunction, onSelectFunction, onActivate
           justifyContent: 'center', marginBottom: 6,
         }}>
           <span style={{
-            fontFamily: 'var(--t-font-mono)', fontSize: 28, fontWeight: 800,
+            fontFamily: 'var(--t-font-sans)', fontSize: 28, fontWeight: 800,
             color: 'var(--t-text)',
           }}>
             {formatPrice(price)}
@@ -368,7 +368,7 @@ function PlanCard({ plan, annual, selectedFunction, onSelectFunction, onActivate
         {annual && (
           <p style={{
             fontSize: 10, color: 'var(--t-success)',
-            fontFamily: 'var(--t-font-mono)',
+            fontFamily: 'var(--t-font-sans)',
             marginBottom: 8,
           }}>
             Save {Math.round(100 - ANNUAL_DISCOUNT * 100)}% with annual billing
@@ -391,8 +391,8 @@ function PlanCard({ plan, annual, selectedFunction, onSelectFunction, onActivate
           <div style={{
             height: 36, width: 'calc(100% - 56px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--t-font-mono)', fontSize: 10, fontWeight: 800,
-            letterSpacing: '0.18em', textTransform: 'uppercase',
+            fontFamily: 'var(--t-font-sans)', fontSize: 10, fontWeight: 800,
+            letterSpacing: '0.04em', textTransform: 'uppercase',
             background: 'rgba(34,197,94,0.18)',
             border: '1px solid var(--t-success)',
             color: 'var(--t-success)',
@@ -417,8 +417,8 @@ function PlanCard({ plan, annual, selectedFunction, onSelectFunction, onActivate
                 ? (ctaHover ? '#0f74e8' : '#1e88ff')
                 : (ctaHover ? 'rgba(37,99,235,0.08)' : 'transparent'),
               color: isHighlighted ? '#fff' : (ctaHover ? '#60a5fa' : 'var(--t-text-secondary)'),
-              fontFamily: 'var(--t-font-mono)', fontSize: 10, fontWeight: 800,
-              letterSpacing: '0.18em', textTransform: 'uppercase',
+              fontFamily: 'var(--t-font-sans)', fontSize: 10, fontWeight: 800,
+              letterSpacing: '0.04em', textTransform: 'uppercase',
               cursor: (activating || !canActivate) ? 'not-allowed' : 'pointer',
               opacity: activating && activating !== plan.id ? 0.45 : 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -433,7 +433,7 @@ function PlanCard({ plan, annual, selectedFunction, onSelectFunction, onActivate
         {/* Demo note */}
         <p style={{
           marginTop: 4, fontSize: 10,
-          color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-mono)',
+          color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)',
           textAlign: 'center',
         }}>
           Demo mode · instant activation
@@ -515,14 +515,14 @@ export default function TerminalPricing() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{
-              fontFamily: 'var(--t-font-mono)', fontSize: 10,
-              color: 'var(--t-text-muted)', textTransform: 'uppercase', letterSpacing: '0.2em',
+              fontFamily: 'var(--t-font-sans)', fontSize: 10,
+              color: 'var(--t-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em',
             }}>
               CHOOSE A PLAN
             </span>
             {hasActive && (
               <span style={{
-                fontSize: 10, fontFamily: 'var(--t-font-mono)', fontWeight: 700,
+                fontSize: 10, fontFamily: 'var(--t-font-sans)', fontWeight: 700,
                 color: 'var(--t-success)', background: 'rgba(34,197,94,0.12)',
                 border: '1px solid rgba(34,197,94,0.3)',
                 borderRadius: 9999, padding: '1px 10px',
@@ -538,11 +538,11 @@ export default function TerminalPricing() {
               type="button"
               onClick={() => navigate(-1)}
               style={{
-                fontFamily: 'var(--t-font-mono)', fontSize: 10,
+                fontFamily: 'var(--t-font-sans)', fontSize: 10,
                 color: 'var(--t-text-muted)', background: 'none',
                 border: '1px solid var(--t-border)',
                 borderRadius: 'var(--t-radius-sm)', padding: '3px 10px', cursor: 'pointer',
-                letterSpacing: '0.1em', textTransform: 'uppercase',
+                letterSpacing: '0.04em', textTransform: 'uppercase',
               }}
             >
               ← BACK
@@ -584,13 +584,13 @@ export default function TerminalPricing() {
                 display: 'flex', alignItems: 'center', gap: 10,
               }}>
                 <span style={{
-                  fontFamily: 'var(--t-font-mono)', fontSize: 10, fontWeight: 700,
-                  color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.12em',
+                  fontFamily: 'var(--t-font-sans)', fontSize: 10, fontWeight: 700,
+                  color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.04em',
                 }}>
                   Region
                 </span>
                 <span style={{
-                  fontFamily: 'var(--t-font-mono)', fontSize: 13,
+                  fontFamily: 'var(--t-font-sans)', fontSize: 13,
                   color: 'var(--t-text)',
                 }}>
                   China — covering East, North, South, West, Central China, Hong Kong, Taiwan & Macau
@@ -631,9 +631,9 @@ export default function TerminalPricing() {
                     borderTop: '1px solid var(--t-border-subtle)',
                   }}>
                     <span style={{
-                      fontFamily: 'var(--t-font-mono)', fontSize: 10,
+                      fontFamily: 'var(--t-font-sans)', fontSize: 10,
                       color: 'var(--t-text-muted)', textTransform: 'uppercase',
-                      letterSpacing: '0.1em', width: 200, flexShrink: 0,
+                      letterSpacing: '0.04em', width: 200, flexShrink: 0,
                     }}>
                       {f.label}
                     </span>

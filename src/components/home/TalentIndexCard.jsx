@@ -112,7 +112,7 @@ export default function TalentIndexCard({ totals = { candidates: 0, jobs: 0 }, t
           color: '#1e40af',
           fontSize: 12,
           fontWeight: 900,
-          letterSpacing: '0.12em',
+          letterSpacing: '0.04em',
           padding: '5px 10px',
           borderRadius: 6,
           border: '1.5px solid #1e40af',
@@ -125,7 +125,7 @@ export default function TalentIndexCard({ totals = { candidates: 0, jobs: 0 }, t
           <div style={{
             fontSize: 10,
             fontWeight: 800,
-            letterSpacing: '0.14em',
+            letterSpacing: '0.04em',
             color: '#1e3a6e',
             textTransform: 'uppercase',
             lineHeight: 1.4,
@@ -268,7 +268,7 @@ export default function TalentIndexCard({ totals = { candidates: 0, jobs: 0 }, t
             e.currentTarget.style.background  = viewIdx === 0 ? '#f0f5ff' : '#f8faff'
           }}
         >
-          <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>
+          <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>
             候选池
           </p>
           <p style={{ fontSize: 30, fontWeight: 900, color: '#2563eb', lineHeight: 1, marginBottom: 6 }}>
@@ -293,7 +293,7 @@ export default function TalentIndexCard({ totals = { candidates: 0, jobs: 0 }, t
             e.currentTarget.style.background  = viewIdx === 1 ? '#f0fdfe' : '#f8faff'
           }}
         >
-          <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>
+          <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>
             岗位需求
           </p>
           <p style={{ fontSize: 30, fontWeight: 900, color: '#0e7490', lineHeight: 1, marginBottom: 6 }}>
