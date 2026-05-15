@@ -228,13 +228,13 @@ def create_job():
     raw_management_headcount = data.get("management_headcount")
     if is_management_role:
         if raw_management_headcount is None or str(raw_management_headcount).strip() == "":
-            return _err("预计管理人数不能为空")
+            return _err("预计团队人数不能为空")
         raw_management_headcount_text = str(raw_management_headcount).strip()
         if not raw_management_headcount_text.isdigit():
-            return _err("预计管理人数必须为纯数字")
+            return _err("预计团队人数必须为纯数字")
         management_headcount = int(raw_management_headcount_text)
         if management_headcount <= 0 or management_headcount > 9999:
-            return _err("预计管理人数必须是 1-9999 之间的数字")
+            return _err("预计团队人数必须是 1-9999 之间的数字")
 
     knowledge_arr,  k_err = _validate_tags(data.get("knowledge_requirements"),  "knowledge_requirements")
     if k_err: return _err(k_err)

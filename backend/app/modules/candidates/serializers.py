@@ -27,6 +27,7 @@ def build_public_dict(profile: Candidate, include_contact: bool = False,
         "id": profile.id,
         # 公开字段（永远返回）
         "current_title": profile.current_title,
+        "desired_position": profile.desired_position,
         "current_city": profile.current_city,
         "expected_city": profile.expected_city,
         "expected_salary_min": profile.expected_salary_min,

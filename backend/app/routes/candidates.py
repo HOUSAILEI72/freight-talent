@@ -188,7 +188,7 @@ def update_me():
         soft_skill_tags_val, err = _validate_tags(data.get("soft_skill_tags"), "soft_skill_tags")
         if err: return _err(err)
 
-    VALID_AVAIL = {'open', 'passive', 'closed'}
+    VALID_AVAIL = {'open', 'passive_now', 'passive', 'closed'}
     avail = data.get("availability_status") or "open"
     if avail not in VALID_AVAIL:
         return _err(f"availability_status 只能是 {sorted(VALID_AVAIL)} 之一")
@@ -336,6 +336,7 @@ def update_me():
 
     profile.full_name = full_name
     profile.current_title = current_title
+    profile.desired_position = (data.get("desired_position") or "").strip() or None
     profile.current_city = current_city
     profile.current_company = (data.get("current_company") or "").strip() or None
     profile.expected_city = (data.get("expected_city") or "").strip() or None
@@ -569,7 +570,7 @@ def list_candidates():
         from app.models.candidate import Candidate as _Cand
         try:
             pool_counts["all"] = _db.session.query(_db.func.count(_Cand.id)).filter(
-                _Cand.availability_status.in_(["open", "passive"])
+                _Cand.availability_status.in_(["open", "passive_now", "passive"])
             ).scalar() or 0
         except Exception:
             pool_counts["all"] = None

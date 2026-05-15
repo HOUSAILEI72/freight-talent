@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
     "@province-city-china/data": "^8.5.8",
     "@tailwindcss/vite": "^4.2.2",
     "axios": "^1.15.0",

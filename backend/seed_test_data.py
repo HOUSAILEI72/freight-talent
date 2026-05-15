@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 app = create_app()
 
 CANDIDATES = [
-    {"full_name": "张明远", "current_title": "海运操作经理", "current_company": "中远海运物流",
+    {"full_name": "张明远", "gender": "male", "current_title": "海运操作经理", "current_company": "中远海运物流",
      "current_city": "上海", "expected_city": "上海", "experience_years": 12, "age": 35,
      "education": "本科 · 国际航运管理", "english_level": "CET-6",
      "business_type": "海运", "job_type": "操作",
@@ -39,7 +39,7 @@ CANDIDATES = [
      "current_salary_min": 30000, "current_salary_max": 40000, "current_salary_months": 13,
      "current_average_bonus_percent": 20, "current_has_year_end_bonus": True, "current_year_end_bonus_months": 2},
 
-    {"full_name": "李思雨", "current_title": "空运销售代表", "current_company": "DHL Global Forwarding",
+    {"full_name": "李思雨", "gender": "female", "current_title": "空运销售代表", "current_company": "DHL Global Forwarding",
      "current_city": "深圳", "expected_city": "深圳", "experience_years": 5, "age": 28,
      "education": "大专 · 物流管理", "english_level": "流利",
      "business_type": "空运", "job_type": "销售",
@@ -63,7 +63,7 @@ CANDIDATES = [
      "current_salary_min": 15000, "current_salary_max": 20000, "current_salary_months": 13,
      "current_average_bonus_percent": 30, "current_has_year_end_bonus": True, "current_year_end_bonus_months": 3},
 
-    {"full_name": "王建国", "current_title": "报关部主管", "current_company": "上海欣海报关",
+    {"full_name": "王建国", "gender": "male", "current_title": "报关部主管", "current_company": "上海欣海报关",
      "current_city": "上海", "expected_city": "上海", "experience_years": 15, "age": 42,
      "education": "本科 · 国际贸易", "english_level": "CET-4",
      "business_type": "报关", "job_type": "客服",
@@ -87,7 +87,7 @@ CANDIDATES = [
      "current_salary_min": 20000, "current_salary_max": 28000, "current_salary_months": 13,
      "current_average_bonus_percent": 15, "current_has_year_end_bonus": True, "current_year_end_bonus_months": 1},
 
-    {"full_name": "陈晓峰", "current_title": "陆运调度员", "current_company": "德邦物流",
+    {"full_name": "陈晓峰", "gender": "male", "current_title": "陆运调度员", "current_company": "德邦物流",
      "current_city": "广州", "expected_city": "广州", "experience_years": 6, "age": 30,
      "education": "大专 · 交通运输", "english_level": "一般",
      "business_type": "陆运", "job_type": "操作",
@@ -111,7 +111,7 @@ CANDIDATES = [
      "current_salary_min": 10000, "current_salary_max": 15000, "current_salary_months": 12,
      "current_average_bonus_percent": 10, "current_has_year_end_bonus": True, "current_year_end_bonus_months": 1},
 
-    {"full_name": "刘芳华", "current_title": "跨境电商物流专员", "current_company": "菜鸟网络",
+    {"full_name": "刘芳华", "gender": "female", "current_title": "跨境电商物流专员", "current_company": "菜鸟网络",
      "current_city": "杭州", "expected_city": "杭州", "experience_years": 4, "age": 26,
      "education": "本科 · 电子商务", "english_level": "CET-6",
      "business_type": "综合物流", "job_type": "销售",
@@ -135,7 +135,7 @@ CANDIDATES = [
      "current_salary_min": 12000, "current_salary_max": 18000, "current_salary_months": 14,
      "current_average_bonus_percent": 20, "current_has_year_end_bonus": True, "current_year_end_bonus_months": 2},
 
-    {"full_name": "赵志强", "current_title": "铁路货运经理", "current_company": "中铁集装箱运输",
+    {"full_name": "赵志强", "gender": "male", "current_title": "铁路货运经理", "current_company": "中铁集装箱运输",
      "current_city": "郑州", "expected_city": "郑州", "experience_years": 10, "age": 38,
      "education": "本科 · 铁道运输", "english_level": "CET-4",
      "business_type": "铁路", "job_type": "操作",
@@ -159,7 +159,7 @@ CANDIDATES = [
      "current_salary_min": 22000, "current_salary_max": 30000, "current_salary_months": 13,
      "current_average_bonus_percent": 15, "current_has_year_end_bonus": True, "current_year_end_bonus_months": 2},
 
-    {"full_name": "周美琪", "current_title": "海运客服主管", "current_company": "马士基航运",
+    {"full_name": "周美琪", "gender": "female", "current_title": "海运客服主管", "current_company": "马士基航运",
      "current_city": "青岛", "expected_city": "青岛", "experience_years": 8, "age": 32,
      "education": "本科 · 英语", "english_level": "专业八级",
      "business_type": "海运", "job_type": "客服",
@@ -183,7 +183,7 @@ CANDIDATES = [
      "current_salary_min": 18000, "current_salary_max": 25000, "current_salary_months": 13,
      "current_average_bonus_percent": 15, "current_has_year_end_bonus": True, "current_year_end_bonus_months": 1},
 
-    {"full_name": "吴明辉", "current_title": "合同物流项目经理", "current_company": "中外运合同物流",
+    {"full_name": "吴明辉", "gender": "male", "current_title": "合同物流项目经理", "current_company": "中外运合同物流",
      "current_city": "苏州", "expected_city": "苏州", "experience_years": 9, "age": 34,
      "education": "硕士 · 物流工程", "english_level": "CET-6",
      "business_type": "合同物流", "job_type": "管理",
@@ -208,7 +208,7 @@ CANDIDATES = [
      "current_salary_min": 25000, "current_salary_max": 35000, "current_salary_months": 14,
      "current_average_bonus_percent": 25, "current_has_year_end_bonus": True, "current_year_end_bonus_months": 3},
 
-    {"full_name": "孙丽萍", "current_title": "货代操作员", "current_company": "深圳华运国际物流",
+    {"full_name": "孙丽萍", "gender": "female", "current_title": "货代操作员", "current_company": "深圳华运国际物流",
      "current_city": "深圳", "expected_city": "深圳", "experience_years": 3, "age": 25,
      "education": "大专 · 商务英语", "english_level": "CET-4",
      "business_type": "海运", "job_type": "操作",
@@ -232,7 +232,7 @@ CANDIDATES = [
      "current_salary_min": 8000, "current_salary_max": 12000, "current_salary_months": 12,
      "current_average_bonus_percent": 10, "current_has_year_end_bonus": True, "current_year_end_bonus_months": 1},
 
-    {"full_name": "黄伟杰", "current_title": "供应链分析师", "current_company": "UPS Supply Chain",
+    {"full_name": "黄伟杰", "gender": "male", "current_title": "供应链分析师", "current_company": "UPS Supply Chain",
      "current_city": "香港", "expected_city": "香港", "experience_years": 7, "age": 31,
      "education": "硕士 · 供应链管理", "english_level": "流利",
      "business_type": "综合物流", "job_type": "管理",
@@ -465,6 +465,7 @@ def seed():
             profile = Candidate(
                 user_id=user.id,
                 full_name=c["full_name"],
+                gender=c.get("gender"),
                 current_title=c["current_title"],
                 current_company=c["current_company"],
                 current_city=c["current_city"],

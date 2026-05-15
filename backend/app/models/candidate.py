@@ -13,6 +13,7 @@ class Candidate(db.Model):
     # 基本信息
     full_name = db.Column(db.String(60), nullable=False)
     current_title = db.Column(db.String(100), nullable=False)
+    desired_position = db.Column(db.String(100), nullable=True)
     current_company = db.Column(db.String(100), nullable=True)
     current_city = db.Column(db.String(50), nullable=False)
     expected_city = db.Column(db.String(50), nullable=True)
@@ -49,7 +50,7 @@ class Candidate(db.Model):
 
     # 求职状态
     availability_status = db.Column(
-        db.Enum("open", "passive", "closed", name="availability_status"),
+        db.Enum("open", "passive_now", "passive", "closed", name="availability_status"),
         nullable=False,
         default="open",
         index=True,

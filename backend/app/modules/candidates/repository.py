@@ -32,8 +32,8 @@ def list_candidates_with_filters(
     query = Candidate.query
 
     if avail_param == "all":
-        query = query.filter(Candidate.availability_status.in_(["open", "passive"]))
-    elif avail_param in ("open", "passive"):
+        query = query.filter(Candidate.availability_status.in_(["open", "passive_now", "passive"]))
+    elif avail_param in ("open", "passive_now", "passive"):
         query = query.filter(Candidate.availability_status == avail_param)
     else:
         query = query.filter(Candidate.availability_status == "open")
@@ -170,7 +170,7 @@ def list_candidates_with_filters(
 def count_candidates_by_business_area() -> list:
     return (
         db.session.query(Candidate.business_area_code, db.func.count(Candidate.id))
-        .filter(Candidate.availability_status.in_(["open", "passive"]))
+        .filter(Candidate.availability_status.in_(["open", "passive_now", "passive"]))
         .filter(Candidate.business_area_code.isnot(None))
         .group_by(Candidate.business_area_code)
         .all()
