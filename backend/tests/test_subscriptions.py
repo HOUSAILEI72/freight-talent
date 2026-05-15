@@ -719,3 +719,80 @@ class TestChinaScopeExpansion:
             expected = int(p["monthly_price"] * 12 * 0.85)
             assert p["annual_price"] == expected, \
                 f"{p['id']}: expected {expected}, got {p['annual_price']}"
+
+
+class TestDashboardTrendSummaryGrowth:
+    """dashboard-trend-summary 接口返回 platform_totals 和 growth 字段"""
+
+    def test_trend_summary_200_and_fields(self, app, client, db_session):
+        emp_user = _make_employer_user(app, db_session, "emp_growth1@ex.com")
+        token = client.post("/api/auth/login", json={
+            "email": "emp_growth1@ex.com", "password": "Pass123!",
+        }).get_json()["access_token"]
+
+        r = client.get(
+            "/api/employer/dashboard-trend-summary?function=ALL&region=ALL",
+            headers=_auth(token),
+        )
+        assert r.status_code == 200
+        data = r.get_json()
+        assert data["success"] is True
+
+        pt = data.get("platform_totals", {})
+        assert "candidates" in pt
+        assert "jobs" in pt
+        assert "teams" in pt
+        assert "soon" in pt
+        assert isinstance(pt["candidates"], int)
+        assert isinstance(pt["jobs"], int)
+        assert isinstance(pt["teams"], int)
+
+        growth = data.get("growth", {})
+        for key in ("jobs", "candidates"):
+            g = growth.get(key, {})
+            assert "label" in g, f"growth.{key} missing label"
+            assert "ytd_delta" in g, f"growth.{key} missing ytd_delta"
+            assert "week_delta" in g, f"growth.{key} missing week_delta"
+            assert "ytd_percent" in g, f"growth.{key} missing ytd_percent"
+            assert "week_percent" in g, f"growth.{key} missing week_percent"
+            assert "total" in g, f"growth.{key} missing total"
+            assert "direction" in g, f"growth.{key} missing direction"
+            assert isinstance(g["ytd_delta"], int)
+            assert isinstance(g["week_delta"], int)
+            assert isinstance(g["ytd_percent"], (int, float))
+            assert isinstance(g["week_percent"], (int, float))
+            assert "ytd_base" in g, f"growth.{key} missing ytd_base"
+            assert "week_base" in g, f"growth.{key} missing week_base"
+            assert g["direction"] in ("up", "neutral")
+            # 口径验证：增长率 = delta / base（年初/周初存量），不是 delta / total_now
+            ytd_base = g["ytd_base"]
+            if ytd_base > 0:
+                expected_ytd = round(g["ytd_delta"] / ytd_base * 100, 1)
+                assert abs(g["ytd_percent"] - expected_ytd) < 0.01, \
+                    f"growth.{key}.ytd_percent: expected {expected_ytd}, got {g['ytd_percent']}"
+            else:
+                assert g["ytd_percent"] in (0.0, 100.0)
+            week_base = g["week_base"]
+            if week_base > 0:
+                expected_week = round(g["week_delta"] / week_base * 100, 1)
+                assert abs(g["week_percent"] - expected_week) < 0.01, \
+                    f"growth.{key}.week_percent: expected {expected_week}, got {g['week_percent']}"
+            else:
+                assert g["week_percent"] in (0.0, 100.0)
+
+    def test_trend_summary_old_cards_still_present(self, app, client, db_session):
+        """保证旧 cards 字段不被破坏（兼容旧前端引用）"""
+        emp_user = _make_employer_user(app, db_session, "emp_growth2@ex.com")
+        token = client.post("/api/auth/login", json={
+            "email": "emp_growth2@ex.com", "password": "Pass123!",
+        }).get_json()["access_token"]
+
+        r = client.get(
+            "/api/employer/dashboard-trend-summary?function=ALL&region=ALL",
+            headers=_auth(token),
+        )
+        assert r.status_code == 200
+        data = r.get_json()
+        assert "cards" in data
+        assert "candidates" in data["cards"]
+        assert "jobs" in data["cards"]

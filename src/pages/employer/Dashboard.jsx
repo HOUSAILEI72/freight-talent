@@ -1,27 +1,81 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Database, TrendingUp, Inbox, Briefcase, Heart, UsersRound, Wrench, UserSearch } from 'lucide-react'
+import { Users, Briefcase, Heart, UsersRound, Wrench, UserSearch } from 'lucide-react'
 
+function formatPercent(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return '—'
+  const sign = number > 0 ? '+' : ''
+  const normalized = Number.isInteger(number)
+    ? String(number)
+    : number.toFixed(1).replace(/\.0$/, '')
+  return `${sign}${normalized}%`
+}
+
+function getGrowthPercent(growthData, legacyCard, key) {
+  if (key === 'ytd') {
+    return growthData?.ytd_percent
+      ?? growthData?.ytdPercent
+      ?? growthData?.percent
+      ?? legacyCard?.percent
+      ?? 0
+  }
+  return growthData?.week_percent
+    ?? growthData?.weekPercent
+    ?? 0
+}
+
+// ── TrendSummaryCard ──────────────────────────────────────────────────────
+function TrendSummaryCard({ type, data, loading }) {
+  const growthData = data?.growth?.[type]
+  const legacyCard = data?.cards?.[type]
+  const title = type === 'jobs' ? 'PLATFORM JOB GROWTH' : 'PLATFORM CANDIDATE GROWTH'
+
+  const ytdPct  = getGrowthPercent(growthData, legacyCard, 'ytd')
+  const weekPct = getGrowthPercent(growthData, legacyCard, 'week')
+  const ytdUp   = ytdPct  > 0
+  const weekUp  = weekPct > 0
+
+  return (
+    <div className="terminal-growth-card">
+      <span className="terminal-growth-card-label">{title}</span>
+      <div className="terminal-growth-card-rows">
+        <div className="terminal-growth-row">
+          <span>YTD</span>
+          <strong className="terminal-growth-row-value" style={{ color: ytdUp ? 'var(--t-trend-up)' : 'var(--t-trend-neutral)' }}>
+            {loading ? '—' : formatPercent(ytdPct)}
+          </strong>
+        </div>
+        <div className="terminal-growth-row">
+          <span>THIS WEEK</span>
+          <strong className="terminal-growth-row-value terminal-growth-row-value--sm" style={{ color: weekUp ? 'var(--t-trend-up)' : 'var(--t-trend-neutral)' }}>
+            {loading ? '—' : formatPercent(weekPct)}
+          </strong>
+        </div>
+      </div>
+    </div>
+  )
+}
 // ── LockedInsightsPanel ───────────────────────────────────────────────────
 function LockedInsightsPanel({ locked, onPricingClick, children }) {
   return (
-    <section className="relative shrink-0 overflow-hidden rounded-[var(--t-radius-lg)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] shadow-[var(--t-shadow-panel)]">
+    <section className="relative shrink-0 overflow-visible rounded-[var(--t-radius-lg)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] shadow-[var(--t-shadow-panel)]">
       <div className={locked ? 'pointer-events-none select-none blur-[5px] opacity-35' : ''}>
         {children}
       </div>
-
       {locked && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[rgba(7,10,16,0.45)] backdrop-blur-[2px]">
+        <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(2px)', borderRadius: 'var(--t-radius-lg)' }}>
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)]">
+            <div className="text-[15px] font-semibold text-[color:var(--t-text)]">
               Unlock market insights
             </div>
             <button
               type="button"
               onClick={onPricingClick}
-              className="h-8 rounded-[var(--t-radius)] border border-[color:var(--t-primary)] px-4 font-[var(--t-font-mono)] text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--t-text)] hover:bg-[color:var(--t-primary)]"
+              className="h-8 rounded-[var(--t-radius)] border px-4 text-[12px] font-bold uppercase tracking-[0.06em] hover:opacity-90"
+              style={{ borderColor: 'var(--t-primary)', color: 'var(--t-text)', background: 'transparent' }}
             >
-              VIEW PRICING
+              View Pricing
             </button>
           </div>
         </div>
@@ -29,94 +83,11 @@ function LockedInsightsPanel({ locked, onPricingClick, children }) {
     </section>
   )
 }
-// ── TrendSummaryCard ──────────────────────────────────────────────────────
-function TrendSummaryCard({ type, data, loading }) {
-  const title = type === 'candidates' ? 'PLATFORM CANDIDATES' : 'PLATFORM JOBS'
-  const card = data?.cards?.[type]
-
-  const cardClass =
-    'terminal-trend-card rounded-[var(--t-radius-lg)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] shadow-[var(--t-shadow-panel)]'
-
-  const labelEl = (
-    <span className="terminal-trend-card-label font-[var(--t-font-mono)] text-[10px] uppercase text-[color:var(--t-text-muted)]">
-      {title}
-    </span>
-  )
-
-  if (loading) {
-    return (
-      <div className={cardClass}>
-        {labelEl}
-        <div className="terminal-trend-card-main">
-          <span className="terminal-trend-card-value font-[var(--t-font-mono)] font-bold text-[color:var(--t-text-secondary)]">
-            —
-          </span>
-        </div>
-        <div className="terminal-trend-card-footer">
-          <span className="terminal-trend-card-meta font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
-            &nbsp;
-          </span>
-        </div>
-      </div>
-    )
-  }
-
-  if (!card) {
-    return (
-      <div className={cardClass}>
-        {labelEl}
-        <div className="terminal-trend-card-main">
-          <span className="font-[var(--t-font-mono)] text-[26px] font-bold uppercase tracking-wide text-[color:var(--t-text-secondary)]">
-            NO DATA
-          </span>
-        </div>
-        <div className="terminal-trend-card-footer">
-          <span className="terminal-trend-card-meta font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
-            &nbsp;
-          </span>
-        </div>
-      </div>
-    )
-  }
-
-  const deltaSign = card.delta > 0 ? '+' : ''
-  const percentSign = card.percent > 0 ? '+' : ''
-  const deltaColor =
-    card.direction === 'up'
-      ? 'var(--t-trend-up)'
-      : card.direction === 'down'
-        ? 'var(--t-trend-down)'
-        : 'var(--t-text-muted)'
-
-  return (
-    <div className={cardClass}>
-      {labelEl}
-      <div className="terminal-trend-card-main">
-        <span className="terminal-trend-card-value font-[var(--t-font-mono)] font-bold text-[color:var(--t-text)]">
-          {card.current}
-        </span>
-      </div>
-      <div className="terminal-trend-card-footer">
-        <span className="terminal-trend-card-meta font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-secondary)]">
-          AS OF {data.current_checkpoint}
-        </span>
-        <span
-          className="terminal-trend-card-change font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-bold"
-          style={{ color: deltaColor }}
-        >
-          {deltaSign}{card.delta} / {percentSign}{card.percent}%
-        </span>
-        <span className="terminal-trend-card-compare font-[var(--t-font-mono)] text-[10px] uppercase tracking-wider text-[color:var(--t-text-muted)]">
-          VS {data.previous_checkpoint}
-        </span>
-      </div>
-    </div>
-  )
-}
 // ─────────────────────────────────────────────────────────────────────────
 import TerminalLayout from '../../components/terminal/TerminalLayout'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 import AreaRail from '../../components/terminal/AreaRail'
+import { DEFAULT_AREAS } from '../../components/terminal/AreaSidebar'
 import FunctionSidebar from '../../components/terminal/FunctionSidebar'
 import CandidateChartPanel from '../../components/terminal/CandidateChartPanel'
 import TerminalActionBar from '../../components/terminal/TerminalActionBar'
@@ -127,11 +98,6 @@ import { subscriptionsApi } from '../../api/subscriptions'
 
 const DEFAULT_FUNCTION = 'ALL'
 const DEFAULT_AREA = 'China'
-const SHOW_SECONDARY_METRICS = false
-
-const DASHBOARD_AREA_OPTIONS = [
-  { key: 'China', label: 'CHINA', short: 'CN', code: 'GREAT_CHINA' },
-]
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -172,95 +138,69 @@ export default function Dashboard() {
     setChartLoading(true)
     const regionForApi = selectedArea === 'Global' ? 'ALL' : selectedArea
     employerDashboardApi
-      .getChart({
-        functionValue: selectedFunction,
-        regionValue: regionForApi,
-        granularity,
-      })
-      .then((res) => {
-        if (alive) setChart(res.data)
-      })
-      .catch(() => {
-        if (alive) setChart(null)
-      })
-      .finally(() => {
-        if (alive) setChartLoading(false)
-      })
-    return () => {
-      alive = false
-    }
+      .getChart({ functionValue: selectedFunction, regionValue: regionForApi, granularity })
+      .then((res) => { if (alive) setChart(res.data) })
+      .catch(() => { if (alive) setChart(null) })
+      .finally(() => { if (alive) setChartLoading(false) })
+    return () => { alive = false }
   }, [selectedFunction, selectedArea, granularity])
 
   useEffect(() => {
     let alive = true
     setTrendLoading(true)
-    const regionForApi = selectedArea === 'Global' ? 'ALL' : selectedArea
     employerDashboardApi
-      .getTrendSummary({
-        functionValue: selectedFunction,
-        regionValue: regionForApi,
-      })
-      .then((res) => {
-        if (alive) setTrendSummary(res.data)
-      })
-      .catch(() => {
-        if (alive) setTrendSummary(null)
-      })
-      .finally(() => {
-        if (alive) setTrendLoading(false)
-      })
-    return () => {
-      alive = false
-    }
-  }, [selectedFunction, selectedArea])
+      .getTrendSummary({ functionValue: 'ALL', regionValue: 'ALL' })
+      .then((res) => { if (alive) setTrendSummary(res.data) })
+      .catch(() => { if (alive) setTrendSummary(null) })
+      .finally(() => { if (alive) setTrendLoading(false) })
+    return () => { alive = false }
+  }, [])
 
   const chartBars = useMemo(() => {
     const bars = chart?.bars ?? []
     const staleShape = bars.some((item) => item?.period == null && item?.period_label == null)
     if (staleShape) {
-      console.warn('Employer dashboard chart ignored non-time-series payload:', {
-        mode: chart?.mode,
-        bars,
-      })
+      console.warn('Employer dashboard chart ignored non-time-series payload:', { mode: chart?.mode, bars })
       return []
     }
     return bars
   }, [chart])
-  const total = chart?.total ?? 0
-  const stats = chart?.stats ?? {}
-  const applicationsCount = stats.applications_received ?? 0
-  const jobsCount = stats.jobs ?? 0
-  const favoritesCount = useMemo(() => {
-    try {
-      const raw = localStorage.getItem(`archived_${user?.id}`)
-      return raw ? JSON.parse(raw).length : 0
-    } catch {
-      return 0
-    }
-  }, [user?.id])
 
   const subtitle = `FUNC=${selectedFunction} / AREA=${selectedArea}`
-  const filterHelper = selectedFunction === DEFAULT_FUNCTION && selectedArea === DEFAULT_AREA
-    ? 'ALL FUNCTIONS / CHINA'
-    : subtitle
   const updatedAt = chart?.updated_at
     ? new Date(chart.updated_at).toLocaleString('zh-CN')
     : '—'
 
+  const stats = chart?.stats ?? {}
+  const jobsCount = stats.jobs ?? 0
+  const applicationsCount = stats.applicant_candidates ?? stats.applications_received ?? 0
+  const favoritesCount = stats.favorited_candidates ?? 0
+  const filterHelper =
+    selectedFunction === DEFAULT_FUNCTION && selectedArea === DEFAULT_AREA
+      ? 'ALL FUNCTIONS / CHINA'
+      : `FUNC=${selectedFunction} / AREA=${selectedArea}`
+
+  const legacyTrendCards = trendSummary?.cards ?? {}
+  const platformTotals = {
+    candidates: trendSummary?.platform_totals?.candidates ?? legacyTrendCards.candidates?.current,
+    jobs: trendSummary?.platform_totals?.jobs ?? legacyTrendCards.jobs?.current,
+    teams: trendSummary?.platform_totals?.teams,
+  }
   const companyName = user?.company_name || user?.name || 'Employer'
-  const insightsLocked = hasSubscription === false
 
   return (
-    <TerminalLayout title="DASHBOARD" activeIconId="dashboard">
-      {/* Area rail (collapsible on hover — narrow first column) */}
+    <TerminalLayout
+      title="DASHBOARD"
+      activeIconId="dashboard"
+    >
+      {/* Area rail */}
       <AreaRail
         value={selectedArea}
         onChange={handleAreaChange}
-        areas={DASHBOARD_AREA_OPTIONS}
-        hasSubscription={hasSubscription}
+        areas={DEFAULT_AREAS}
       />
 
-      {/* Function sidebar (always expanded — second column) */}
+      {/* Function sidebar */}
       <FunctionSidebar
         value={selectedFunction}
         onChange={handleFunctionChange}
@@ -271,27 +211,59 @@ export default function Dashboard() {
       {/* Main workspace */}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Sub-header strip */}
-        <div className="flex shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-5 py-3">
+        <div
+          className="flex shrink-0 items-center justify-between px-5 py-3"
+          style={{ borderBottom: '1px solid var(--t-border-subtle)' }}
+        >
           <div className="flex items-center gap-3 min-w-0">
-            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
-              ACCOUNT
+            <span className="text-[11px] font-medium tracking-[0.04em]" style={{ color: 'var(--t-text-muted)' }}>
+              Account
             </span>
-            <span className="font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)] truncate">
+            <span className="text-[14px] font-semibold truncate" style={{ color: 'var(--t-text)' }}>
               {companyName}
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
-              UPDATED
+            <span className="text-[11px] font-medium tracking-[0.04em]" style={{ color: 'var(--t-text-muted)' }}>
+              Updated
             </span>
-            <span className="font-[var(--t-font-mono)] text-[10px] text-[color:var(--t-text-secondary)]">
+            <span className="text-[12px]" style={{ color: 'var(--t-text-secondary)' }}>
               {updatedAt}
             </span>
           </div>
         </div>
 
-        {/* Body — chart panel + locked insights + action bar */}
+        {/* Body */}
         <div className="terminal-dashboard-body terminal-scrollbar min-w-0">
+          {/* Platform count strip */}
+          <div className="terminal-platform-count-grid shrink-0">
+            <MetricCard
+              compact
+              label="PLATFORM CANDIDATES"
+              value={trendLoading ? '—' : (platformTotals.candidates ?? 0)}
+              icon={<Users size={14} />}
+            />
+            <MetricCard
+              compact
+              label="PLATFORM JOBS"
+              value={trendLoading ? '—' : (platformTotals.jobs ?? 0)}
+              icon={<Briefcase size={14} />}
+            />
+            <MetricCard
+              compact
+              label="PLATFORM TEAMS"
+              value={trendLoading ? '—' : (platformTotals.teams ?? 0)}
+              icon={<UsersRound size={14} />}
+            />
+            <MetricCard
+              compact
+              label="TO BE SOON"
+              value="—"
+              helper="COMING SOON"
+              icon={<Wrench size={14} />}
+            />
+          </div>
+
           {/* Chart + trend sidebar */}
           <div className="terminal-dashboard-main min-w-0">
             <CandidateChartPanel
@@ -305,17 +277,17 @@ export default function Dashboard() {
               onGranularityChange={setGranularity}
             />
             <aside className="terminal-dashboard-stats-aside-wrap">
-              <TrendSummaryCard type="candidates" data={trendSummary} loading={trendLoading} />
               <TrendSummaryCard type="jobs"       data={trendSummary} loading={trendLoading} />
+              <TrendSummaryCard type="candidates" data={trendSummary} loading={trendLoading} />
             </aside>
           </div>
 
-          {/* Freightos-style locked insight panel */}
+          {/* Employer metrics panel */}
           <LockedInsightsPanel
-            locked={insightsLocked}
+            locked={hasSubscription === false}
             onPricingClick={() => navigate('/employer/pricing')}
           >
-            <div className="flex flex-col gap-4 p-4">
+            <div className="terminal-insights-panel flex flex-col">
               <div className="terminal-card-grid">
                 <MetricCard
                   compact
@@ -326,73 +298,23 @@ export default function Dashboard() {
                 />
                 <MetricCard
                   compact
-                  label="APPLICATIONS"
+                  label="APPLICANT CANDIDATES"
                   value={chartLoading ? '—' : applicationsCount}
                   helper={filterHelper}
-                  icon={<Inbox size={14} />}
+                  icon={<Users size={14} />}
                 />
                 <MetricCard
                   compact
-                  label="INTERESTED"
+                  label="FAVORITED CANDIDATES"
                   value={chartLoading ? '—' : favoritesCount}
                   helper={filterHelper}
                   icon={<Heart size={14} />}
                 />
               </div>
-              <div className="terminal-card-grid">
-                <MetricCard
-                  compact
-                  label="2.0 后续迭代"
-                  value="—"
-                  helper="COMING SOON"
-                  icon={<Wrench size={14} />}
-                />
-                <MetricCard
-                  compact
-                  label="2.0 后续迭代"
-                  value="—"
-                  helper="COMING SOON"
-                  icon={<UserSearch size={14} />}
-                />
-                <MetricCard
-                  compact
-                  label="2.0 后续迭代"
-                  value="—"
-                  helper="COMING SOON"
-                  icon={<UsersRound size={14} />}
-                />
-              </div>
             </div>
           </LockedInsightsPanel>
 
-          {/* Metric strip — Row 2 (hidden, code preserved) */}
-          {SHOW_SECONDARY_METRICS && (
-          <div className="terminal-card-grid shrink-0">
-            <MetricCard
-              compact
-              label="CANDIDATES"
-              value={chartLoading ? '—' : total}
-              helper={filterHelper}
-              icon={<Users size={14} />}
-            />
-            <MetricCard
-              compact
-              label="FUNCTIONS"
-              value={DEFAULT_FUNCTIONS.length - 1}
-              helper={selectedFunction === DEFAULT_FUNCTION ? 'ALL' : selectedFunction}
-              icon={<Database size={14} />}
-            />
-            <MetricCard
-              compact
-              label="AREAS"
-              value={DASHBOARD_AREA_OPTIONS.length}
-              helper={selectedArea}
-              icon={<TrendingUp size={14} />}
-            />
-          </div>
-          )}
-
-          {/* Bottom CTA bar — always visible, never blurred */}
+          {/* Bottom CTA bar */}
           <TerminalActionBar actions={[
             {
               icon: Briefcase,

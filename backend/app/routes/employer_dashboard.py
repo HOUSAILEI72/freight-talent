@@ -12,6 +12,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func as sa_func, or_
 
 from app.extensions import db
+from app.models.candidate import Candidate
+from app.models.employer_candidate_favorite import EmployerCandidateFavorite
 from app.models.invitation import Invitation
 from app.models.job import Job
 from app.models.job_application import JobApplication
@@ -317,10 +319,158 @@ def _count_interested_candidates(employer_id, function_value, region_value):
         return 0
 
 
+def _count_applicant_candidates(employer_id, function_value, region_value):
+    """投递该企业岗位的去重候选人数。"""
+    try:
+        query = (
+            db.session.query(sa_func.count(sa_func.distinct(JobApplication.candidate_id)))
+            .join(Job, Job.id == JobApplication.job_id)
+            .filter(JobApplication.employer_id == employer_id)
+        )
+        query = _apply_job_filters(query, function_value, region_value)
+        return int(query.scalar() or 0)
+    except Exception:
+        return 0
+
+
+def _count_favorited_candidates(employer_id):
+    """该企业收藏的候选人数。"""
+    try:
+        return int(
+            db.session.query(sa_func.count(EmployerCandidateFavorite.id))
+            .filter(EmployerCandidateFavorite.employer_id == employer_id)
+            .scalar() or 0
+        )
+    except Exception:
+        return 0
+
+
 # ── Trend summary helpers ──────────────────────────────────────────────────
 
 # Asia/Shanghai is always UTC+8 (no DST)
 _SHANGHAI_TZ = timezone(timedelta(hours=8))
+
+
+def _start_of_year_utc_naive():
+    """今年 1 月 1 日 00:00:00 Asia/Shanghai → UTC naive"""
+    now_sh = datetime.now(_SHANGHAI_TZ)
+    start_sh = datetime(now_sh.year, 1, 1, 0, 0, 0, tzinfo=_SHANGHAI_TZ)
+    return start_sh.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _start_of_week_utc_naive():
+    """本周一 00:00:00 Asia/Shanghai → UTC naive（weekday() Monday=0）"""
+    now_sh = datetime.now(_SHANGHAI_TZ)
+    days_since_monday = now_sh.weekday()
+    monday_sh = now_sh - timedelta(days=days_since_monday)
+    monday_start_sh = datetime(monday_sh.year, monday_sh.month, monday_sh.day, 0, 0, 0, tzinfo=_SHANGHAI_TZ)
+    return monday_start_sh.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _now_utc_naive():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _count_platform_candidates_total(function_value, region_value):
+    sql_parts = [
+        "SELECT COUNT(*) FROM candidates WHERE availability_status IN ('open', 'passive')"
+    ]
+    params = {}
+    if function_value != ALL_VALUE:
+        sql_parts.append(" AND (function_code = :func OR business_type = :func)")
+        params['func'] = function_value
+    if region_value == DEFAULT_REGION_VALUE:
+        placeholders = ', '.join(f':area_{i}' for i in range(len(GREAT_CHINA_AREA_CODES)))
+        sql_parts.append(f" AND business_area_code IN ({placeholders})")
+        for i, code in enumerate(GREAT_CHINA_AREA_CODES):
+            params[f'area_{i}'] = code
+    elif region_value != ALL_VALUE:
+        sql_parts.append(" AND business_area_code = :area")
+        params['area'] = region_value
+    try:
+        return int(db.session.execute(db.text(''.join(sql_parts)), params).scalar() or 0)
+    except Exception:
+        return 0
+
+
+def _count_platform_jobs_total(function_value, region_value):
+    sql_parts = ["SELECT COUNT(*) FROM jobs WHERE status = 'published'"]
+    params = {}
+    if function_value != ALL_VALUE:
+        sql_parts.append(" AND (function_code = :func OR business_type = :func)")
+        params['func'] = function_value
+    if region_value == DEFAULT_REGION_VALUE:
+        placeholders = ', '.join(f':area_{i}' for i in range(len(GREAT_CHINA_AREA_CODES)))
+        sql_parts.append(f" AND business_area_code IN ({placeholders})")
+        for i, code in enumerate(GREAT_CHINA_AREA_CODES):
+            params[f'area_{i}'] = code
+    elif region_value != ALL_VALUE:
+        sql_parts.append(" AND business_area_code = :area")
+        params['area'] = region_value
+    try:
+        return int(db.session.execute(db.text(''.join(sql_parts)), params).scalar() or 0)
+    except Exception:
+        return 0
+
+
+def _count_platform_teams_total():
+    try:
+        return int(db.session.query(sa_func.count(User.id)).filter(
+            User.role == 'employer',
+            User.is_active == True,
+        ).scalar() or 0)
+    except Exception:
+        return 0
+
+
+def _count_platform_candidates_since(function_value, region_value, start, end):
+    sql_parts = [
+        """SELECT COUNT(*) FROM candidates
+        WHERE availability_status IN ('open', 'passive')
+          AND COALESCE(profile_confirmed_at, created_at) >= :start
+          AND COALESCE(profile_confirmed_at, created_at) < :end"""
+    ]
+    params = {'start': start, 'end': end}
+    if function_value != ALL_VALUE:
+        sql_parts.append(" AND (function_code = :func OR business_type = :func)")
+        params['func'] = function_value
+    if region_value == DEFAULT_REGION_VALUE:
+        placeholders = ', '.join(f':area_{i}' for i in range(len(GREAT_CHINA_AREA_CODES)))
+        sql_parts.append(f" AND business_area_code IN ({placeholders})")
+        for i, code in enumerate(GREAT_CHINA_AREA_CODES):
+            params[f'area_{i}'] = code
+    elif region_value != ALL_VALUE:
+        sql_parts.append(" AND business_area_code = :area")
+        params['area'] = region_value
+    try:
+        return int(db.session.execute(db.text(''.join(sql_parts)), params).scalar() or 0)
+    except Exception:
+        return 0
+
+
+def _count_platform_jobs_since(function_value, region_value, start, end):
+    sql_parts = [
+        """SELECT COUNT(*) FROM jobs
+        WHERE status = 'published'
+          AND created_at >= :start
+          AND created_at < :end"""
+    ]
+    params = {'start': start, 'end': end}
+    if function_value != ALL_VALUE:
+        sql_parts.append(" AND (function_code = :func OR business_type = :func)")
+        params['func'] = function_value
+    if region_value == DEFAULT_REGION_VALUE:
+        placeholders = ', '.join(f':area_{i}' for i in range(len(GREAT_CHINA_AREA_CODES)))
+        sql_parts.append(f" AND business_area_code IN ({placeholders})")
+        for i, code in enumerate(GREAT_CHINA_AREA_CODES):
+            params[f'area_{i}'] = code
+    elif region_value != ALL_VALUE:
+        sql_parts.append(" AND business_area_code = :area")
+        params['area'] = region_value
+    try:
+        return int(db.session.execute(db.text(''.join(sql_parts)), params).scalar() or 0)
+    except Exception:
+        return 0
 
 
 def _checkpoint_pair(now=None):
@@ -470,6 +620,35 @@ def dashboard_trend_summary():
     jobs_current = _count_platform_jobs_as_of(function_value, region_value, current_cutoff)
     jobs_previous = _count_platform_jobs_as_of(function_value, region_value, previous_cutoff)
 
+    now = _now_utc_naive()
+    year_start = _start_of_year_utc_naive()
+    week_start = _start_of_week_utc_naive()
+
+    # platform_totals 和 growth 始终是全平台口径，不受 function/region 筛选影响
+    jobs_total_now  = _count_platform_jobs_total(ALL_VALUE, ALL_VALUE)
+    cands_total_now = _count_platform_candidates_total(ALL_VALUE, ALL_VALUE)
+
+    jobs_ytd   = _count_platform_jobs_since(ALL_VALUE, ALL_VALUE, year_start, now)
+    jobs_week  = _count_platform_jobs_since(ALL_VALUE, ALL_VALUE, week_start, now)
+    cands_ytd  = _count_platform_candidates_since(ALL_VALUE, ALL_VALUE, year_start, now)
+    cands_week = _count_platform_candidates_since(ALL_VALUE, ALL_VALUE, week_start, now)
+
+    def _growth_pct(delta, base):
+        """相对基准时点存量的增幅：delta / base * 100。"""
+        if base > 0:
+            return round(delta / base * 100, 1)
+        return 100.0 if delta > 0 else 0.0
+
+    jobs_year_start_total  = jobs_total_now  - jobs_ytd
+    jobs_week_start_total  = jobs_total_now  - jobs_week
+    cands_year_start_total = cands_total_now - cands_ytd
+    cands_week_start_total = cands_total_now - cands_week
+
+    jobs_ytd_pct   = _growth_pct(jobs_ytd,   jobs_year_start_total)
+    jobs_week_pct  = _growth_pct(jobs_week,  jobs_week_start_total)
+    cands_ytd_pct  = _growth_pct(cands_ytd,  cands_year_start_total)
+    cands_week_pct = _growth_pct(cands_week, cands_week_start_total)
+
     return jsonify({
         "success": True,
         "function": function_value,
@@ -485,6 +664,36 @@ def dashboard_trend_summary():
             "jobs": {
                 "label": "PLATFORM JOBS",
                 **_trend_payload(jobs_current, jobs_previous),
+            },
+        },
+        "platform_totals": {
+            "candidates": cands_total_now,
+            "jobs": jobs_total_now,
+            "teams": _count_platform_teams_total(),
+            "soon": None,
+        },
+        "growth": {
+            "jobs": {
+                "label": "PLATFORM JOB GROWTH",
+                "total": jobs_total_now,
+                "ytd_delta": jobs_ytd,
+                "ytd_base": jobs_year_start_total,
+                "ytd_percent": jobs_ytd_pct,
+                "week_delta": jobs_week,
+                "week_base": jobs_week_start_total,
+                "week_percent": jobs_week_pct,
+                "direction": "up" if jobs_ytd > 0 else "neutral",
+            },
+            "candidates": {
+                "label": "PLATFORM CANDIDATE GROWTH",
+                "total": cands_total_now,
+                "ytd_delta": cands_ytd,
+                "ytd_base": cands_year_start_total,
+                "ytd_percent": cands_ytd_pct,
+                "week_delta": cands_week,
+                "week_base": cands_week_start_total,
+                "week_percent": cands_week_pct,
+                "direction": "up" if cands_ytd > 0 else "neutral",
             },
         },
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -555,8 +764,10 @@ def dashboard_chart():
     result = _time_series_bars(function_value, region_value, granularity)
     stats = {
         "applications_received": _count_received_applications(user.id, function_value, region_value),
+        "applicant_candidates": _count_applicant_candidates(user.id, function_value, region_value),
         "jobs": _count_employer_jobs(user.id, function_value, region_value),
         "interested": _count_interested_candidates(user.id, function_value, region_value),
+        "favorited_candidates": _count_favorited_candidates(user.id),
     }
 
     return jsonify({
