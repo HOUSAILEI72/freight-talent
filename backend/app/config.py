@@ -90,6 +90,7 @@ class Config:
 class DevelopmentConfig(Config):
     """本地开发配置。"""
     DEBUG = True
+    RATELIMIT_ENABLED = False
 
 
 class ProductionConfig(Config):

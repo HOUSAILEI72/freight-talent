@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { submitTagNote, getMyTagNote } from '../../api/tagsV2'
+import { useAutoResize } from '../../hooks/useAutoResize'
 
 /**
  * TagNoteModal — 为已选标签写自定义描述
@@ -13,6 +14,7 @@ export function TagNoteModal({ tag, onClose }) {
   const [note, setNote] = useState('')
   const [status, setStatus] = useState('idle') // idle | loading | submitting | done | error
   const [errorMsg, setErrorMsg] = useState('')
+  const noteRef = useAutoResize(note)
   const [existingStatus, setExistingStatus] = useState(null)
 
   // 加载当前用户已有的描述
@@ -93,13 +95,14 @@ export function TagNoteModal({ tag, onClose }) {
             {/* 文本域 */}
             <div className="relative">
               <textarea
+                ref={noteRef}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={4}
                 maxLength={200}
                 placeholder={`描述你在「${tag?.name}」方面的具体经验或使用场景...`}
                 disabled={status === 'loading' || status === 'submitting'}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm resize-none outline-none
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm resize-none outline-none overflow-hidden
                   focus:border-blue-400 focus:ring-1 focus:ring-blue-100
                   disabled:bg-slate-50 disabled:opacity-60"
               />

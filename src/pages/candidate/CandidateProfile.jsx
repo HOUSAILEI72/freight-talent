@@ -56,12 +56,6 @@ function FreshnessIndicator({ days, terminal }) {
   )
 }
 
-function AvailBadge({ status, terminal = false }) {
-  if (status === 'open')    return <Badge color="green"  terminal={terminal}>开放机会</Badge>
-  if (status === 'passive') return <Badge color="yellow" terminal={terminal}>被动求职</Badge>
-  return <Badge color="gray" terminal={terminal}>暂不考虑</Badge>
-}
-
 // 合并所有能力标签，按组分类展示
 function buildTagGroups(profile) {
   const groups = []
@@ -273,10 +267,11 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
               {profile.current_title}
             </p>
 
-            <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-              {profile.freshness_days != null && <FreshnessIndicator days={profile.freshness_days} terminal={terminal} />}
-              <AvailBadge status={profile.availability_status} terminal={terminal} />
-            </div>
+            {profile.freshness_days != null && (
+              <div className="flex items-center justify-center mt-3">
+                <FreshnessIndicator days={profile.freshness_days} terminal={terminal} />
+              </div>
+            )}
 
             {/* 核心属性列表 */}
             <div className="mt-6 space-y-2 text-sm text-left">

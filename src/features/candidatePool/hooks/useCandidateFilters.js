@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 export function useCandidateFilters() {
   const [q, setQ]                             = useState('')
-  const [avail, setAvail]                     = useState('open')
+  const [avail, setAvail]                     = useState('all')
   const [location, setLocation]               = useState(null)
   const [functionCode, setFunctionCode]       = useState('')
   const [archiveFilter, setArchiveFilter]     = useState('all')
@@ -30,12 +30,12 @@ export function useCandidateFilters() {
   }
 
   function resetFilters() {
-    setQ(''); setAvail('open'); setLocation(null); setFunctionCode('')
+    setQ(''); setAvail('all'); setLocation(null); setFunctionCode('')
     setArchiveFilter('all'); setInviteFilter('all'); setGender('')
     // poolType 保留：重置搜索条件不归零候选人池分类
   }
 
-  const hasFilter = !!(q || avail !== 'open' || location?.location_code || functionCode || archiveFilter !== 'all' || inviteFilter !== 'all' || gender)
+  const hasFilter = !!(q || avail !== 'all' || location?.location_code || functionCode || archiveFilter !== 'all' || inviteFilter !== 'all' || gender)
 
   return {
     q, setQ,

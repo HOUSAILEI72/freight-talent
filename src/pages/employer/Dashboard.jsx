@@ -104,7 +104,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedFunction, setSelectedFunction] = useState(DEFAULT_FUNCTION)
   const [selectedArea, setSelectedArea] = useState(DEFAULT_AREA)
-  const [granularity, setGranularity] = useState('day')
+  const [granularity, setGranularity] = useState('week')
   const [chart, setChart] = useState(null)
   const [chartLoading, setChartLoading] = useState(false)
   const [trendSummary, setTrendSummary] = useState(null)
@@ -177,7 +177,7 @@ export default function Dashboard() {
   const favoritesCount = stats.favorited_candidates ?? 0
   const filterHelper =
     selectedFunction === DEFAULT_FUNCTION && selectedArea === DEFAULT_AREA
-      ? 'ALL FUNCTIONS / CHINA'
+      ? '全板块 / CHINA'
       : `FUNC=${selectedFunction} / AREA=${selectedArea}`
 
   const legacyTrendCards = trendSummary?.cards ?? {}

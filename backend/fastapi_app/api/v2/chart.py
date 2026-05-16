@@ -78,7 +78,29 @@ def _generate_periods(granularity: str, periods: int) -> list[str]:
     now = _now_cst()
     result = []
 
-    if granularity == "day":
+    if granularity == "bi_monthly":
+        # 每月 10 号和 20 号为统计点
+        year, month = now.year, now.month
+        day = now.day
+        if day >= 20:
+            snaps = [(year, month, 20), (year, month, 10)]
+        else:
+            snaps = [(year, month, 10)]
+            pm = month - 1 if month > 1 else 12
+            py = year if month > 1 else year - 1
+            snaps.append((py, pm, 20))
+        while len(snaps) < periods:
+            y, m, d = snaps[-1]
+            if d == 20:
+                snaps.append((y, m, 10))
+            else:
+                pm = m - 1 if m > 1 else 12
+                py = y if m > 1 else y - 1
+                snaps.append((py, pm, 20))
+        snaps = list(reversed(snaps[-periods:]))
+        result = [f"{y:04d}-{m:02d}-{d:02d}" for y, m, d in snaps]
+
+    elif granularity == "day":
         for i in range(periods - 1, -1, -1):
             result.append((now - timedelta(days=i)).strftime("%Y-%m-%d"))
 
@@ -116,11 +138,18 @@ def _generate_periods(granularity: str, periods: int) -> list[str]:
 # ── SQL 构建 ──────────────────────────────────────────────────────────────────
 
 _DATE_FMT = {
-    "day":     "DATE_FORMAT(c.created_at, '%%Y-%%m-%%d')",
-    "week":    "DATE_FORMAT(c.created_at, '%%Y-%%W')",
-    "month":   "DATE_FORMAT(c.created_at, '%%Y-%%m')",
-    "quarter": "CONCAT(YEAR(c.created_at), '-Q', QUARTER(c.created_at))",
-    "year":    "YEAR(c.created_at)",
+    "bi_monthly": (
+        "CASE"
+        " WHEN DAY(c.created_at)<=10 THEN DATE_FORMAT(c.created_at,'%%Y-%%m-10')"
+        " WHEN DAY(c.created_at)<=20 THEN DATE_FORMAT(c.created_at,'%%Y-%%m-20')"
+        " ELSE DATE_FORMAT(DATE_ADD(c.created_at,INTERVAL 1 MONTH),'%%Y-%%m-10')"
+        " END"
+    ),
+    "day":        "DATE_FORMAT(c.created_at, '%%Y-%%m-%%d')",
+    "week":       "DATE_FORMAT(c.created_at, '%%Y-%%W')",
+    "month":      "DATE_FORMAT(c.created_at, '%%Y-%%m')",
+    "quarter":    "CONCAT(YEAR(c.created_at), '-Q', QUARTER(c.created_at))",
+    "year":       "YEAR(c.created_at)",
 }
 
 
@@ -139,11 +168,12 @@ def _exists_clauses(tag_table: str, fk_col: str, groups: list[list[int]]) -> str
 def _cutoff(granularity: str, periods: int) -> datetime:
     now = datetime.now(timezone.utc)
     deltas = {
-        "day": timedelta(days=periods),
-        "week": timedelta(weeks=periods),
-        "month": timedelta(days=periods * 32),
+        "bi_monthly": timedelta(days=periods * 16),
+        "day":     timedelta(days=periods),
+        "week":    timedelta(weeks=periods),
+        "month":   timedelta(days=periods * 32),
         "quarter": timedelta(days=periods * 95),
-        "year": timedelta(days=periods * 366),
+        "year":    timedelta(days=periods * 366),
     }
     return now - deltas.get(granularity, timedelta(days=periods * 32))
 
@@ -201,7 +231,7 @@ def _query_jobs(db: Session, groups: list[list[int]],
 
 # ── 端点 ──────────────────────────────────────────────────────────────────────
 
-VALID_GRAN = {"day", "week", "month", "quarter", "year"}
+VALID_GRAN = {"bi_monthly", "day", "week", "month", "quarter", "year"}
 
 
 @router.get("/candidates/chart", response_model=ChartResponse)

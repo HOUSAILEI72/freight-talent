@@ -31,7 +31,7 @@ export function CandidateList({
   selected, selectedJob, invited, archivedSet, hasSubscription,
   archiveFilter, inviteFilter, terminal,
   variant,
-  onSelect, onArchive, onInvite,
+  onSelect, onArchive, onOpenConversation,
   navigateBasePath,
 }) {
   if (loading) return (
@@ -106,7 +106,7 @@ export function CandidateList({
               canInvite={canInvite}
               selectedJob={selectedJob}
               onArchive={onArchive}
-              onInvite={onInvite}
+              onOpenConversation={onOpenConversation}
               navigatePath={`${navigateBasePath ?? '/employer/candidates'}/${c.id}`}
             />
           )
@@ -134,7 +134,7 @@ export function CandidateList({
             terminal={terminal}
             onSelect={() => onSelect(c)}
             onArchive={onArchive}
-            onInvite={onInvite}
+            onInvite={onOpenConversation}
           />
         )
       })}

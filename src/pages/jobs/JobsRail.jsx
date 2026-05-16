@@ -5,7 +5,7 @@ const COLLAPSED = 52
 const EXPANDED  = 240
 
 export const JOBS_TABS = [
-  { key: 'all',               label: '全部岗位',    short: 'ALL', icon: BriefcaseBusiness },
+  { key: 'all',               label: '发布岗位',    short: 'ALL', icon: BriefcaseBusiness },
   { key: 'personal_headhunt', label: '个人猎头服务', short: 'PH',  icon: UserSearch },
   { key: 'team_headhunt',     label: '团队猎头服务', short: 'TH',  icon: UsersRound },
 ]

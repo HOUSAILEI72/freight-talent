@@ -867,3 +867,155 @@ def get_favorites():
     from app.models.employer_candidate_favorite import EmployerCandidateFavorite
     rows = EmployerCandidateFavorite.query.filter_by(employer_id=user.id).all()
     return jsonify({"success": True, "favorited_ids": [r.candidate_id for r in rows]})
+
+
+# ── Email action constants ─────────────────────────────────────────────────────
+
+_EMAIL_ACTION_WHITELIST = {"interview", "not_fit", "resume_update", "interview_address"}
+
+_ACTION_TEMPLATES = {
+    "interview": {
+        "subject": "面试邀请 | ACE-Talent",
+        "body": "您好 {name}，\n\n我们对您的背景很感兴趣，想邀请您进一步面试沟通。请您回复方便的面试时间。\n\n{company_name}\nACE-Talent",
+    },
+    "not_fit": {
+        "subject": "岗位匹配结果通知 | ACE-Talent",
+        "body": "您好 {name}，\n\n感谢您关注我们的岗位。综合当前岗位要求评估后，这次机会暂时不太匹配。后续如有更合适机会，我们会再联系您。\n\n{company_name}\nACE-Talent",
+    },
+    "resume_update": {
+        "subject": "请更新您的简历信息 | ACE-Talent",
+        "body": "您好 {name}，\n\n我们查看了您的档案，部分简历信息还需要补充或更新。请完善近期工作经历、项目经验、联系方式等内容，便于进一步沟通。\n\n{company_name}\nACE-Talent",
+    },
+    "interview_address": {
+        "subject": "面试地址通知 | ACE-Talent",
+        "body": "您好 {name}，\n\n面试地址如下：\n\n地址：请填写具体面试地址\n时间：请填写面试时间\n联系人：请填写联系人及电话\n\n请确认是否方便参加。\n\n{company_name}\nACE-Talent",
+    },
+}
+
+
+@candidates_bp.post("/<int:candidate_id>/email-action")
+@jwt_required()
+def send_candidate_email_action(candidate_id):
+    """POST /api/candidates/:id/email-action — 发送邮件动作给候选人并落库状态"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("employer", "admin"):
+        return _err("仅企业或管理员可发送候选人邮件", 403)
+
+    data = request.get_json(silent=True) or {}
+    action = data.get("action")
+    job_id = data.get("job_id")
+    thread_id = data.get("thread_id")
+
+    if action not in _EMAIL_ACTION_WHITELIST:
+        return _err(f"无效的 action，允许值：{', '.join(sorted(_EMAIL_ACTION_WHITELIST))}", 400)
+    if not job_id:
+        return _err("job_id 为必填项", 400)
+
+    profile = get_candidate_by_id(candidate_id)
+    if not profile:
+        return _err("候选人不存在", 404)
+
+    from app.models.job import Job
+    job = db.session.get(Job, job_id)
+    if not job:
+        return _err("岗位不存在", 404)
+    if user.role == "employer" and job.company_id != user.id:
+        return _err("只能对自己发布的岗位发送邮件", 403)
+
+    candidate_email = (profile.email or "").strip()
+    if not candidate_email and profile.user:
+        candidate_email = (profile.user.email or "").strip()
+    if not candidate_email:
+        return _err("候选人未配置邮箱，无法发送邮件", 422)
+
+    candidate_name = profile.full_name or (profile.user.name if profile.user else None) or "候选人"
+    company_name = user.company_name or user.name or "企业"
+
+    tpl = _ACTION_TEMPLATES[action]
+    subject = tpl["subject"]
+    body = tpl["body"].format(name=candidate_name, company_name=company_name)
+
+    # Upsert 状态记录
+    from app.models.candidate_email_action import CandidateEmailAction
+    from datetime import datetime, timezone
+    record = CandidateEmailAction.query.filter_by(
+        employer_id=user.id,
+        candidate_id=candidate_id,
+        job_id=job_id,
+        action=action,
+    ).first()
+
+    if not record:
+        record = CandidateEmailAction(
+            employer_id=user.id,
+            candidate_id=candidate_id,
+            job_id=job_id,
+            action=action,
+        )
+        db.session.add(record)
+
+    record.status = "pending"
+    record.thread_id = thread_id
+    record.subject = subject
+    record.body = body
+    record.error_message = None
+    db.session.commit()
+
+    # 发送邮件
+    from app.services.email_service import send_candidate_action_email
+    try:
+        send_candidate_action_email(candidate_email, candidate_name, company_name, action)
+        record.status = "sent"
+        record.sent_at = datetime.now(timezone.utc)
+        record.error_message = None
+        db.session.commit()
+    except Exception as exc:
+        record.status = "failed"
+        record.error_message = str(exc)[:500]
+        db.session.commit()
+        return _err("邮件发送失败，请稍后重试", 500)
+
+    return jsonify({
+        "success": True,
+        "message": "邮件已发送",
+        "action": action,
+        "status": "sent",
+        "sent_at": record.sent_at.isoformat() if record.sent_at else None,
+    })
+
+
+@candidates_bp.get("/<int:candidate_id>/email-actions")
+@jwt_required()
+def get_candidate_email_actions(candidate_id):
+    """GET /api/candidates/:id/email-actions?job_id=X — 查询邮件发送状态"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("employer", "admin"):
+        return _err("仅企业或管理员可查询邮件状态", 403)
+
+    job_id = request.args.get("job_id", type=int)
+    if not job_id:
+        return _err("job_id 为必填项", 400)
+
+    from app.models.candidate_email_action import CandidateEmailAction
+    rows = CandidateEmailAction.query.filter_by(
+        employer_id=user.id,
+        candidate_id=candidate_id,
+        job_id=job_id,
+    ).all()
+
+    # 补全四个 action 的状态，无记录时为 idle
+    actions = {}
+    for key in _EMAIL_ACTION_WHITELIST:
+        actions[key] = {"status": "idle", "sent_at": None, "updated_at": None}
+    for row in rows:
+        actions[row.action] = {
+            "status": row.status,
+            "sent_at": row.sent_at.isoformat() if row.sent_at else None,
+            "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        }
+
+    return jsonify({"success": True, "actions": actions})

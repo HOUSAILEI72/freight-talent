@@ -9,7 +9,7 @@ const NAV_BY_ROLE = {
     { label: '候选人动态', href: '/employer/home' },
     { label: '发布岗位', href: '/employer/jobs/new' },
     { label: '候选人池', href: '/candidates' },
-    { label: '岗位广场', href: '/jobs' },
+    { label: '岗位广场', href: '/employer/jobs' },
     { label: '标签申请', href: '/tags' },
     { label: '消息', href: '/messages' },
   ],

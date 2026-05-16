@@ -104,6 +104,7 @@ def create_app(config_class=None):
         from app.models import subscription   # noqa: F401
         from app.models import employer_candidate_favorite  # noqa: F401
         from app.models import headhunting_request  # noqa: F401
+        from app.models import candidate_email_action  # noqa: F401
 
     @app.get("/api/health")
     def health():

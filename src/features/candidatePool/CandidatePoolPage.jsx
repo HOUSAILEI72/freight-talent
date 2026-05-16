@@ -1,41 +1,40 @@
 import { User } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { useRef } from 'react'
-import { InviteModal } from '../../components/ui/InviteModal'
+import { useRef, useState, useEffect } from 'react'
 import TerminalPageSurface from '../../components/terminal/TerminalPageSurface'
 import Pagination from '../../components/ui/Pagination'
 import { useCandidatePool } from './hooks/useCandidatePool'
 import { useCandidateFilters } from './hooks/useCandidateFilters'
 import { useCandidateArchive } from './hooks/useCandidateSelection'
-import { useCandidateInvite } from './hooks/useCandidateInvite'
 import { CandidateFilterBar } from './components/CandidateFilterBar'
 import { CandidateList } from './components/CandidateList'
 import { CandidateDetailPanel } from './components/CandidateDetailPanel'
-import { Toast } from './components/Toast'
 import { CandidatePoolRail } from './components/CandidatePoolRail'
+import { CandidateChatModal } from './components/CandidateChatModal'
 import { CANDIDATE_POOL_TABS } from './constants'
-import { useState, useEffect } from 'react'
+import { conversationsApi } from '../../api/conversations'
 
-export default function CandidatePoolPage({ terminal = false, messagesBasePath }) {
+export default function CandidatePoolPage({ terminal = false }) {
   const pool    = useCandidatePool()
   const filters = useCandidateFilters()
   const archive = useCandidateArchive()
-  const invite  = useCandidateInvite({ selectedJob: pool.selectedJob, markInvited: pool.markInvited })
-  const navigate = useNavigate()
 
   const [selected, setSelected] = useState(null)
-  // Keep latest filters so pagination buttons can re-fetch with same params
+  const [chatModal, setChatModal] = useState(null)    // { threadId, candidate, job }
+  const [chatToast, setChatToast] = useState(null)
   const lastFiltersRef = useRef({ availability_status: 'open' })
 
-  // Auto-select first candidate when list loads (only for non-terminal inline view)
   useEffect(() => {
     if (!terminal && pool.candidates.length > 0 && !selected) setSelected(pool.candidates[0])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pool.candidates])
 
+  function showToast(msg) {
+    setChatToast(msg)
+    setTimeout(() => setChatToast(null), 3000)
+  }
+
   function handleJobChange(job) {
     pool.setSelectedJob(job)
-    // applied 模式下切换岗位需要重新过滤投递列表
     if (filters.poolType === 'applied') {
       setSelected(null)
       const f = filters.buildFilters({ job_id: job?.id })
@@ -89,6 +88,33 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
     pool.fetchCandidates(lastFiltersRef.current, p)
   }
 
+  async function handleOpenConversation(candidate) {
+    if (!pool.selectedJob) {
+      showToast('请先选择沟通岗位')
+      return
+    }
+
+    const invKey = `${pool.selectedJob.id}_${candidate.id}`
+    const existing = pool.invited[invKey]
+
+    if (typeof existing === 'number') {
+      setChatModal({ threadId: existing, candidate, job: pool.selectedJob })
+      return
+    }
+
+    try {
+      const res = await conversationsApi.openConversation({
+        jobId: pool.selectedJob.id,
+        candidateId: candidate.id,
+      })
+      const threadId = res.data.thread_id
+      pool.markInvited(pool.selectedJob.id, candidate.id, threadId)
+      setChatModal({ threadId, candidate, job: pool.selectedJob })
+    } catch (err) {
+      showToast(err.response?.data?.message || '打开沟通失败')
+    }
+  }
+
   const filteredCandidates = pool.candidates.filter(c => {
     const isArch = archive.archivedSet.has(c.id)
     const invKey = pool.selectedJob ? `${pool.selectedJob.id}_${c.id}` : null
@@ -127,26 +153,31 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
     archiveFilter: filters.archiveFilter, inviteFilter: filters.inviteFilter,
     terminal,
     onArchive: archive.handleArchive,
-    onInvite: invite.setModal,
+    onOpenConversation: handleOpenConversation,
   }
 
-  // ── Terminal layout: pool rail + filter sidebar + wide card list ──────────
+  const chatToastEl = chatToast ? (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9990] flex items-center gap-3 px-5 py-3 bg-slate-900 text-white rounded-xl shadow-xl text-sm font-medium">
+      {chatToast}
+    </div>
+  ) : null
+
+  // ── Terminal layout ───────────────────────────────────────────────────────
   if (terminal) {
     return (
       <>
-        {invite.modal && pool.selectedJob && (
-          <InviteModal
-            candidate={invite.modal}
-            job={pool.selectedJob}
-            onConfirm={invite.handleConfirm}
-            onCancel={() => invite.setModal(null)}
+        {chatModal && (
+          <CandidateChatModal
+            threadId={chatModal.threadId}
+            candidate={chatModal.candidate}
+            job={chatModal.job}
             terminal
+            onClose={() => setChatModal(null)}
           />
         )}
-        {invite.toast && <Toast name={invite.toast} onDone={() => invite.setToast(null)} />}
+        {chatToastEl}
 
         <TerminalPageSurface split>
-          {/* Pool type rail — hover-expands, fixed height */}
           <CandidatePoolRail
             value={filters.poolType}
             onChange={(next) => {
@@ -160,14 +191,9 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
             counts={pool.poolCounts}
           />
 
-          {/* Left: filter sidebar — fixed 260px, scroll internally */}
           <aside
             className="flex-shrink-0 flex flex-col overflow-hidden"
-            style={{
-              width: 260,
-              background: 'var(--t-bg-panel)',
-              borderRight: '1px solid var(--t-border)',
-            }}
+            style={{ width: 260, background: 'var(--t-bg-panel)', borderRight: '1px solid var(--t-border)' }}
           >
             <div className="flex-1 overflow-y-auto terminal-scrollbar">
               <CandidateFilterBar
@@ -177,11 +203,7 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
             </div>
           </aside>
 
-          {/* Right: wide card list — fills remaining space */}
-          <main
-            className="flex-1 min-w-0 flex flex-col overflow-hidden"
-            style={{ background: 'var(--t-bg)' }}
-          >
+          <main className="flex-1 min-w-0 flex flex-col overflow-hidden" style={{ background: 'var(--t-bg)' }}>
             <div className="flex-1 overflow-y-auto terminal-scrollbar">
               <CandidateList
                 {...listProps}
@@ -202,15 +224,12 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
     )
   }
 
-  // ── Public light layout: unchanged ───────────────────────────────────────
+  // ── Public light layout ───────────────────────────────────────────────────
   const leftPanel = (
     <div className="w-80 flex-shrink-0 flex flex-col border-r border-slate-200 bg-white overflow-hidden">
       <CandidateFilterBar {...filterBarProps} />
       <div className="flex-1 overflow-y-auto">
-        <CandidateList
-          {...listProps}
-          onSelect={setSelected}
-        />
+        <CandidateList {...listProps} onSelect={setSelected} />
       </div>
       <Pagination
         page={pool.page}
@@ -248,18 +267,17 @@ export default function CandidatePoolPage({ terminal = false, messagesBasePath }
 
   return (
     <>
-      {invite.modal && pool.selectedJob && (
-        <InviteModal
-          candidate={invite.modal}
-          job={pool.selectedJob}
-          onConfirm={invite.handleConfirm}
-          onCancel={() => invite.setModal(null)}
+      {chatModal && (
+        <CandidateChatModal
+          threadId={chatModal.threadId}
+          candidate={chatModal.candidate}
+          job={chatModal.job}
           terminal={false}
+          onClose={() => setChatModal(null)}
         />
       )}
-      {invite.toast && <Toast name={invite.toast} onDone={() => invite.setToast(null)} />}
+      {chatToastEl}
       <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-slate-50">{leftPanel}{rightPanel}</div>
     </>
   )
 }
-

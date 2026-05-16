@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/Badge'
 import { useAuth } from '../../context/AuthContext'
 import { candidatesApi } from '../../api/candidates'
 import RegionSelector from '../../components/RegionSelector'
+import { useAutoResize } from '../../hooks/useAutoResize'
 
 const SUGGESTED_TAGS = [
   '海运操作', '空运操作', '报关员', '单证制作', '货代销售',
@@ -104,6 +105,7 @@ export default function UploadResume({ terminal = false }) {
   }, [])
 
   function setField(k, v) { setForm(f => ({ ...f, [k]: v })) }
+  const summaryRef = useAutoResize(form.summary)
 
   function toggleTag(tag) {
     setSelectedTags(prev =>
@@ -488,8 +490,9 @@ export default function UploadResume({ terminal = false }) {
             <div>
               <label className="block text-xs text-slate-500 mb-1">个人简介</label>
               <textarea
+                ref={summaryRef}
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none overflow-hidden"
                 value={form.summary}
                 onChange={e => setField('summary', e.target.value)}
                 placeholder="简要介绍你的从业经历和核心优势..."

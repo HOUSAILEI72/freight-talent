@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Briefcase } from 'lucide-react'
 import { INV_STATUS, INV_STATUS_TERMINAL_STYLE } from '../constants'
+import { CandidateEmailActionBar } from './CandidateEmailActionBar'
 
 function InvBadge({ status, terminal = false }) {
   const cfg = INV_STATUS[status] ?? INV_STATUS.pending
@@ -192,21 +193,24 @@ function JobSelector({ threads, activeId, onSelect, terminal }) {
   )
 }
 
-export function ConversationHeader({ thread, threadId, threads, onSwitchThread, terminal }) {
+export function ConversationHeader({ thread, threadId, threads, onSwitchThread, terminal, myRole }) {
   const otherName = thread?.candidate_name ?? thread?.company_name
+  const showEmailBar = (myRole === 'employer' || myRole === 'admin')
+    && !!thread?.candidate_id
+    && !!thread?.job_id
 
   return (
     <div
-      className={terminal ? 'px-5 py-3.5 flex items-center gap-3 flex-shrink-0' : 'px-5 py-3.5 border-b border-slate-100 flex items-center gap-3 flex-shrink-0'}
+      className={terminal ? 'px-5 py-3.5 flex items-start gap-3 flex-shrink-0' : 'px-5 py-3.5 border-b border-slate-100 flex items-start gap-3 flex-shrink-0'}
       style={terminal ? { borderBottom: '1px solid var(--t-border-subtle)' } : undefined}
     >
       <div
-        className={terminal ? 'w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm' : 'w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm'}
+        className={terminal ? 'w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0' : 'w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0'}
         style={terminal ? { background: 'var(--t-primary)' } : undefined}
       >
         {(otherName?.[0] ?? '?').toUpperCase()}
       </div>
-      <div>
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className={terminal ? 'font-semibold text-sm' : 'font-semibold text-slate-800 text-sm'} style={terminal ? { color: 'var(--t-text)' } : undefined}>
             {otherName}
@@ -219,6 +223,16 @@ export function ConversationHeader({ thread, threadId, threads, onSwitchThread, 
           <p className={terminal ? 'text-xs' : 'text-xs text-slate-400'} style={terminal ? { color: 'var(--t-text-muted)' } : undefined}>
             {thread?.job_title}
           </p>
+        )}
+        {showEmailBar && (
+          <div style={{ marginTop: 6 }}>
+            <CandidateEmailActionBar
+              candidateId={thread.candidate_id}
+              jobId={thread.job_id}
+              threadId={threadId}
+              terminal={terminal}
+            />
+          </div>
         )}
       </div>
     </div>

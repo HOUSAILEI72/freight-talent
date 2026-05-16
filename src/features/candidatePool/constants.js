@@ -4,9 +4,10 @@ import { Users, Inbox, Star, UserSearch, UsersRound, BriefcaseBusiness } from 'l
 export const FUNCTION_OPTIONS = DEFAULT_FUNCTIONS.filter(f => f.key !== 'ALL')
 
 export const AVAIL_OPTIONS = [
-  { value: 'open',    label: '开放机会' },
-  { value: 'passive', label: '被动寻找' },
-  { value: 'all',     label: '全部' },
+  { value: 'all',         label: '全部' },
+  { value: 'open',        label: '离职-随时到岗' },
+  { value: 'passive_now', label: '在职-月内到岗' },
+  { value: 'passive',     label: '在职-考虑机会' },
 ]
 
 export const CANDIDATE_POOL_TABS = [

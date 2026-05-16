@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Loader2, AlertCircle, CheckCircle, ChevronRight, Plus, Trash2,
@@ -7,6 +7,17 @@ import {
 import { candidatesApi } from '../../api/candidates'
 import RegionSelector from '../../components/RegionSelector'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
+import { TerminalSelect } from '../../components/terminal/TerminalSelect'
+import { JOB_TITLE_SUGGESTIONS } from '../../data/jobTitleSuggestions'
+import { useAutoResize } from '../../hooks/useAutoResize'
+import { getBusinessAreaByLocationCode } from '../../utils/businessArea'
+
+// Migrate legacy CN-XX-XXXX location codes (e.g. CN-33-0113 → 330113)
+function migrateLegacyLocationCode(code) {
+  if (!code) return code
+  const m = String(code).match(/^CN-(\d{2})-(\d{4})$/)
+  return m ? m[1] + m[2] : code
+}
 
 const FUNCTION_OPTIONS = DEFAULT_FUNCTIONS.filter(f => f.key !== 'ALL')
 
@@ -169,74 +180,136 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
   const [expectedSalaryLabel, setExpectedSalaryLabel] = useState('')
   const [desiredPosition, setDesiredPosition] = useState('')
 
+  // ── Auto-resize refs ───────────────────────────────────────────────────
+  const curRespRef     = useAutoResize(currentResponsibilities)
+  const knowledgeRef   = useAutoResize(knowledgeText)
+  const hardRef        = useAutoResize(hardText)
+  const softRef        = useAutoResize(softText)
+  const eduLinesRef    = useAutoResize(educationLines)
+  const certsRef       = useAutoResize(certificatesText)
+
+  // ── Desired position autocomplete ────────────────────────────────────────
+  const [posSugOpen, setPosSugOpen] = useState(false)
+  const [posActiveIdx, setPosActiveIdx] = useState(-1)
+  const [posDropPos, setPosDropPos] = useState({ top: 0, left: 0, width: 0 })
+  const posWrapRef = useRef(null)
+
+  const posSuggestions = useMemo(() => {
+    if (!desiredPosition.trim()) return []
+    const q = desiredPosition.trim()
+    return JOB_TITLE_SUGGESTIONS.filter(s => s.includes(q))
+  }, [desiredPosition])
+
+  useEffect(() => {
+    function onDown(e) {
+      if (posWrapRef.current && !posWrapRef.current.contains(e.target)) {
+        setPosSugOpen(false)
+        setPosActiveIdx(-1)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  function openPosDrop() {
+    const rect = posWrapRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setPosDropPos({ top: rect.bottom + 2, left: rect.left, width: rect.width })
+    setPosSugOpen(true)
+  }
+
+  const handlePosKeyDown = useCallback((e) => {
+    if (!posSugOpen || posSuggestions.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setPosActiveIdx(i => Math.min(i + 1, posSuggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setPosActiveIdx(i => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter' && posActiveIdx >= 0) {
+      e.preventDefault()
+      setDesiredPosition(posSuggestions[posActiveIdx])
+      setPosSugOpen(false)
+      setPosActiveIdx(-1)
+    } else if (e.key === 'Escape') {
+      setPosSugOpen(false)
+      setPosActiveIdx(-1)
+    }
+  }, [posSugOpen, posSuggestions, posActiveIdx])
+
   // ── Hydrate from server ─────────────────────────────────────────────────
+  const hydrateProfile = useCallback((p) => {
+    if (!p) return
+    setFullName(p.full_name || '')
+    setPhone(p.phone || '')
+    setEmail(p.email || '')
+    if (p.location_code) {
+      const migratedCode = migrateLegacyLocationCode(p.location_code)
+      const area = getBusinessAreaByLocationCode(migratedCode)
+      setLocation({
+        location_code: migratedCode,
+        location_name: p.location_name,
+        location_path: p.location_path,
+        location_type: p.location_type,
+        business_area_code: area?.code ?? p.business_area_code,
+        business_area_name: area?.name ?? p.business_area_name,
+      })
+    }
+    setAvailability(p.availability_status || 'open')
+    setBirthYear(p.birth_year != null ? String(p.birth_year) : '')
+    setBirthMonth(p.birth_month != null ? String(p.birth_month) : '')
+    setGender(p.gender || '')
+
+    setCurrentCompany(p.current_company || '')
+    setCurrentTitle(p.current_title || '')
+    setCurrentResponsibilities(p.current_responsibilities || '')
+    setFunctionCode(p.function_code || '')
+    setIsManagementStr(
+      p.is_management_role === true ? 'yes' :
+      p.is_management_role === false ? 'no' : ''
+    )
+    setMgmtHeadcount(p.management_headcount != null ? String(p.management_headcount) : '')
+    setCsMin(p.current_salary_min != null ? String(p.current_salary_min) : '')
+    setCsMax(p.current_salary_max != null ? String(p.current_salary_max) : '')
+    setCsMonths(p.current_salary_months != null ? String(p.current_salary_months) : '')
+    setCsAvgBonus(p.current_average_bonus_percent != null ? String(p.current_average_bonus_percent) : '')
+    setCsHasYeb(p.current_has_year_end_bonus === true)
+    setCsYebMonths(p.current_year_end_bonus_months != null ? String(p.current_year_end_bonus_months) : '')
+
+    if (Array.isArray(p.work_experiences) && p.work_experiences.length > 0) {
+      setWorkRows(p.work_experiences.map(w => ({
+        ...EMPTY_WORK_EXPERIENCE,
+        company_name: w.company_name || w.company || '',
+        title: w.title || '',
+        start_month: w.start_month || '',
+        end_month:   w.end_month   || '',
+        responsibilities: w.responsibilities || '',
+        achievements:     w.achievements     || '',
+        salary:       w.salary != null ? String(w.salary) : (w.salary_min != null ? String(w.salary_min) : (w.salary_max != null ? String(w.salary_max) : '')),
+        salary_months: w.salary_months != null ? String(w.salary_months) : '',
+        average_bonus_percent: w.average_bonus_percent != null ? String(w.average_bonus_percent) : '',
+        has_year_end_bonus:    w.has_year_end_bonus === true,
+        year_end_bonus_months: w.year_end_bonus_months != null ? String(w.year_end_bonus_months) : '',
+      })))
+    }
+
+    setKnowledgeText(tagsToText(p.knowledge_tags))
+    setHardText(tagsToText(p.hard_skill_tags))
+    setSoftText(tagsToText(p.soft_skill_tags))
+
+    setEducation(p.education || '')
+    setEducationLines(educationLinesToText(p.education_experiences))
+    setCertificatesText(tagsToText(p.certificates))
+    setExpectedSalaryLabel(p.expected_salary_label || '')
+    setDesiredPosition(p.desired_position || '')
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     candidatesApi.getMyCandidateProfile()
       .then(res => {
         if (cancelled) return
-        const p = res.data?.profile
-        if (!p) return
-        setFullName(p.full_name || '')
-        setPhone(p.phone || '')
-        setEmail(p.email || '')
-        if (p.location_code) {
-          setLocation({
-            location_code: p.location_code,
-            location_name: p.location_name,
-            location_path: p.location_path,
-            location_type: p.location_type,
-            business_area_code: p.business_area_code,
-            business_area_name: p.business_area_name,
-          })
-        }
-        setAvailability(p.availability_status || 'open')
-        setBirthYear(p.birth_year != null ? String(p.birth_year) : '')
-        setBirthMonth(p.birth_month != null ? String(p.birth_month) : '')
-        setGender(p.gender || '')
-
-        setCurrentCompany(p.current_company || '')
-        setCurrentTitle(p.current_title || '')
-        setCurrentResponsibilities(p.current_responsibilities || '')
-        setFunctionCode(p.function_code || '')
-        setIsManagementStr(
-          p.is_management_role === true ? 'yes' :
-          p.is_management_role === false ? 'no' : ''
-        )
-        setMgmtHeadcount(p.management_headcount != null ? String(p.management_headcount) : '')
-        setCsMin(p.current_salary_min != null ? String(p.current_salary_min) : '')
-        setCsMax(p.current_salary_max != null ? String(p.current_salary_max) : '')
-        setCsMonths(p.current_salary_months != null ? String(p.current_salary_months) : '')
-        setCsAvgBonus(p.current_average_bonus_percent != null ? String(p.current_average_bonus_percent) : '')
-        setCsHasYeb(p.current_has_year_end_bonus === true)
-        setCsYebMonths(p.current_year_end_bonus_months != null ? String(p.current_year_end_bonus_months) : '')
-
-        if (Array.isArray(p.work_experiences) && p.work_experiences.length > 0) {
-          setWorkRows(p.work_experiences.map(w => ({
-            ...EMPTY_WORK_EXPERIENCE,
-            company_name: w.company_name || w.company || '',
-            title: w.title || '',
-            start_month: w.start_month || '',
-            end_month:   w.end_month   || '',
-            responsibilities: w.responsibilities || '',
-            achievements:     w.achievements     || '',
-            salary:       w.salary != null ? String(w.salary) : (w.salary_min != null ? String(w.salary_min) : (w.salary_max != null ? String(w.salary_max) : '')),
-            salary_months: w.salary_months != null ? String(w.salary_months) : '',
-            average_bonus_percent: w.average_bonus_percent != null ? String(w.average_bonus_percent) : '',
-            has_year_end_bonus:    w.has_year_end_bonus === true,
-            year_end_bonus_months: w.year_end_bonus_months != null ? String(w.year_end_bonus_months) : '',
-          })))
-        }
-
-        setKnowledgeText(tagsToText(p.knowledge_tags))
-        setHardText(tagsToText(p.hard_skill_tags))
-        setSoftText(tagsToText(p.soft_skill_tags))
-
-        setEducation(p.education || '')
-        setEducationLines(educationLinesToText(p.education_experiences))
-        setCertificatesText(tagsToText(p.certificates))
-        setExpectedSalaryLabel(p.expected_salary_label || '')
-        setDesiredPosition(p.desired_position || '')
+        hydrateProfile(res.data?.profile)
       })
       .catch(err => {
         if (cancelled) return
@@ -251,7 +324,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
       })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [])
+  }, [hydrateProfile])
 
   // ── Derived ─────────────────────────────────────────────────────────────
   const knowledgeArr = useMemo(() => splitTokens(knowledgeText), [knowledgeText])
@@ -395,7 +468,8 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
 
     setSaving(true)
     try {
-      await candidatesApi.updateMyCandidateProfile(payload)
+      const res = await candidatesApi.updateMyCandidateProfile(payload)
+      hydrateProfile(res.data?.profile)
       setShowLatestPrompt(true)
     } catch (err) {
       console.error('Failed to save candidate profile:', {
@@ -586,19 +660,87 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
               </div>
               <div>
                 <label className={labelClass} style={labelStyle}>求职状态</label>
-                <select className={inputClass} style={inputStyle}
-                  value={availability} onChange={e => setAvailability(e.target.value)}>
-                  <option value="open">离职-随时到岗</option>
-                  <option value="passive_now">在职-月内到岗</option>
-                  <option value="passive">在职-考虑机会</option>
-                </select>
+                {terminal ? (
+                  <TerminalSelect
+                    value={availability}
+                    onChange={setAvailability}
+                    options={[
+                      { value: 'open', label: '离职-随时到岗' },
+                      { value: 'passive_now', label: '在职-月内到岗' },
+                      { value: 'passive', label: '在职-考虑机会' },
+                    ]}
+                    placeholder="请选择"
+                    hasValue={true}
+                  />
+                ) : (
+                  <select className={inputClass} style={inputStyle}
+                    value={availability} onChange={e => setAvailability(e.target.value)}>
+                    <option value="open">离职-随时到岗</option>
+                    <option value="passive_now">在职-月内到岗</option>
+                    <option value="passive">在职-考虑机会</option>
+                  </select>
+                )}
               </div>
-              <div>
+              <div ref={posWrapRef} style={{ position: 'relative' }}>
                 <label className={labelClass} style={labelStyle}>期望岗位</label>
-                <input className={inputClass} style={inputStyle}
+                <input
+                  className={inputClass}
+                  style={inputStyle}
                   value={desiredPosition}
-                  onChange={e => setDesiredPosition(e.target.value)}
-                  placeholder="如：海运操作、报关员、销售" />
+                  autoComplete="off"
+                  placeholder="如：海运操作主管、报关专员"
+                  onChange={e => {
+                    setDesiredPosition(e.target.value)
+                    if (e.target.value.trim()) openPosDrop()
+                    else setPosSugOpen(false)
+                    setPosActiveIdx(-1)
+                  }}
+                  onFocus={() => { if (desiredPosition.trim()) openPosDrop() }}
+                  onKeyDown={handlePosKeyDown}
+                />
+                {posSugOpen && posSuggestions.length > 0 && (
+                  <ul style={{
+                    position: terminal ? 'fixed' : 'absolute',
+                    ...(terminal
+                      ? { top: posDropPos.top, left: posDropPos.left, width: posDropPos.width }
+                      : { top: '100%', left: 0, right: 0, marginTop: 4 }
+                    ),
+                    zIndex: 9999,
+                    maxHeight: 220,
+                    overflowY: 'auto',
+                    ...(terminal ? {
+                      borderRadius: 'var(--t-radius)',
+                      border: '1px solid var(--t-border)',
+                      background: 'var(--t-bg-elevated)',
+                      boxShadow: 'var(--t-shadow-elevated)',
+                      padding: '4px 0',
+                    } : {
+                      borderRadius: 8,
+                      border: '1px solid #e2e8f0',
+                      background: '#fff',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                      padding: '4px 0',
+                    }),
+                    listStyle: 'none',
+                    margin: 0,
+                  }}>
+                    {posSuggestions.map((s, i) => (
+                      <li key={s}
+                        onMouseDown={(e) => { e.preventDefault(); setDesiredPosition(s); setPosSugOpen(false); setPosActiveIdx(-1) }}
+                        onMouseEnter={() => setPosActiveIdx(i)}
+                        style={{
+                          padding: '7px 12px', fontSize: 13, cursor: 'pointer',
+                          color: terminal
+                            ? (i === posActiveIdx ? 'var(--t-primary-fg)' : 'var(--t-text)')
+                            : (i === posActiveIdx ? '#fff' : '#1e293b'),
+                          background: terminal
+                            ? (i === posActiveIdx ? 'var(--t-primary)' : 'transparent')
+                            : (i === posActiveIdx ? '#2563eb' : 'transparent'),
+                        }}
+                      >{s}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <div>
                 <label className={labelClass} style={labelStyle}>期望薪资</label>
@@ -610,30 +752,60 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
               <div>
                 <label className={labelClass} style={labelStyle}>出生年月</label>
                 <div className="flex gap-2">
-                  <select className={inputClass} style={inputStyle}
-                    value={birthYear} onChange={e => setBirthYear(e.target.value)}>
-                    <option value="">年份</option>
-                    {Array.from({ length: new Date().getFullYear() - 16 - 1950 + 1 }, (_, i) => new Date().getFullYear() - 16 - i).map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                  <select className={inputClass} style={inputStyle}
-                    value={birthMonth} onChange={e => setBirthMonth(e.target.value)}>
-                    <option value="">月份</option>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                      <option key={m} value={m}>{m}月</option>
-                    ))}
-                  </select>
+                  {terminal ? (
+                    <TerminalSelect
+                      value={String(birthYear)}
+                      onChange={setBirthYear}
+                      options={[{ value: '', label: '年份' }, ...Array.from({ length: new Date().getFullYear() - 16 - 1950 + 1 }, (_, i) => new Date().getFullYear() - 16 - i).map(y => ({ value: String(y), label: String(y) }))]}
+                      placeholder="年份"
+                      hasValue={!!birthYear}
+                    />
+                  ) : (
+                    <select className={inputClass} style={inputStyle}
+                      value={birthYear} onChange={e => setBirthYear(e.target.value)}>
+                      <option value="">年份</option>
+                      {Array.from({ length: new Date().getFullYear() - 16 - 1950 + 1 }, (_, i) => new Date().getFullYear() - 16 - i).map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  )}
+                  {terminal ? (
+                    <TerminalSelect
+                      value={String(birthMonth)}
+                      onChange={setBirthMonth}
+                      options={[{ value: '', label: '月份' }, ...Array.from({ length: 12 }, (_, i) => i + 1).map(m => ({ value: String(m), label: `${m}月` }))]}
+                      placeholder="月份"
+                      hasValue={!!birthMonth}
+                    />
+                  ) : (
+                    <select className={inputClass} style={inputStyle}
+                      value={birthMonth} onChange={e => setBirthMonth(e.target.value)}>
+                      <option value="">月份</option>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                        <option key={m} value={m}>{m}月</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
               <div>
                 <label className={labelClass} style={labelStyle}>性别</label>
-                <select className={inputClass} style={inputStyle}
-                  value={gender} onChange={e => setGender(e.target.value)}>
-                  <option value="">请选择</option>
-                  <option value="male">男</option>
-                  <option value="female">女</option>
-                </select>
+                {terminal ? (
+                  <TerminalSelect
+                    value={gender}
+                    onChange={setGender}
+                    options={[{ value: '', label: '请选择' }, { value: 'male', label: '男' }, { value: 'female', label: '女' }]}
+                    placeholder="请选择"
+                    hasValue={!!gender}
+                  />
+                ) : (
+                  <select className={inputClass} style={inputStyle}
+                    value={gender} onChange={e => setGender(e.target.value)}>
+                    <option value="">请选择</option>
+                    <option value="male">男</option>
+                    <option value="female">女</option>
+                  </select>
+                )}
               </div>
             </div>
             <div>
@@ -671,20 +843,40 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
               </div>
               <div>
                 <label className={labelClass} style={labelStyle}>业务方向 *</label>
-                <select className={inputClass} style={inputStyle}
-                  value={functionCode} onChange={e => setFunctionCode(e.target.value)}>
-                  <option value="">请选择</option>
-                  {FUNCTION_OPTIONS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-                </select>
+                {terminal ? (
+                  <TerminalSelect
+                    value={functionCode}
+                    onChange={setFunctionCode}
+                    options={[{ value: '', label: '请选择' }, ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label }))]}
+                    placeholder="请选择"
+                    hasValue={!!functionCode}
+                  />
+                ) : (
+                  <select className={inputClass} style={inputStyle}
+                    value={functionCode} onChange={e => setFunctionCode(e.target.value)}>
+                    <option value="">请选择</option>
+                    {FUNCTION_OPTIONS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+                  </select>
+                )}
               </div>
               <div>
                 <label className={labelClass} style={labelStyle}>是否带团队 *</label>
-                <select className={inputClass} style={inputStyle}
-                  value={isManagementStr} onChange={e => setIsManagementStr(e.target.value)}>
-                  <option value="">请选择</option>
-                  <option value="yes">是</option>
-                  <option value="no">否</option>
-                </select>
+                {terminal ? (
+                  <TerminalSelect
+                    value={isManagementStr}
+                    onChange={setIsManagementStr}
+                    options={[{ value: '', label: '请选择' }, { value: 'yes', label: '是' }, { value: 'no', label: '否' }]}
+                    placeholder="请选择"
+                    hasValue={isManagementStr === 'yes' || isManagementStr === 'no'}
+                  />
+                ) : (
+                  <select className={inputClass} style={inputStyle}
+                    value={isManagementStr} onChange={e => setIsManagementStr(e.target.value)}>
+                    <option value="">请选择</option>
+                    <option value="yes">是</option>
+                    <option value="no">否</option>
+                  </select>
+                )}
               </div>
               {isManagementStr === 'yes' && (
                 <div>
@@ -698,7 +890,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
             </div>
             <div>
               <label className={labelClass} style={labelStyle}>岗位职责 *</label>
-              <textarea rows={3} className={textareaClass} style={inputStyle}
+              <textarea ref={curRespRef} rows={3} className={textareaClass + ' overflow-hidden'} style={inputStyle}
                 value={currentResponsibilities}
                 onChange={e => setCurrentResponsibilities(e.target.value)}
                 placeholder="主要职责、负责的业务范围..." />
@@ -725,13 +917,23 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
                 </div>
                 <div>
                   <label className={helperClass} style={helperStyle}>薪资月数</label>
-                  <select className={inputClass} style={inputStyle}
-                    value={csMonths} onChange={e => setCsMonths(e.target.value)}>
-                    <option value="">未填</option>
-                    <option value="12">12</option>
-                    <option value="13">13</option>
-                    <option value="14">14</option>
-                  </select>
+                  {terminal ? (
+                    <TerminalSelect
+                      value={csMonths}
+                      onChange={setCsMonths}
+                      options={[{ value: '', label: '未填' }, { value: '12', label: '12' }, { value: '13', label: '13' }, { value: '14', label: '14' }]}
+                      placeholder="未填"
+                      hasValue={!!csMonths}
+                    />
+                  ) : (
+                    <select className={inputClass} style={inputStyle}
+                      value={csMonths} onChange={e => setCsMonths(e.target.value)}>
+                      <option value="">未填</option>
+                      <option value="12">12</option>
+                      <option value="13">13</option>
+                      <option value="14">14</option>
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className={helperClass} style={helperStyle}>平均奖金 %</label>
@@ -836,15 +1038,17 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
                   </div>
                   <div>
                     <label className={helperClass} style={helperStyle}>职责</label>
-                    <textarea rows={2} className={textareaClass} style={inputStyle}
+                    <textarea rows={2} className={textareaClass + ' overflow-hidden'} style={inputStyle}
+                      ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
                       value={r.responsibilities}
-                      onChange={e => updateWorkRow(i, { responsibilities: e.target.value })} />
+                      onChange={e => { updateWorkRow(i, { responsibilities: e.target.value }); const t = e.target; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px' }} />
                   </div>
                   <div>
                     <label className={helperClass} style={helperStyle}>成就</label>
-                    <textarea rows={2} className={textareaClass} style={inputStyle}
+                    <textarea rows={2} className={textareaClass + ' overflow-hidden'} style={inputStyle}
+                      ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
                       value={r.achievements}
-                      onChange={e => updateWorkRow(i, { achievements: e.target.value })} />
+                      onChange={e => { updateWorkRow(i, { achievements: e.target.value }); const t = e.target; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px' }} />
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
@@ -858,14 +1062,24 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
                     </div>
                     <div>
                       <label className={helperClass} style={helperStyle}>薪资月数</label>
-                      <select className={inputClass} style={inputStyle}
-                        value={r.salary_months}
-                        onChange={e => updateWorkRow(i, { salary_months: e.target.value })}>
-                        <option value="">未填</option>
-                        <option value="12">12</option>
-                        <option value="13">13</option>
-                        <option value="14">14</option>
-                      </select>
+                      {terminal ? (
+                        <TerminalSelect
+                          value={r.salary_months}
+                          onChange={(val) => updateWorkRow(i, { salary_months: val })}
+                          options={[{ value: '', label: '未填' }, { value: '12', label: '12' }, { value: '13', label: '13' }, { value: '14', label: '14' }]}
+                          placeholder="未填"
+                          hasValue={!!r.salary_months}
+                        />
+                      ) : (
+                        <select className={inputClass} style={inputStyle}
+                          value={r.salary_months}
+                          onChange={e => updateWorkRow(i, { salary_months: e.target.value })}>
+                          <option value="">未填</option>
+                          <option value="12">12</option>
+                          <option value="13">13</option>
+                          <option value="14">14</option>
+                        </select>
+                      )}
                     </div>
                     <div>
                       <label className={helperClass} style={helperStyle}>平均奖金 %</label>
@@ -907,19 +1121,19 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
             </p>
             <div>
               <label className={labelClass} style={labelStyle}>知识 * （{knowledgeArr.length}）</label>
-              <textarea rows={2} className={textareaClass} style={inputStyle}
+              <textarea ref={knowledgeRef} rows={2} className={textareaClass + ' overflow-hidden'} style={inputStyle}
                 value={knowledgeText} onChange={e => setKnowledgeText(e.target.value)}
                 placeholder="如：国际贸易术语、海运报关流程、HS 编码体系" />
             </div>
             <div>
               <label className={labelClass} style={labelStyle}>硬技能 * （{hardArr.length}）</label>
-              <textarea rows={2} className={textareaClass} style={inputStyle}
+              <textarea ref={hardRef} rows={2} className={textareaClass + ' overflow-hidden'} style={inputStyle}
                 value={hardText} onChange={e => setHardText(e.target.value)}
                 placeholder="如：Cargowise、Excel、SAP、Python" />
             </div>
             <div>
               <label className={labelClass} style={labelStyle}>软技能 * （{softArr.length}）</label>
-              <textarea rows={2} className={textareaClass} style={inputStyle}
+              <textarea ref={softRef} rows={2} className={textareaClass + ' overflow-hidden'} style={inputStyle}
                 value={softText} onChange={e => setSoftText(e.target.value)}
                 placeholder="如：跨部门沟通、抗压、团队管理" />
             </div>
@@ -938,7 +1152,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
             </div>
             <div>
               <label className={labelClass} style={labelStyle}>详细教育经历</label>
-              <textarea rows={3} className={textareaClass} style={inputStyle}
+              <textarea ref={eduLinesRef} rows={3} className={textareaClass + ' overflow-hidden'} style={inputStyle}
                 value={educationLines}
                 onChange={e => setEducationLines(e.target.value)}
                 placeholder={'每行一条，使用 "|" 分隔字段：学校 | 专业 | 学位 | 起止\n如：上海海事大学 | 国际贸易 | 本科 | 2014-2018'}
@@ -947,7 +1161,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
             </div>
             <div>
               <label className={labelClass} style={labelStyle}>资格证书（{certsArr.length}）</label>
-              <textarea rows={2} className={textareaClass} style={inputStyle}
+              <textarea ref={certsRef} rows={2} className={textareaClass + ' overflow-hidden'} style={inputStyle}
                 value={certificatesText} onChange={e => setCertificatesText(e.target.value)}
                 placeholder="如：报关员证、国际货代证、CET-6" />
             </div>

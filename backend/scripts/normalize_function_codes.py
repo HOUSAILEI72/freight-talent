@@ -1,11 +1,16 @@
-"""normalize_function_codes.py — 一次性历史 function_code 修复脚本。
+"""normalize_function_codes.py — 历史 function_code 修复脚本（v2）。
 
-将 candidates 和 jobs 表中的旧 function_code/function_name 映射到新的 6 项标准枚举。
+将 candidates 和 jobs 表中的旧 function_code 映射到新的 8 项标准枚举：
+  Sea / Air / CrossBorder / Railway / Road / ContractLogistics / Warehousing / Customs
 
-映射规则:
+映射规则 (旧 → 新):
   Land              → Road
-  Custom            → Contract Logistics
-  Customs           → Contract Logistics
+  MultiModal        → Railway
+  Supply            → ContractLogistics
+  Contract Logistics→ ContractLogistics
+  CL                → ContractLogistics
+  ECOMS             → CrossBorder
+  Custom            → Customs
 
 用法:
   python scripts/normalize_function_codes.py          # dry-run，仅输出统计
@@ -27,11 +32,15 @@ from app import create_app
 from app.extensions import db
 
 # ── Mapping table ────────────────────────────────────────────────────────────
-# (old_code, new_code)
+# (old_code, new_code)  — 顺序重要：长值优先匹配
 FUNCTION_REMAP = [
-    ("Land",    "Road"),
-    ("Custom",  "Contract Logistics"),
-    ("Customs", "Contract Logistics"),
+    ("Contract Logistics", "ContractLogistics"),
+    ("Land",               "Road"),
+    ("MultiModal",         "Railway"),
+    ("Supply",             "ContractLogistics"),
+    ("CL",                 "ContractLogistics"),
+    ("ECOMS",              "CrossBorder"),
+    ("Custom",             "Customs"),
 ]
 
 # ── Normalize helpers ────────────────────────────────────────────────────────
@@ -40,15 +49,15 @@ FUNCTION_REMAP = [
 def _build_case_stmt(table, col, remap):
     """Build a SQL CASE WHEN statement for the given remap list."""
     whens = []
-    for old_val, new_val in remap:
-        whens.append(f"WHEN {col} = :old_{old_val} THEN :new_{old_val}")
+    for i, (old_val, new_val) in enumerate(remap):
+        whens.append(f"WHEN {col} = :old_{i} THEN :new_{i}")
     if not whens:
         return None, {}
     stmt = f"CASE {' '.join(whens)} ELSE {col} END"
     params = {}
-    for old_val, new_val in remap:
-        params[f"old_{old_val}"] = old_val
-        params[f"new_{old_val}"] = new_val
+    for i, (old_val, new_val) in enumerate(remap):
+        params[f"old_{i}"] = old_val
+        params[f"new_{i}"] = new_val
     return stmt, params
 
 

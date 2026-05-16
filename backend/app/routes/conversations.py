@@ -305,3 +305,111 @@ def send_message(thread_id):
                       room=f'user_{candidate.user_id}')
 
     return jsonify({'success': True, 'message': msg_dict}), 201
+
+
+@conversations_bp.post('/open')
+@jwt_required()
+def open_conversation():
+    """
+    POST /api/conversations/open
+    body: { job_id, candidate_id }
+
+    企业点击在线沟通时调用：
+    - 已有 pending/accepted invitation+thread → 直接返回 thread_id
+    - 没有 → 创建 Invitation + ConversationThread，不发邮件
+    """
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err('用户不存在', 404)
+    if user.role not in ('employer', 'admin'):
+        return _err('仅企业或管理员可发起在线沟通', 403)
+
+    if user.role == 'employer':
+        from app.utils.subscription_access import subscription_gate
+        sub, sub_err = subscription_gate(user.id)
+        if sub_err:
+            return sub_err
+
+    data = request.get_json(silent=True) or {}
+    job_id       = data.get('job_id')
+    candidate_id = data.get('candidate_id')
+    if not job_id or not candidate_id:
+        return _err('job_id 和 candidate_id 为必填项')
+
+    from app.models.job import Job
+    from app.models.candidate import Candidate
+    from app.models.invitation import Invitation
+
+    job = db.session.get(Job, job_id)
+    if not job:
+        return _err('岗位不存在', 404)
+    if job.status != 'published':
+        return _err(f'岗位当前状态为 {job.status}，只有 published 岗位可发起沟通', 422)
+    if user.role == 'employer' and job.company_id != user.id:
+        return _err('只能对自己发布的岗位发起沟通', 403)
+
+    candidate = db.session.get(Candidate, candidate_id)
+    if not candidate:
+        return _err('候选人不存在', 404)
+    if candidate.availability_status == 'closed':
+        return _err('该候选人当前不接受沟通（已关闭求职状态）', 422)
+
+    if user.role == 'employer':
+        from app.utils.subscription_access import _get_active_subscription
+        sub = _get_active_subscription(user.id)
+        if sub and not sub.covers_candidate(candidate.function_code, candidate.business_area_code):
+            return jsonify({
+                'success': False,
+                'message': '您的订阅范围不覆盖该候选人，无法发起沟通',
+                'error_code': 'subscription_scope_mismatch',
+                'pricing_url': '/employer/pricing',
+            }), 402
+
+    existing = Invitation.query.filter_by(
+        job_id=job_id,
+        candidate_id=candidate_id,
+    ).order_by(Invitation.created_at.desc()).first()
+
+    if existing and existing.status in ('pending', 'accepted'):
+        thread = ConversationThread.query.filter_by(invitation_id=existing.id).first()
+        if not thread:
+            thread = ConversationThread(
+                invitation_id=existing.id,
+                job_id=job_id,
+                candidate_id=candidate_id,
+                employer_id=user.id,
+            )
+            db.session.add(thread)
+            db.session.commit()
+        return jsonify({
+            'success': True,
+            'thread_id': thread.id,
+            'invitation_id': existing.id,
+            'already_existed': True,
+        })
+
+    inv = Invitation(
+        job_id=job_id,
+        candidate_id=candidate_id,
+        employer_id=user.id,
+        message='企业发起在线沟通',
+        status='pending',
+    )
+    db.session.add(inv)
+    db.session.flush()
+
+    thread = ConversationThread(
+        invitation_id=inv.id,
+        job_id=job_id,
+        candidate_id=candidate_id,
+        employer_id=user.id,
+    )
+    db.session.add(thread)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'thread_id': thread.id,
+        'invitation_id': inv.id,
+        'already_existed': False,
+    }), 201

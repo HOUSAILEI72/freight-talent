@@ -277,6 +277,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'employer/jobs/:jobId/edit',
+        element: (
+          <RequireAuth roles={['employer']}>
+            <TerminalPostJob mode="edit" />
+          </RequireAuth>
+        ),
+      },
+      {
         path: 'employer/jobs/:jobId/match',
         element: (
           <RequireAuth roles={['employer']}>

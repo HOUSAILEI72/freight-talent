@@ -56,17 +56,19 @@ export default function RegionSelector({
   const [open, setOpen]       = useState(false)
   const [query, setQuery]     = useState('')
   const [navStack, setNavStack] = useState([]) // [{type:'great-china'|'overseas'|'province'|'city', node?}]
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 })
 
   const wrapperRef = useRef(null)
+  const panelRef   = useRef(null)
   const searchRef  = useRef(null)
 
   // ── Close on outside click / Escape ───────────────────────────────────────
   useEffect(() => {
     if (!open) return
     function onClickOutside(e) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setOpen(false)
-      }
+      const inWrap  = wrapperRef.current?.contains(e.target)
+      const inPanel = panelRef.current?.contains(e.target)
+      if (!inWrap && !inPanel) setOpen(false)
     }
     function onKey(e) {
       if (e.key === 'Escape') setOpen(false)
@@ -161,7 +163,21 @@ export default function RegionSelector({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setOpen(o => !o)}
+        onClick={(e) => {
+          if (disabled) return
+          setOpen(o => {
+            if (!o) {
+              const rect = wrapperRef.current?.getBoundingClientRect()
+              if (rect) {
+                const panelH = 320
+                const spaceBelow = window.innerHeight - rect.bottom - 4
+                const top = spaceBelow >= panelH ? rect.bottom + 2 : rect.top - panelH - 2
+                setDropPos({ top, left: rect.left, width: rect.width })
+              }
+            }
+            return !o
+          })
+        }}
         className={`relative inline-flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors disabled:opacity-50 ${
           terminal ? '' : (value ? 'border-slate-200 text-slate-700' : 'border-slate-200 text-slate-400')
         } ${className}`}
@@ -531,44 +547,59 @@ export default function RegionSelector({
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
+  const popoverContent = open ? (
+    <div
+      ref={panelRef}
+      className={terminal ? 'rounded-lg border' : 'absolute z-50 mt-1 w-full rounded-lg border shadow-lg'}
+      style={terminal
+        ? {
+            position: 'fixed',
+            top: dropPos.top,
+            left: dropPos.left,
+            width: dropPos.width,
+            zIndex: 9999,
+            maxHeight: 340,
+            overflowY: 'auto',
+            ...popoverStyle,
+            boxShadow: 'var(--t-shadow-elevated)',
+          }
+        : popoverStyle}
+    >
+      {/* Search box */}
+      <div
+        className="flex items-center gap-2 border-b px-3 py-2"
+        style={terminal ? { borderColor: 'var(--t-border-subtle)' } : { borderColor: '#e2e8f0' }}
+      >
+        <Search size={14} style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+        <input
+          ref={searchRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by name / code (e.g. Shanghai, Germany, 440300, DE)"
+          className="w-full bg-transparent text-sm outline-none border-none"
+          style={searchInputStyle}
+        />
+        {query && (
+          <button type="button" onClick={() => setQuery('')} style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>
+            <X size={12} />
+          </button>
+        )}
+      </div>
+
+      {/* Body */}
+      {isSearching ? renderSearchHits() : (
+        <>
+          {renderBreadcrumb()}
+          {renderDrillDown()}
+        </>
+      )}
+    </div>
+  ) : null
+
   return (
     <div ref={wrapperRef} className="relative w-full">
       {renderTrigger()}
-      {open && (
-        <div
-          className="absolute z-50 mt-1 w-full rounded-lg border shadow-lg"
-          style={popoverStyle}
-        >
-          {/* Search box */}
-          <div
-            className="flex items-center gap-2 border-b px-3 py-2"
-            style={terminal ? { borderColor: 'var(--t-border-subtle)' } : { borderColor: '#e2e8f0' }}
-          >
-            <Search size={14} style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
-            <input
-              ref={searchRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name / code (e.g. Shanghai, Germany, 440300, DE)"
-              className="w-full bg-transparent text-sm outline-none border-none"
-              style={searchInputStyle}
-            />
-            {query && (
-              <button type="button" onClick={() => setQuery('')} style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>
-                <X size={12} />
-              </button>
-            )}
-          </div>
-
-          {/* Body */}
-          {isSearching ? renderSearchHits() : (
-            <>
-              {renderBreadcrumb()}
-              {renderDrillDown()}
-            </>
-          )}
-        </div>
-      )}
+      {popoverContent}
       {/* Hidden import to keep getBusinessAreaByLocationCode used (silences
           unused-import warnings if commit() ever stops calling it). */}
       {process.env.NODE_ENV === 'never' && <span>{String(getBusinessAreaByLocationCode('GLOBAL'))}</span>}

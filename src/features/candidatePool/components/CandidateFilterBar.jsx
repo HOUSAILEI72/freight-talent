@@ -1,14 +1,7 @@
 import { Search, X, SlidersHorizontal } from 'lucide-react'
 import RegionSelector from '../../../components/RegionSelector'
+import { TerminalSelect } from '../../../components/terminal/TerminalSelect'
 import { FUNCTION_OPTIONS, AVAIL_OPTIONS } from '../constants'
-
-const SEL_STYLE = (terminal, hasValue) => terminal
-  ? {
-      background: 'var(--t-bg-input)',
-      borderColor: hasValue ? 'var(--t-border-focus)' : 'var(--t-border)',
-      color: hasValue ? 'var(--t-text)' : 'var(--t-text-muted)',
-    }
-  : undefined
 
 const SEL_CLASS = (terminal) => terminal
   ? 'w-full px-2 py-1.5 text-xs rounded border focus:outline-none'
@@ -56,7 +49,7 @@ export function CandidateFilterBar({
           />
           <span
             style={terminal
-              ? { fontFamily: 'var(--t-font-sans)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)' }
+              ? { fontFamily: 'var(--t-font-ui)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)' }
               : { fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }
             }
           >
@@ -66,7 +59,7 @@ export function CandidateFilterBar({
             <span
               style={{
                 marginLeft: 'auto',
-                fontFamily: 'var(--t-font-sans)',
+                fontFamily: 'var(--t-font-ui)',
                 fontSize: 9,
                 color: 'var(--t-primary)',
                 fontWeight: 700,
@@ -108,20 +101,30 @@ export function CandidateFilterBar({
           <div className="mb-3">
             <label
               style={terminal
-                ? { display: 'block', fontSize: 9, fontFamily: 'var(--t-font-sans)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }
+                ? { display: 'block', fontSize: 9, fontFamily: 'var(--t-font-ui)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }
                 : { display: 'block', fontSize: 11, color: '#94a3b8', marginBottom: 4 }
               }
             >
               邀约岗位
             </label>
-            <select
-              value={selectedJob?.id ?? ''}
-              onChange={e => setSelectedJob(myJobs.find(j => j.id === Number(e.target.value)) ?? null)}
-              className={SEL_CLASS(terminal)}
-              style={SEL_STYLE(terminal, !!selectedJob)}
-            >
-              {myJobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}
-            </select>
+            {terminal ? (
+              <TerminalSelect
+                value={selectedJob?.id ?? ''}
+                onChange={val => setSelectedJob(myJobs.find(j => j.id === Number(val)) ?? null)}
+                options={myJobs.map(j => ({ value: j.id, label: j.title }))}
+                placeholder="选择岗位"
+                hasValue={!!selectedJob}
+                searchable
+              />
+            ) : (
+              <select
+                value={selectedJob?.id ?? ''}
+                onChange={e => setSelectedJob(myJobs.find(j => j.id === Number(e.target.value)) ?? null)}
+                className={SEL_CLASS(false)}
+              >
+                {myJobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}
+              </select>
+            )}
           </div>
         )}
 
@@ -175,43 +178,77 @@ export function CandidateFilterBar({
 
           {/* Section label */}
           {terminal && (
-            <p style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }}>
+            <p style={{ fontFamily: 'var(--t-font-ui)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }}>
               属性筛选
             </p>
           )}
 
           {/* Function */}
-          <select
-            value={functionCode}
-            onChange={e => onFunctionChange(e.target.value)}
-            className={SEL_CLASS(terminal)}
-            style={SEL_STYLE(terminal, !!functionCode)}
-          >
-            <option value="">业务方向（全部）</option>
-            {FUNCTION_OPTIONS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-          </select>
+          {terminal ? (
+            <TerminalSelect
+              value={functionCode}
+              onChange={onFunctionChange}
+              options={[
+                { value: '', label: '业务方向（全部）' },
+                ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label })),
+              ]}
+              placeholder="业务方向（全部）"
+              hasValue={!!functionCode}
+            />
+          ) : (
+            <select
+              value={functionCode}
+              onChange={e => onFunctionChange(e.target.value)}
+              className={SEL_CLASS(false)}
+            >
+              <option value="">业务方向（全部）</option>
+              {FUNCTION_OPTIONS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+            </select>
+          )}
 
           {/* Availability */}
-          <select
-            value={avail}
-            onChange={e => setAvail(e.target.value)}
-            className={SEL_CLASS(terminal)}
-            style={SEL_STYLE(terminal, avail !== 'open')}
-          >
-            {AVAIL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
+          {terminal ? (
+            <TerminalSelect
+              value={avail}
+              onChange={setAvail}
+              options={AVAIL_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+              placeholder="开放状态"
+              hasValue={avail !== 'all'}
+            />
+          ) : (
+            <select
+              value={avail}
+              onChange={e => setAvail(e.target.value)}
+              className={SEL_CLASS(false)}
+            >
+              {AVAIL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          )}
 
           {/* Gender */}
-          <select
-            value={gender ?? ''}
-            onChange={e => setGender(e.target.value)}
-            className={SEL_CLASS(terminal)}
-            style={SEL_STYLE(terminal, !!gender)}
-          >
-            <option value="">性别（不限）</option>
-            <option value="male">男</option>
-            <option value="female">女</option>
-          </select>
+          {terminal ? (
+            <TerminalSelect
+              value={gender ?? ''}
+              onChange={setGender}
+              options={[
+                { value: '', label: '性别（不限）' },
+                { value: 'male', label: '男' },
+                { value: 'female', label: '女' },
+              ]}
+              placeholder="性别（不限）"
+              hasValue={!!gender}
+            />
+          ) : (
+            <select
+              value={gender ?? ''}
+              onChange={e => setGender(e.target.value)}
+              className={SEL_CLASS(false)}
+            >
+              <option value="">性别（不限）</option>
+              <option value="male">男</option>
+              <option value="female">女</option>
+            </select>
+          )}
 
           {/* Divider */}
           {terminal && (
@@ -220,34 +257,60 @@ export function CandidateFilterBar({
 
           {/* Section label */}
           {terminal && (
-            <p style={{ fontFamily: 'var(--t-font-sans)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }}>
+            <p style={{ fontFamily: 'var(--t-font-ui)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }}>
               互动状态
             </p>
           )}
 
           {/* Archive filter */}
-          <select
-            value={archiveFilter}
-            onChange={e => setArchiveFilter(e.target.value)}
-            className={SEL_CLASS(terminal)}
-            style={SEL_STYLE(terminal, archiveFilter !== 'all')}
-          >
-            <option value="all">收藏（全部）</option>
-            <option value="archived">已收藏</option>
-            <option value="not_archived">未收藏</option>
-          </select>
+          {terminal ? (
+            <TerminalSelect
+              value={archiveFilter}
+              onChange={setArchiveFilter}
+              options={[
+                { value: 'all', label: '收藏（全部）' },
+                { value: 'archived', label: '已收藏' },
+                { value: 'not_archived', label: '未收藏' },
+              ]}
+              placeholder="收藏（全部）"
+              hasValue={archiveFilter !== 'all'}
+            />
+          ) : (
+            <select
+              value={archiveFilter}
+              onChange={e => setArchiveFilter(e.target.value)}
+              className={SEL_CLASS(false)}
+            >
+              <option value="all">收藏（全部）</option>
+              <option value="archived">已收藏</option>
+              <option value="not_archived">未收藏</option>
+            </select>
+          )}
 
           {/* Invite filter */}
-          <select
-            value={inviteFilter}
-            onChange={e => setInviteFilter(e.target.value)}
-            className={SEL_CLASS(terminal)}
-            style={SEL_STYLE(terminal, inviteFilter !== 'all')}
-          >
-            <option value="all">邀约（全部）</option>
-            <option value="invited">已邀约</option>
-            <option value="not_invited">未邀约</option>
-          </select>
+          {terminal ? (
+            <TerminalSelect
+              value={inviteFilter}
+              onChange={setInviteFilter}
+              options={[
+                { value: 'all', label: '邀约（全部）' },
+                { value: 'invited', label: '已邀约' },
+                { value: 'not_invited', label: '未邀约' },
+              ]}
+              placeholder="邀约（全部）"
+              hasValue={inviteFilter !== 'all'}
+            />
+          ) : (
+            <select
+              value={inviteFilter}
+              onChange={e => setInviteFilter(e.target.value)}
+              className={SEL_CLASS(false)}
+            >
+              <option value="all">邀约（全部）</option>
+              <option value="invited">已邀约</option>
+              <option value="not_invited">未邀约</option>
+            </select>
+          )}
 
           {/* Action buttons */}
           <div className="flex gap-2 pt-1">
@@ -260,7 +323,7 @@ export function CandidateFilterBar({
                     color: '#fff',
                     border: 'none',
                     borderRadius: 'var(--t-radius-sm)',
-                    fontFamily: 'var(--t-font-sans)',
+                    fontFamily: 'var(--t-font-ui)',
                     fontWeight: 700,
                     letterSpacing: '0.06em',
                     cursor: 'pointer',

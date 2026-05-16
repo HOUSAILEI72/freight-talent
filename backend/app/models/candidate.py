@@ -135,6 +135,7 @@ class Candidate(db.Model):
             "current_title": self.current_title,
             "current_company": self.current_company,
             "current_city": self.current_city,
+            "desired_position": self.desired_position,
             "expected_city": self.expected_city,
             "expected_salary_min": self.expected_salary_min,
             "expected_salary_max": self.expected_salary_max,

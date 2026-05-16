@@ -1,10 +1,10 @@
 export function GranularityTabs({ value, onChange }) {
   const opts = [
-    { value: "day",     label: "日" },
-    { value: "week",    label: "周" },
-    { value: "month",   label: "月" },
-    { value: "quarter", label: "季度" },
-    { value: "year",    label: "年" },
+    { value: "week",       label: "周" },
+    { value: "bi_monthly", label: "10&20/月" },
+    { value: "month",      label: "月" },
+    { value: "quarter",    label: "季度" },
+    { value: "year",       label: "年" },
   ]
   return (
     <div className="inline-flex bg-slate-100 rounded-lg p-1 gap-1">

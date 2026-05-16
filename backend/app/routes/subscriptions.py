@@ -18,7 +18,10 @@ subscriptions_bp = Blueprint("subscriptions", __name__, url_prefix="/api/subscri
 
 VALID_PLAN_IDS = {"china_function", "china_all_functions"}
 VALID_BILLING_CYCLES = {"monthly", "annual"}
-VALID_FUNCTIONS = ["Sea", "Air", "Road", "Railway", "Contract Logistics", "ECOMS"]
+VALID_FUNCTIONS = [
+    "Sea", "Air", "CrossBorder", "Railway",
+    "Road", "ContractLogistics", "Warehousing", "Customs",
+]
 
 ANNUAL_DISCOUNT = 0.85
 

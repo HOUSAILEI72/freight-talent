@@ -99,9 +99,8 @@ function AvailBadge({ status, terminal }) {
     return <Badge color="gray">暂不考虑</Badge>
   }
   const label = status === 'open' ? 'OPEN' : status === 'passive_now' ? 'NOW' : status === 'passive' ? 'PASSIVE' : 'CLOSED'
-  const color = status === 'open' ? 'var(--t-success)' : status === 'passive_now' ? 'var(--t-warning)' : status === 'passive' ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
   return (
-    <span className="font-sans text-[10px] uppercase tracking-wider" style={{ color }}>
+    <span className="font-sans text-[10px] uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>
       {label}
     </span>
   )
@@ -233,12 +232,7 @@ function CandidateDetailPanel({
               items.push(<span key="edu" className="inline-flex items-center gap-0.5 text-xs" style={{ color: terminal ? 'var(--t-text-muted)' : '#94a3b8' }}><Lock size={9} />学历</span>)
             if (isPrivate && candidate.availability_status)
               items.push(
-                <span key="avail" className="text-xs font-semibold" style={{
-                  color: candidate.availability_status === 'open' ? (terminal ? 'var(--t-success)' : '#16a34a')
-                    : candidate.availability_status === 'passive_now' ? (terminal ? 'var(--t-warning)' : '#d97706')
-                    : candidate.availability_status === 'passive' ? (terminal ? 'var(--t-chart-blue)' : '#2563eb')
-                    : (terminal ? 'var(--t-text-muted)' : '#94a3b8'),
-                }}>
+                <span key="avail" className="text-xs" style={terminal ? mutedColor : { color: '#64748b' }}>
                   {AVAIL_LABEL[candidate.availability_status] ?? candidate.availability_status}
                 </span>
               )

@@ -95,4 +95,14 @@ export const candidatesApi = {
   getAreaFilters() {
     return client.get('/candidates/area-filters')
   },
+
+  /** GET /api/candidates/:id/email-actions?job_id=X — 查询邮件发送状态 */
+  getCandidateEmailActions(candidateId, params = {}) {
+    return client.get(`/candidates/${candidateId}/email-actions`, { params })
+  },
+
+  /** POST /api/candidates/:id/email-action — 发送邮件动作 */
+  sendCandidateEmailAction(candidateId, payload) {
+    return client.post(`/candidates/${candidateId}/email-action`, payload)
+  },
 }

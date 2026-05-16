@@ -37,9 +37,18 @@ export function MessageBubble({ msg, isMine, onRetry, terminal = false }) {
     if (isMine) {
       bubbleStyle = isFailed
         ? { background: 'var(--t-danger-muted)', color: 'var(--t-danger)', border: '1px solid var(--t-danger)' }
-        : { background: 'var(--t-primary)', color: '#fff' }
+        : {
+            background: 'var(--t-primary)',
+            color: '#fff',
+            border: '1px solid rgba(37,99,235,0.7)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)',
+          }
     } else {
-      bubbleStyle = { background: 'var(--t-bg-elevated)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
+      bubbleStyle = {
+        background: 'var(--t-bg-elevated)',
+        color: 'var(--t-text)',
+        border: '1px solid var(--t-border)',
+      }
     }
     const metaColor = isFailed ? 'var(--t-danger)' : isMine ? 'rgba(255,255,255,0.7)' : 'var(--t-text-muted)'
 

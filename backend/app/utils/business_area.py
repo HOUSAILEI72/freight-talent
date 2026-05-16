@@ -226,6 +226,7 @@ def validate_location_payload(data: Optional[dict]) -> tuple[Optional[dict], Opt
     on failure. The normalized dict ALWAYS uses the back-end's computed
     business_area_code/name — any value the client put there is discarded.
     """
+    import re as _re
     if not isinstance(data, dict):
         return None, "location payload must be an object"
 
@@ -238,6 +239,12 @@ def validate_location_payload(data: Optional[dict]) -> tuple[Optional[dict], Opt
     if not name: return None, "location_name is required"
     if not path: return None, "location_path is required"
     if not typ:  return None, "location_type is required"
+
+    # ── Migrate legacy CN-XX-XXXX format → 6-digit numeric code ─────────────
+    # Old format: CN-{2-digit province}-{4-digit area}, e.g. CN-33-0113 → 330113
+    _legacy = _re.match(r'^CN-(\d{2})-(\d{4})$', str(code))
+    if _legacy:
+        code = _legacy.group(1) + _legacy.group(2)
 
     if not is_valid_location_code(code):
         return None, f"Unknown or forbidden location_code: {code}"

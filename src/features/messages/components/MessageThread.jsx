@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Loader2 } from 'lucide-react'
-import { EyeOff, Trash2 } from 'lucide-react'
+import { Loader2, EyeOff, Trash2, MessageSquare } from 'lucide-react'
 import { MessageBubble, DateDivider } from './MessageBubble'
 import TypingIndicator from './TypingIndicator'
 import { msgDateKey } from '../utils/messageFormatters'
@@ -110,9 +109,18 @@ export function MessageThread({
       <div ref={topAnchorRef} />
 
       {messages.length === 0 && (
-        <div className={terminal ? 'text-center text-sm py-12' : 'text-center text-sm text-slate-400 py-12'} style={terminal ? { color: 'var(--t-text-muted)' } : undefined}>
-          暂无消息，发一条开始沟通吧
-        </div>
+        terminal ? (
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            paddingTop: 40, paddingBottom: 24, gap: 10,
+          }}>
+            <MessageSquare size={28} style={{ color: 'var(--t-text-muted)', opacity: 0.45 }} />
+            <span style={{ fontSize: 13, color: 'var(--t-text-muted)' }}>发一条消息开始沟通</span>
+          </div>
+        ) : (
+          <div className="text-center text-sm text-slate-400 py-12">暂无消息，发一条开始沟通吧</div>
+        )
       )}
 
       {messages.map((msg, idx) => {

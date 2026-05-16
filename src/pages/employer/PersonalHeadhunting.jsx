@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlertCircle, Loader2, ChevronRight, UserSearch, CheckCircle,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { headhuntingApi } from '../../api/headhunting'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
+import { TerminalSelect } from '../../components/terminal/TerminalSelect'
 import RegionSelector from '../../components/RegionSelector'
 import { useAuth } from '../../context/AuthContext'
 
@@ -388,6 +389,18 @@ export default function PersonalHeadhunting({ terminal = false }) {
   const [hardSkillText,           setHardSkillText]           = useState('')
   const [softSkillText,           setSoftSkillText]           = useState('')
   const [targetCompaniesText,     setTargetCompaniesText]     = useState('')
+
+  // ── Auto-resize refs ────────────────────────────────────────────────────
+  const descRef        = useRef(null)
+  const knowledgeRef   = useRef(null)
+  const hardSkillRef   = useRef(null)
+  const softSkillRef   = useRef(null)
+  const targetCoRef    = useRef(null)
+  useEffect(() => { const el = descRef.current;      if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [description])
+  useEffect(() => { const el = knowledgeRef.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [knowledgeText])
+  useEffect(() => { const el = hardSkillRef.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [hardSkillText])
+  useEffect(() => { const el = softSkillRef.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [softSkillText])
+  useEffect(() => { const el = targetCoRef.current;  if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [targetCompaniesText])
   const [salaryMin,               setSalaryMin]               = useState('')
   const [salaryMax,               setSalaryMax]               = useState('')
   const [salaryMonths,            setSalaryMonths]            = useState(13)
@@ -632,14 +645,14 @@ export default function PersonalHeadhunting({ terminal = false }) {
 
         {/* ── Col 1: 服务条款 & 增值服务 ────────────────────────────────────── */}
         <div style={T.card}>
-          <SectionHeader icon={FileText} title="服务条款" sub="TERMS OF SERVICE" />
+          <SectionHeader icon={FileText} title="重要服务条款" sub="TERMS OF SERVICE" />
           <div className="flex-1 min-h-0 overflow-y-auto terminal-scrollbar" style={{ paddingRight: 2 }}>
 
             {/* Terms list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
-              {REQUIRED_TERMS.map(term => (
+              {REQUIRED_TERMS.map((term, idx) => (
                 <div key={term.key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '6px 8px', borderRadius: 4, border: '1px solid var(--t-border-subtle)' }}>
-                  <span style={{ fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0, marginTop: 2, lineHeight: 1 }}>·</span>
+                  <span style={{ fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0, marginTop: 2, lineHeight: 1, fontFamily: 'var(--t-font-sans)', fontVariantNumeric: 'tabular-nums' }}>{idx + 1}</span>
                   <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', lineHeight: 1.65 }}>{term.text}</span>
                 </div>
               ))}
@@ -787,22 +800,26 @@ export default function PersonalHeadhunting({ terminal = false }) {
             {/* 岗位板块 */}
             <div>
               <label style={T.label}>岗位板块 *</label>
-              <select style={T.input} value={functionCode} onChange={e => setFunctionCode(e.target.value)}>
-                <option value="">请选择板块</option>
-                {FUNCTION_OPTIONS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-              </select>
+              <TerminalSelect
+                value={functionCode}
+                onChange={setFunctionCode}
+                options={[{ value: '', label: '请选择板块' }, ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label }))]}
+                placeholder="请选择板块"
+                hasValue={!!functionCode}
+              />
             </div>
 
             {/* 是否带团队 */}
             <div style={{ display: 'grid', gridTemplateColumns: isManagementRole === 'true' ? '1fr 1fr' : '1fr', gap: 8 }}>
               <div>
                 <label style={T.label}>是否带团队 *</label>
-                <select style={T.input} value={isManagementRole}
-                  onChange={e => { setIsManagementRole(e.target.value); if (e.target.value !== 'true') setManagementHeadcount('') }}>
-                  <option value="">请选择</option>
-                  <option value="true">是</option>
-                  <option value="false">否</option>
-                </select>
+                <TerminalSelect
+                  value={isManagementRole}
+                  onChange={(val) => { setIsManagementRole(val); if (val !== 'true') setManagementHeadcount('') }}
+                  options={[{ value: '', label: '请选择' }, { value: 'true', label: '是' }, { value: 'false', label: '否' }]}
+                  placeholder="请选择"
+                  hasValue={isManagementRole === 'true' || isManagementRole === 'false'}
+                />
               </div>
               {isManagementRole === 'true' && (
                 <div>
@@ -817,10 +834,13 @@ export default function PersonalHeadhunting({ terminal = false }) {
             {/* 应聘类型 */}
             <div>
               <label style={T.label}>应聘类型 *</label>
-              <select style={T.input} value={employmentType} onChange={e => setEmploymentType(e.target.value)}>
-                <option value="">请选择</option>
-                {EMPLOYMENT_TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <TerminalSelect
+                value={employmentType}
+                onChange={setEmploymentType}
+                options={[{ value: '', label: '请选择' }, ...EMPLOYMENT_TYPE_OPTIONS.map(t => ({ value: t, label: t }))]}
+                placeholder="请选择"
+                hasValue={!!employmentType}
+              />
             </div>
 
             {/* 城市 */}
@@ -843,32 +863,38 @@ export default function PersonalHeadhunting({ terminal = false }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div>
                 <label style={T.label}>经验要求 *</label>
-                <select style={T.input} value={experienceYears} onChange={e => setExperienceYears(e.target.value)}>
-                  <option value="">请选择</option>
-                  {EXPERIENCE_YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
+                <TerminalSelect
+                  value={experienceYears}
+                  onChange={setExperienceYears}
+                  options={[{ value: '', label: '请选择' }, ...EXPERIENCE_YEAR_OPTIONS.map(y => ({ value: y, label: y }))]}
+                  placeholder="请选择"
+                  hasValue={!!experienceYears}
+                />
               </div>
               <div>
                 <label style={T.label}>最低学历 *</label>
-                <select style={T.input} value={degreeRequired} onChange={e => setDegreeRequired(e.target.value)}>
-                  <option value="">请选择</option>
-                  {DEGREE_REQUIRED_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
+                <TerminalSelect
+                  value={degreeRequired}
+                  onChange={setDegreeRequired}
+                  options={[{ value: '', label: '请选择' }, ...DEGREE_REQUIRED_OPTIONS.map(d => ({ value: d, label: d }))]}
+                  placeholder="请选择"
+                  hasValue={!!degreeRequired}
+                />
               </div>
             </div>
 
             {/* 岗位职责 */}
             <div>
               <label style={T.label}>岗位职责 *</label>
-              <textarea rows={4} style={T.textarea} placeholder="描述该岗位的主要工作职责..."
+              <textarea ref={descRef} rows={4} style={{ ...T.textarea, overflow: 'hidden' }} placeholder="描述该岗位的主要工作职责..."
                 value={description} onChange={e => setDescription(e.target.value)} />
             </div>
 
             {/* 技能区 */}
             {[
-              { label: '知识要求 *', val: knowledgeText, set: setKnowledgeText, arr: knowledgeArr, ph: '例：国际贸易, HS编码, 危险品分类' },
-              { label: '硬技能要求 *', val: hardSkillText, set: setHardSkillText, arr: hardSkillArr, ph: 'Cargowise, Excel, SAP' },
-              { label: '软技能要求 *', val: softSkillText, set: setSoftSkillText, arr: softSkillArr, ph: '英语沟通, 抗压能力, 团队协作' },
+              { label: '知识要求 *', val: knowledgeText, set: setKnowledgeText, arr: knowledgeArr, ph: '例：国际贸易, HS编码, 危险品分类', taRef: knowledgeRef },
+              { label: '硬技能要求 *', val: hardSkillText, set: setHardSkillText, arr: hardSkillArr, ph: 'Cargowise, Excel, SAP', taRef: hardSkillRef },
+              { label: '软技能要求 *', val: softSkillText, set: setSoftSkillText, arr: softSkillArr, ph: '英语沟通, 抗压能力, 团队协作', taRef: softSkillRef },
             ].map(sk => (
               <div key={sk.label}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -879,7 +905,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                     </span>
                   )}
                 </div>
-                <textarea rows={2} style={T.textarea} placeholder={sk.ph}
+                <textarea ref={sk.taRef} rows={2} style={{ ...T.textarea, overflow: 'hidden' }} placeholder={sk.ph}
                   value={sk.val} onChange={e => sk.set(e.target.value)} />
                 {sk.arr.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
@@ -901,8 +927,9 @@ export default function PersonalHeadhunting({ terminal = false }) {
                 )}
               </div>
               <textarea
+                ref={targetCoRef}
                 rows={2}
-                style={T.textarea}
+                style={{ ...T.textarea, overflow: 'hidden' }}
                 placeholder="例：马士基, MSC, 中远海运（逗号分隔）"
                 value={targetCompaniesText}
                 onChange={e => setTargetCompaniesText(e.target.value)}
@@ -939,9 +966,13 @@ export default function PersonalHeadhunting({ terminal = false }) {
               </div>
               <div>
                 <label style={T.label}>薪资月数 *</label>
-                <select style={T.input} value={salaryMonths} onChange={e => setSalaryMonths(Number(e.target.value))}>
-                  {SALARY_MONTHS_OPTIONS.map(m => <option key={m} value={m}>{m} 个月</option>)}
-                </select>
+                <TerminalSelect
+                  value={String(salaryMonths)}
+                  onChange={(val) => setSalaryMonths(Number(val))}
+                  options={SALARY_MONTHS_OPTIONS.map(m => ({ value: String(m), label: `${m} 个月` }))}
+                  placeholder="请选择"
+                  hasValue={true}
+                />
               </div>
             </div>
 
@@ -949,10 +980,13 @@ export default function PersonalHeadhunting({ terminal = false }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div>
                 <label style={T.label}>提成 / 计件奖金</label>
-                <select style={T.input} value={commissionBonusPeriod}
-                  onChange={e => { setCommissionBonusPeriod(e.target.value); if (e.target.value === 'not_applicable') setCommissionBonusAmount('') }}>
-                  {COMMISSION_BONUS_PERIODS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
+                <TerminalSelect
+                  value={commissionBonusPeriod}
+                  onChange={(val) => { setCommissionBonusPeriod(val); if (val === 'not_applicable') setCommissionBonusAmount('') }}
+                  options={COMMISSION_BONUS_PERIODS.map(p => ({ value: p.value, label: p.label }))}
+                  placeholder="请选择"
+                  hasValue={commissionBonusPeriod !== 'not_applicable'}
+                />
               </div>
               <div>
                 <label style={T.label}>预估平均额</label>
@@ -972,12 +1006,13 @@ export default function PersonalHeadhunting({ terminal = false }) {
             {/* 年终奖 */}
             <div>
               <label style={T.label}>是否有年终奖 *</label>
-              <select style={T.input} value={hasYearEndBonus}
-                onChange={e => { setHasYearEndBonus(e.target.value); if (e.target.value !== 'true') { setYearEndBonusQuickSelect(null); setYearEndBonusCustom('') } }}>
-                <option value="">请选择</option>
-                <option value="true">是</option>
-                <option value="false">否</option>
-              </select>
+              <TerminalSelect
+                value={hasYearEndBonus}
+                onChange={(val) => { setHasYearEndBonus(val); if (val !== 'true') { setYearEndBonusQuickSelect(null); setYearEndBonusCustom('') } }}
+                options={[{ value: '', label: '请选择' }, { value: 'true', label: '是' }, { value: 'false', label: '否' }]}
+                placeholder="请选择"
+                hasValue={hasYearEndBonus === 'true' || hasYearEndBonus === 'false'}
+              />
             </div>
             {hasYearEndBonus === 'true' && (
               <div>

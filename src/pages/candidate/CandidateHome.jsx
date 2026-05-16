@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Briefcase, Database, Send, Tags, TrendingUp, FileText, Building2, SquareDashed } from 'lucide-react'
 import TerminalLayout from '../../components/terminal/TerminalLayout'
-import FunctionRail, { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
-import AreaSidebar, { DEFAULT_AREAS } from '../../components/terminal/AreaSidebar'
+import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
+import { DEFAULT_AREAS } from '../../components/terminal/AreaSidebar'
+import AreaRail from '../../components/terminal/AreaRail'
+import FunctionSidebar from '../../components/terminal/FunctionSidebar'
 import CandidateChartPanel from '../../components/terminal/CandidateChartPanel'
 import TerminalActionBar from '../../components/terminal/TerminalActionBar'
 import MetricCard from '../../components/data/MetricCard'
@@ -81,7 +83,7 @@ export default function CandidateHome() {
   const { user } = useAuth()
   const [selectedFunction, setSelectedFunction] = useState(DEFAULT_FUNCTION)
   const [selectedArea, setSelectedArea] = useState(DEFAULT_AREA)
-  const [granularity, setGranularity] = useState('day')
+  const [granularity, setGranularity] = useState('week')
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -140,10 +142,23 @@ export default function CandidateHome() {
     function periodKey(dateStr) {
       const d = new Date(dateStr)
       if (isNaN(d.getTime())) return null
-      if (granularity === 'day') {
-        const mm = String(d.getMonth() + 1).padStart(2, '0')
-        const dd = String(d.getDate()).padStart(2, '0')
-        return { period: `${d.getFullYear()}-${mm}-${dd}`, label: `${mm}-${dd}` }
+      if (granularity === 'bi_monthly') {
+        let snapYear = d.getFullYear()
+        let snapMonth = d.getMonth() + 1
+        let snapDay
+        const day = d.getDate()
+        if (day <= 10) {
+          snapDay = 10
+        } else if (day <= 20) {
+          snapDay = 20
+        } else {
+          snapDay = 10
+          snapMonth += 1
+          if (snapMonth > 12) { snapMonth = 1; snapYear += 1 }
+        }
+        const mm = String(snapMonth).padStart(2, '0')
+        const period = `${snapYear}-${mm}-${String(snapDay).padStart(2, '0')}`
+        return { period, label: `${mm}/${String(snapDay).padStart(2, '0')}` }
       }
       if (granularity === 'week') {
         // ISO week approximation
@@ -213,16 +228,17 @@ export default function CandidateHome() {
 
   return (
     <TerminalLayout title="DASHBOARD" activeIconId="dashboard" navItems={CANDIDATE_ICON_NAV}>
-      <FunctionRail
-        value={selectedFunction}
-        onChange={setSelectedFunction}
-        functions={DEFAULT_FUNCTIONS}
-      />
-
-      <AreaSidebar
+      <AreaRail
         value={selectedArea}
         onChange={setSelectedArea}
         areas={DEFAULT_AREAS}
+      />
+
+      <FunctionSidebar
+        value={selectedFunction}
+        onChange={setSelectedFunction}
+        functions={DEFAULT_FUNCTIONS}
+        hasSubscription={true}
       />
 
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto terminal-scrollbar">

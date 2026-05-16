@@ -160,3 +160,82 @@ ACE-Talent 货代招聘平台
     except Exception as e:
         logger.error(f"Failed to send invitation email to {candidate_email}: {type(e).__name__}")
         raise
+
+
+def send_candidate_action_email(candidate_email, candidate_name, company_name, action):
+    """
+    发送邮件动作给候选人（约面试 / 不合适 / 简历需更新 / 发送面试地址）
+    模板和 subject 由调用方传入，保持与 candidates.py 的 _ACTION_TEMPLATES 解耦。
+    这里只负责 SMTP 发送。
+    """
+    # 模板在 candidates.py 的 _ACTION_TEMPLATES，此处从参数接收
+    # 为了兼容可以直接传 subject/body；但本函数从 candidates.py 间接使用 action key
+    # 简洁起见，此处直接复用 candidates.py 的 _ACTION_TEMPLATES
+    _ACTION_TEMPLATES = {
+        "interview": {
+            "subject": "面试邀请 | ACE-Talent",
+            "body": "您好 {name}，\n\n我们对您的背景很感兴趣，想邀请您进一步面试沟通。请您回复方便的面试时间。\n\n{company_name}\nACE-Talent",
+        },
+        "not_fit": {
+            "subject": "岗位匹配结果通知 | ACE-Talent",
+            "body": "您好 {name}，\n\n感谢您关注我们的岗位。综合当前岗位要求评估后，这次机会暂时不太匹配。后续如有更合适机会，我们会再联系您。\n\n{company_name}\nACE-Talent",
+        },
+        "resume_update": {
+            "subject": "请更新您的简历信息 | ACE-Talent",
+            "body": "您好 {name}，\n\n我们查看了您的档案，部分简历信息还需要补充或更新。请完善近期工作经历、项目经验、联系方式等内容，便于进一步沟通。\n\n{company_name}\nACE-Talent",
+        },
+        "interview_address": {
+            "subject": "面试地址通知 | ACE-Talent",
+            "body": "您好 {name}，\n\n面试地址如下：\n\n地址：请填写具体面试地址\n时间：请填写面试时间\n联系人：请填写联系人及电话\n\n请确认是否方便参加。\n\n{company_name}\nACE-Talent",
+        },
+    }
+
+    if action not in _ACTION_TEMPLATES:
+        raise ValueError(f"Unknown action: {action}")
+
+    if not current_app.config.get("MAIL_ENABLED"):
+        logger.info("MAIL_ENABLED=false, skip candidate action email to %s", candidate_email)
+        return
+
+    mail_host     = current_app.config.get("MAIL_HOST")
+    mail_port     = current_app.config.get("MAIL_PORT")
+    mail_use_ssl  = current_app.config.get("MAIL_USE_SSL")
+    mail_username = current_app.config.get("MAIL_USERNAME")
+    mail_password = current_app.config.get("MAIL_PASSWORD")
+    mail_sender   = current_app.config.get("MAIL_DEFAULT_SENDER")
+
+    if not mail_username or not mail_password:
+        logger.warning("MAIL_USERNAME or MAIL_PASSWORD not configured, skip sending email")
+        return
+
+    tpl = _ACTION_TEMPLATES[action]
+    subject   = tpl["subject"]
+    text_body = tpl["body"].format(name=candidate_name, company_name=company_name)
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"]    = mail_sender
+    msg["To"]      = candidate_email
+    msg["Date"]    = formatdate(localtime=False, usegmt=True)
+
+    sender_email  = parseaddr(mail_sender)[1] or mail_username
+    sender_domain = sender_email.rsplit("@", 1)[1] if "@" in sender_email else "globalogin.com"
+    msg["Message-ID"] = make_msgid(idstring="ace-talent-action", domain=sender_domain)
+
+    msg.set_content(text_body)
+
+    try:
+        if mail_use_ssl:
+            with smtplib.SMTP_SSL(mail_host, mail_port, timeout=10) as server:
+                server.login(mail_username, mail_password)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(mail_host, mail_port, timeout=10) as server:
+                server.starttls()
+                server.login(mail_username, mail_password)
+                server.send_message(msg)
+
+        logger.info("Candidate action email (%s) sent to %s", action, candidate_email)
+    except Exception as e:
+        logger.error("Failed to send candidate action email to %s: %s", candidate_email, type(e).__name__)
+        raise

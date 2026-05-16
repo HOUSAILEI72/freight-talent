@@ -69,6 +69,10 @@ class Job(db.Model):
     year_end_bonus_months = db.Column(db.Float, nullable=True)
 
     employment_type = db.Column(db.String(20), nullable=True)  # 全职 / 兼职 / 实习生
+    job_level = db.Column(db.String(30), nullable=True)        # 高管层 / 总监级 / 高级经理级 / 经理级 / 主管级 / 专员级 / 助理岗
+
+    # 模板标记
+    is_template = db.Column(db.Boolean, nullable=False, default=False, index=True)
 
     # 状态
     status = db.Column(
@@ -132,6 +136,8 @@ class Job(db.Model):
             "has_year_end_bonus": self.has_year_end_bonus,
             "year_end_bonus_months": self.year_end_bonus_months,
             "employment_type": self.employment_type,
+            "job_level": self.job_level,
+            "is_template": self.is_template,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

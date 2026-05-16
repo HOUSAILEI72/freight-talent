@@ -15,12 +15,14 @@ public_market_bp = Blueprint("public_market", __name__, url_prefix="/api/public"
 
 # Canonical function codes — must match VALID_FUNCTIONS in subscriptions.py and DEFAULT_FUNCTIONS in FunctionRail.jsx
 _FUNCTIONS = [
-    {"code": "Sea",                "name": "Sea"},
-    {"code": "Air",                "name": "Air"},
-    {"code": "Road",               "name": "Road"},
-    {"code": "Railway",            "name": "Railway"},
-    {"code": "Contract Logistics", "name": "Contract Logistics"},
-    {"code": "ECOMS",              "name": "ECOMS"},
+    {"code": "Sea",               "name": "海运板块"},
+    {"code": "Air",               "name": "空运板块"},
+    {"code": "CrossBorder",       "name": "跨境电商物流"},
+    {"code": "Railway",           "name": "铁路 / 中欧班列"},
+    {"code": "Road",              "name": "陆路运输"},
+    {"code": "ContractLogistics", "name": "合同物流 / 3PL"},
+    {"code": "Warehousing",       "name": "仓储 / 海外仓"},
+    {"code": "Customs",           "name": "关务 / 合规"},
 ]
 
 # 排除 GLOBAL / REMOTE / OVERSEAS 等不实际展示的 area

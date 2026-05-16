@@ -140,14 +140,28 @@ COMMISSION_PERIOD_MAP: dict[str, str] = {
 
 # 岗位板块：中/英文 → function_code key（对应 FunctionRail.DEFAULT_FUNCTIONS）
 FUNCTION_CODE_MAP: dict[str, str] = {
-    "海运": "Sea",       "Sea": "Sea",
-    "空运": "Air",       "Air": "Air",
-    "陆运": "Road",      "Road": "Road",
-    "铁路": "Railway",   "Railway": "Railway",
-    "报关": "Customs",   "Customs": "Customs",
-    "合同物流": "Contract Logistics", "Contract Logistics": "Contract Logistics", "CL": "Contract Logistics",
-    "综合物流": "ECOMS",  "ECOMS": "ECOMS",
-    "跨境电商": "ECOMS",
+    # 海运板块
+    "海运": "Sea",          "Sea": "Sea",          "海运板块": "Sea",
+    # 空运板块
+    "空运": "Air",          "Air": "Air",          "空运板块": "Air",
+    # 跨境电商物流
+    "跨境电商": "CrossBorder", "CrossBorder": "CrossBorder", "ECOMS": "CrossBorder",
+    "综合物流": "CrossBorder", "跨境电商物流": "CrossBorder",
+    # 铁路 / 中欧班列
+    "铁路": "Railway",      "Railway": "Railway",  "中欧班列": "Railway",
+    "多式联运": "Railway",  "MultiModal": "Railway",
+    # 陆路运输
+    "陆运": "Road",         "Road": "Road",        "陆路运输": "Road",
+    "Land": "Road",
+    # 合同物流 / 3PL
+    "合同物流": "ContractLogistics", "ContractLogistics": "ContractLogistics",
+    "Contract Logistics": "ContractLogistics", "CL": "ContractLogistics",
+    "3PL": "ContractLogistics", "供应链": "ContractLogistics", "Supply": "ContractLogistics",
+    # 仓储 / 海外仓
+    "仓储": "Warehousing",  "Warehousing": "Warehousing", "海外仓": "Warehousing",
+    # 关务 / 合规
+    "报关": "Customs",      "Customs": "Customs",  "关务": "Customs",
+    "合规": "Customs",      "Custom": "Customs",   "通关": "Customs",
 }
 
 

@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, CheckCircle, Clock, XCircle, Loader2, Search } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { getTags, getMyTags, submitTag, getCategories } from '../../api/tagsV2'
+import { TerminalSelect } from '../../components/terminal/TerminalSelect'
 
 const STATUS_LABEL = {
   active:   { color: 'text-emerald-600 bg-emerald-50 border-emerald-200', icon: CheckCircle, text: '已通过' },
@@ -49,6 +50,8 @@ function SubmitForm({ categories, onDone, onCancel, terminal = false }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const descRef = useRef(null)
+  useEffect(() => { const el = descRef.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [description])
 
   async function handleSubmit() {
     const cat = (category === '__new__' ? customCat : category).trim()
@@ -99,18 +102,16 @@ function SubmitForm({ categories, onDone, onCancel, terminal = false }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div>
             <label style={{ display: 'block', fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 4 }}>分类</label>
-            <select
+            <TerminalSelect
               value={category}
-              onChange={e => setCategory(e.target.value)}
-              style={{
-                width: '100%', fontSize: 13, background: 'var(--t-bg-input)',
-                border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)',
-                padding: '6px 10px', color: 'var(--t-text)', outline: 'none',
-              }}
-            >
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              <option value="__new__">+ 新建分类...</option>
-            </select>
+              onChange={setCategory}
+              options={[
+                ...categories.map(c => ({ value: c, label: c })),
+                { value: '__new__', label: '+ 新建分类...' },
+              ]}
+              placeholder="选择分类"
+              hasValue={!!category}
+            />
           </div>
           {category === '__new__' && (
             <div>
@@ -143,6 +144,7 @@ function SubmitForm({ categories, onDone, onCancel, terminal = false }) {
           <div>
             <label style={{ display: 'block', fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 4 }}>说明（可选）</label>
             <textarea
+              ref={descRef}
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={2}
@@ -151,7 +153,7 @@ function SubmitForm({ categories, onDone, onCancel, terminal = false }) {
                 width: '100%', fontSize: 13, background: 'var(--t-bg-input)',
                 border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)',
                 padding: '6px 10px', color: 'var(--t-text)', outline: 'none',
-                resize: 'none', boxSizing: 'border-box',
+                resize: 'none', overflow: 'hidden', boxSizing: 'border-box',
               }}
             />
           </div>
@@ -230,11 +232,12 @@ function SubmitForm({ categories, onDone, onCancel, terminal = false }) {
       <div>
         <label className="block text-xs text-slate-500 mb-1">说明（可选）</label>
         <textarea
+          ref={descRef}
           value={description}
           onChange={e => setDescription(e.target.value)}
           rows={2}
           placeholder="说明这个标签的含义，便于管理员审批"
-          className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-blue-400 resize-none"
+          className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-blue-400 resize-none overflow-hidden"
         />
       </div>
       {error && <p className="text-xs text-red-500">{error}</p>}

@@ -19,11 +19,11 @@ import {
  */
 
 const DEFAULT_GRANULARITY_OPTIONS = [
-  { value: 'day',     label: '日' },
-  { value: 'week',    label: '周' },
-  { value: 'month',   label: '月' },
-  { value: 'quarter', label: '季度' },
-  { value: 'year',    label: '年' },
+  { value: 'week',       label: '周' },
+  { value: 'bi_monthly', label: '10&20/月' },
+  { value: 'month',      label: '月' },
+  { value: 'quarter',    label: '季度' },
+  { value: 'year',       label: '年' },
 ]
 
 /* Colour palettes for dark vs light mode */

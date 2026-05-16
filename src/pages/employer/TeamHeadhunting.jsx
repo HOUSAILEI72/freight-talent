@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlertCircle, Loader2, ChevronRight, Users, CheckCircle,
@@ -152,6 +152,13 @@ function TagPill({ text }) {
 
 function TokenTextArea({ label, value, onChange, placeholder, required }) {
   const tokens = useMemo(() => splitTokens(value), [value])
+  const taRef = useRef(null)
+  useEffect(() => {
+    const el = taRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [value])
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -163,8 +170,9 @@ function TokenTextArea({ label, value, onChange, placeholder, required }) {
         )}
       </div>
       <textarea
+        ref={taRef}
         rows={2}
-        style={T.textarea}
+        style={{ ...T.textarea, overflow: 'hidden' }}
         placeholder={placeholder}
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -177,6 +185,149 @@ function TokenTextArea({ label, value, onChange, placeholder, required }) {
               +{tokens.length - 8}
             </span>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── OnboardDatePicker: calendar-style month picker + optional day ────────────
+
+function OnboardDatePicker({ value, onChange }) {
+  const today = new Date()
+  const initYear  = value?.year  || null
+  const initMonth = value?.month || null
+
+  const [panelYear,  setPanelYear]  = useState(today.getFullYear())
+  const [open,       setOpen]       = useState(false)
+
+  const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']
+
+  const displayText = value?.year
+    ? value.month
+      ? `${value.year} 年 ${value.month} 月${value.day ? ' ' + value.day + ' 日' : ''}`
+      : `${value.year} 年`
+    : ''
+
+  function selectMonth(m) {
+    onChange({ ...value, year: panelYear, month: m, day: value?.day || null })
+    setOpen(false)
+  }
+
+  function selectYear() {
+    onChange({ ...value, year: panelYear, month: null, day: null })
+    setOpen(false)
+  }
+
+  function clearDay() {
+    onChange({ ...value, day: null })
+  }
+
+  const isSelected = (m) => value?.year === panelYear && value?.month === m
+
+  const triggerStyle = {
+    width: '100%', padding: '7px 10px', borderRadius: 4,
+    background: 'var(--t-bg-input)', border: '1px solid var(--t-border)',
+    color: displayText ? 'var(--t-text)' : 'var(--t-text-muted)',
+    fontSize: 13, outline: 'none', fontFamily: 'inherit',
+    boxSizing: 'border-box', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    userSelect: 'none',
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <label style={T.label}>希望到岗时间 *</label>
+
+      {/* Trigger */}
+      <button type="button" style={triggerStyle}
+        onClick={() => setOpen(o => !o)}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--t-primary)' }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--t-border)' }}
+      >
+        <span>{displayText || '选择年 / 月（日可选）'}</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, opacity: 0.5 }}>
+          <rect x="1" y="1" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/>
+          <line x1="1" y1="4" x2="11" y2="4" stroke="currentColor" strokeWidth="1.2"/>
+          <line x1="4" y1="1" x2="4" y2="4" stroke="currentColor" strokeWidth="1.2"/>
+          <line x1="8" y1="1" x2="8" y2="4" stroke="currentColor" strokeWidth="1.2"/>
+        </svg>
+      </button>
+
+      {/* Panel */}
+      {open && (
+        <div style={{
+          position: 'absolute', zIndex: 200, top: 'calc(100% + 4px)', left: 0, right: 0,
+          background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)',
+          borderRadius: 6, padding: '10px 10px 8px', boxShadow: 'var(--t-shadow-elevated)',
+        }}>
+          {/* Year nav */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <button type="button"
+              style={{ width: 22, height: 22, borderRadius: 3, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}
+              onClick={() => setPanelYear(y => y - 1)}
+            >‹</button>
+            <button type="button"
+              style={{ fontSize: 12, fontWeight: 600, color: 'var(--t-text)', fontFamily: 'var(--t-font-sans)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px 8px', borderRadius: 3 }}
+              onClick={selectYear}
+              title="仅选择年份"
+            >
+              {panelYear} 年
+            </button>
+            <button type="button"
+              style={{ width: 22, height: 22, borderRadius: 3, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}
+              onClick={() => setPanelYear(y => y + 1)}
+            >›</button>
+          </div>
+
+          {/* Month grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginBottom: 8 }}>
+            {MONTHS.map((m, i) => {
+              const mNum = i + 1
+              const sel  = isSelected(mNum)
+              return (
+                <button key={m} type="button"
+                  style={{
+                    height: 28, borderRadius: 4, border: sel ? '1px solid var(--t-primary)' : '1px solid var(--t-border)',
+                    background: sel ? 'var(--t-primary)' : 'var(--t-bg-elevated)',
+                    color: sel ? '#fff' : 'var(--t-text-secondary)',
+                    fontSize: 11, fontFamily: 'var(--t-font-sans)', cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => { if (!sel) { e.currentTarget.style.borderColor = 'var(--t-primary)'; e.currentTarget.style.color = 'var(--t-primary)' } }}
+                  onMouseLeave={e => { if (!sel) { e.currentTarget.style.borderColor = 'var(--t-border)'; e.currentTarget.style.color = 'var(--t-text-secondary)' } }}
+                  onClick={() => selectMonth(mNum)}
+                >{m}</button>
+              )
+            })}
+          </div>
+
+          {/* Day input (optional) */}
+          {value?.month && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, borderTop: '1px solid var(--t-border-subtle)', paddingTop: 7 }}>
+              <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', flexShrink: 0 }}>日（选填）</span>
+              <input
+                type="number" min={1} max={31}
+                placeholder="—"
+                value={value?.day || ''}
+                onChange={e => {
+                  const v = parseInt(e.target.value, 10)
+                  onChange({ ...value, day: (v >= 1 && v <= 31) ? v : null })
+                }}
+                style={{ ...T.input, width: 56, padding: '4px 8px', fontSize: 12 }}
+              />
+              {value?.day && (
+                <button type="button" onClick={clearDay}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--t-text-muted)', cursor: 'pointer', padding: 2, lineHeight: 1 }}>
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Hint */}
+          <p style={{ fontSize: 9, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', margin: '6px 0 0', letterSpacing: '0.04em' }}>
+            点击年份仅锁定年 · 点击月份锁定年月 · 日期可选
+          </p>
         </div>
       )}
     </div>
@@ -391,6 +542,13 @@ export default function TeamHeadhunting() {
 
   // ── Team requirement fields ───────────────────────────────────────────────
   const [summary,                    setSummary]                    = useState('')
+  const summaryRef = useRef(null)
+  useEffect(() => {
+    const el = summaryRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [summary])
   const [preferredCities,            setPreferredCities]            = useState([])
   const [businessFocusText,          setBusinessFocusText]          = useState('')
   const [customerFocusText,          setCustomerFocusText]          = useState('')
@@ -398,7 +556,7 @@ export default function TeamHeadhunting() {
   const [memberStructureFocusText,   setMemberStructureFocusText]   = useState('')
   const [commissionModelText,        setCommissionModelText]        = useState('')
   const [assessmentModelText,        setAssessmentModelText]        = useState('')
-  const [expectedOnboardTime,        setExpectedOnboardTime]        = useState('')
+  const [expectedOnboardTime,        setExpectedOnboardTime]        = useState(null)
   const [benchmarkCompanies,         setBenchmarkCompanies]         = useState('')
 
   // ── Modal / submit ────────────────────────────────────────────────────────
@@ -426,7 +584,7 @@ export default function TeamHeadhunting() {
     if (!summary.trim()) return '请填写需求简述'
     if (preferredCities.filter(c => c.location).length === 0) return '所在城市偏向至少添加 1 个城市'
     if (splitTokens(businessFocusText).length === 0) return '业务侧重至少填写 1 项'
-    if (!expectedOnboardTime.trim()) return '请填写希望到岗时间'
+    if (!expectedOnboardTime?.year) return '请填写希望到岗时间'
     return null
   }
 
@@ -462,7 +620,9 @@ export default function TeamHeadhunting() {
         member_structure_focus:      splitTokens(memberStructureFocusText),
         commission_model_preference: splitTokens(commissionModelText),
         assessment_model_preference: splitTokens(assessmentModelText),
-        expected_onboard_time:       expectedOnboardTime.trim(),
+        expected_onboard_time:       expectedOnboardTime
+                                       ? [expectedOnboardTime.year, expectedOnboardTime.month, expectedOnboardTime.day].filter(Boolean).join('-')
+                                       : null,
         benchmark_companies:         benchmarkCompanies.trim() || null,
       },
       terms: Object.fromEntries(TEAM_REQUIRED_TERMS.map(t => [t.key, true])),
@@ -560,14 +720,14 @@ export default function TeamHeadhunting() {
 
         {/* ── Col 1: 服务条款 & 增值服务 ─────────────────────────────────── */}
         <div style={T.card}>
-          <SectionHeader icon={FileText} title="服务条款" sub="TERMS OF SERVICE" />
+          <SectionHeader icon={FileText} title="重要服务条款" sub="TERMS OF SERVICE" />
           <div className="flex-1 min-h-0 overflow-y-auto terminal-scrollbar" style={{ paddingRight: 2 }}>
 
             {/* Terms list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
-              {TEAM_REQUIRED_TERMS.map(term => (
+              {TEAM_REQUIRED_TERMS.map((term, idx) => (
                 <div key={term.key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '6px 8px', borderRadius: 4, border: '1px solid var(--t-border-subtle)' }}>
-                  <span style={{ fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0, marginTop: 2, lineHeight: 1 }}>·</span>
+                  <span style={{ fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0, marginTop: 2, lineHeight: 1, fontFamily: 'var(--t-font-sans)', fontVariantNumeric: 'tabular-nums' }}>{idx + 1}</span>
                   <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', lineHeight: 1.65 }}>{term.text}</span>
                 </div>
               ))}
@@ -730,7 +890,7 @@ export default function TeamHeadhunting() {
             {/* 需求简述 */}
             <div>
               <label style={T.label}>需求简述 *</label>
-              <textarea rows={4} style={T.textarea}
+              <textarea ref={summaryRef} rows={4} style={{ ...T.textarea, overflow: 'hidden' }}
                 placeholder="描述您的团队组建需求，包括团队规模、核心职能、期望经验背景等..."
                 value={summary} onChange={e => setSummary(e.target.value)} />
             </div>
@@ -771,11 +931,7 @@ export default function TeamHeadhunting() {
             />
 
             {/* 希望到岗时间 */}
-            <div>
-              <label style={T.label}>希望到岗时间 *</label>
-              <input style={T.input} placeholder="例：2026 年 Q3 / 3 个月内"
-                value={expectedOnboardTime} onChange={e => setExpectedOnboardTime(e.target.value)} />
-            </div>
+            <OnboardDatePicker value={expectedOnboardTime} onChange={setExpectedOnboardTime} />
 
             {/* 对标公司 */}
             <div>

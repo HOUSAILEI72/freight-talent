@@ -1,13 +1,13 @@
 """add passive_now to availability_status enum and desired_position field
 
-Revision ID: 0021
-Revises: 0020_create_headhunting_requests
+Revision ID: 0021_availability_passive_now_desired_position
+Revises: dd6fa3bff202
 Create Date: 2026-05-15
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = '0021'
+revision = '0021_availability_passive_now_desired_position'
 down_revision = 'dd6fa3bff202'
 branch_labels = None
 depends_on = None

@@ -10,6 +10,7 @@ import { CANDIDATE_ICON_NAV } from '../../components/terminal/navItems'
 import RegionSelector from '../../components/RegionSelector'
 import Pagination from '../../components/ui/Pagination'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
+import { TerminalSelect } from '../../components/terminal/TerminalSelect'
 import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
 
@@ -681,32 +682,28 @@ export default function TerminalCandidateJobs() {
                     terminal
                     placeholder="按地区筛选"
                   />
-                  <select
+                  <TerminalSelect
                     value={functionCode}
-                    onChange={e => handleFunctionChange(e.target.value)}
-                    className="w-full px-2 py-1.5 text-xs rounded-lg border"
-                    style={{
-                      background: 'var(--t-bg-input)', borderColor: 'var(--t-border)',
-                      color: functionCode ? 'var(--t-text)' : 'var(--t-text-muted)',
-                    }}
-                  >
-                    <option value="">业务方向（全部）</option>
-                    {FUNCTION_OPTIONS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-                  </select>
-                  <select
+                    onChange={handleFunctionChange}
+                    options={[
+                      { value: '', label: '业务方向（全部）' },
+                      ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label })),
+                    ]}
+                    placeholder="业务方向（全部）"
+                    hasValue={!!functionCode}
+                  />
+                  <TerminalSelect
                     value={employmentType}
-                    onChange={e => handleEmploymentTypeChange(e.target.value)}
-                    className="w-full px-2 py-1.5 text-xs rounded-lg border"
-                    style={{
-                      background: 'var(--t-bg-input)', borderColor: 'var(--t-border)',
-                      color: employmentType ? 'var(--t-text)' : 'var(--t-text-muted)',
-                    }}
-                  >
-                    <option value="">应聘类型（全部）</option>
-                    <option value="全职">全职</option>
-                    <option value="兼职">兼职</option>
-                    <option value="实习生">实习生</option>
-                  </select>
+                    onChange={handleEmploymentTypeChange}
+                    options={[
+                      { value: '', label: '应聘类型（全部）' },
+                      { value: '全职', label: '全职' },
+                      { value: '兼职', label: '兼职' },
+                      { value: '实习生', label: '实习生' },
+                    ]}
+                    placeholder="应聘类型（全部）"
+                    hasValue={!!employmentType}
+                  />
                   <div className="flex gap-2">
                     <button
                       type="submit"
@@ -818,18 +815,16 @@ export default function TerminalCandidateJobs() {
                     terminal
                     placeholder="按地区筛选"
                   />
-                  <select
+                  <TerminalSelect
                     value={savedFunctionCode}
-                    onChange={e => { setSavedFunctionCode(e.target.value); setSavedPage(1) }}
-                    className="w-full px-2 py-1.5 text-xs rounded-lg border"
-                    style={{
-                      background: 'var(--t-bg-input)', borderColor: 'var(--t-border)',
-                      color: savedFunctionCode ? 'var(--t-text)' : 'var(--t-text-muted)',
-                    }}
-                  >
-                    <option value="">业务方向（全部）</option>
-                    {FUNCTION_OPTIONS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-                  </select>
+                    onChange={val => { setSavedFunctionCode(val); setSavedPage(1) }}
+                    options={[
+                      { value: '', label: '业务方向（全部）' },
+                      ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label })),
+                    ]}
+                    placeholder="业务方向（全部）"
+                    hasValue={!!savedFunctionCode}
+                  />
                 </div>
                 {!savedLoading && (
                   <p className="text-[11px] mt-2" style={{ color: 'var(--t-text-muted)' }}>

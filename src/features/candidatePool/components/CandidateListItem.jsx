@@ -89,11 +89,12 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
             )}
             {terminal && c.availability_status && (() => {
               const isOpen = c.availability_status === 'open'
+              const isPassiveNow = c.availability_status === 'passive_now'
               const isPassive = c.availability_status === 'passive'
-              const label = isOpen ? '求职中' : isPassive ? '机会优先' : '暂不考虑'
-              const color = isOpen ? 'var(--t-success)' : isPassive ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
-              const bg = isOpen ? 'var(--t-success-muted)' : isPassive ? 'rgba(96,165,250,0.12)' : 'rgba(148,163,184,0.1)'
-              const border = isOpen ? 'var(--t-success)' : isPassive ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
+              const label = isOpen ? '离职-随时到岗' : isPassiveNow ? '在职-月内到岗' : isPassive ? '在职-考虑机会' : '暂不考虑'
+              const color = isOpen ? 'var(--t-success)' : isPassiveNow ? 'var(--t-warning)' : isPassive ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
+              const bg = isOpen ? 'var(--t-success-muted)' : isPassiveNow ? 'rgba(245,158,11,0.1)' : isPassive ? 'rgba(96,165,250,0.12)' : 'rgba(148,163,184,0.1)'
+              const border = color
               return (
                 <span style={{
                   display: 'inline-flex', alignItems: 'center',
@@ -114,9 +115,10 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
             {!terminal && c.availability_status && (
               <span className={
                 c.availability_status === 'open' ? 'text-emerald-600 font-semibold' :
+                c.availability_status === 'passive_now' ? 'text-amber-500 font-semibold' :
                 c.availability_status === 'passive' ? 'text-blue-500 font-semibold' : 'text-slate-400'
               }>
-                {c.availability_status === 'open' ? '求职中' : c.availability_status === 'passive' ? '机会优先' : '暂不考虑'}
+                {c.availability_status === 'open' ? '离职-随时到岗' : c.availability_status === 'passive_now' ? '在职-月内到岗' : c.availability_status === 'passive' ? '在职-考虑机会' : '暂不考虑'}
               </span>
             )}
           </div>

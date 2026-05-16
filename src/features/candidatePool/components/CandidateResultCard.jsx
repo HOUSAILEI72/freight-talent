@@ -62,7 +62,7 @@ function StatusPill({ color = 'gray', dot, icon, children }) {
         borderRadius: 999,
         background: bg, border: `1px solid ${border}`, color: fg,
         fontSize: 9, fontWeight: 700,
-        fontFamily: 'var(--t-font-sans)',
+        fontFamily: 'var(--t-font-cjk)',
         letterSpacing: '0.04em',
         whiteSpace: 'nowrap',
         flexShrink: 0,
@@ -91,8 +91,9 @@ const APP_STATUS_PILL = {
 function Chip({ children, accent }) {
   return (
     <span
-      className="font-sans text-[10px] px-1.5 py-[2px] whitespace-nowrap"
+      className="text-[10px] px-1.5 py-[2px] whitespace-nowrap"
       style={{
+        fontFamily: 'var(--t-font-cjk)',
         background: accent ? 'rgba(37,99,235,0.13)' : 'rgba(255,255,255,0.04)',
         border: `1px solid ${accent ? 'rgba(37,99,235,0.32)' : 'var(--t-border)'}`,
         color: accent ? 'var(--t-chart-blue)' : 'var(--t-text-secondary)',
@@ -104,16 +105,20 @@ function Chip({ children, accent }) {
   )
 }
 
-function TimelineRow({ Icon, iconColor, period, title }) {
+function TimelineRow({ Icon, iconColor, label, period, title }) {
   return (
-    <div className="flex items-center min-w-0" style={{ height: 20 }}>
-      <div className="flex items-center gap-1 flex-shrink-0" style={{ minWidth: 90, maxWidth: 120 }}>
-        <Icon size={10} style={{ color: iconColor, flexShrink: 0 }} />
-        <span className="font-sans text-[10px] truncate" style={{ color: 'var(--t-text-muted)' }}>
-          {period || '—'}
-        </span>
-      </div>
-      <span className="text-[11px] truncate flex-1" style={{ color: 'var(--t-text-secondary)' }}>
+    <div className="terminal-timeline-row">
+      <span
+        className="terminal-timeline-kind"
+        style={{ color: iconColor, borderColor: iconColor }}
+      >
+        <Icon size={10} style={{ flexShrink: 0 }} />
+        {label}
+      </span>
+      <span className="terminal-timeline-period">
+        {period || '—'}
+      </span>
+      <span className="terminal-timeline-title">
         {title}
       </span>
     </div>
@@ -134,7 +139,7 @@ function PillBtn({ onClick, disabled, style, onMouseEnter, onMouseLeave, childre
         justifyContent: 'center',
         gap: 4,
         borderRadius: 999,
-        fontFamily: 'var(--t-font-sans)',
+        fontFamily: 'var(--t-font-cjk)',
         fontSize: 11,
         fontWeight: 600,
         letterSpacing: '0.04em',
@@ -159,7 +164,7 @@ export function CandidateResultCard({
   isArchived,
   canInvite,
   onArchive,
-  onInvite,
+  onOpenConversation,
   navigatePath,
 }) {
   const navigate   = useNavigate()
@@ -187,6 +192,14 @@ export function CandidateResultCard({
   const stripFallback = [c.business_type, c.job_type, c.business_area_name].filter(Boolean)
 
   const city = c.current_city ?? c.expected_city ?? c.location_name ?? c.business_area_name
+  const metaParts = []
+  if (c.experience_years != null) metaParts.push(`${c.experience_years}年经验`)
+  if (isUnlocked && c.age != null) metaParts.push(`${c.age}岁`)
+  if (city) metaParts.push(city)
+  if (isUnlocked && c.education) metaParts.push(c.education)
+  else if (!isUnlocked) metaParts.push('学历')
+  if (isUnlocked && c.availability_status) metaParts.push(AVAIL_LABEL[c.availability_status] ?? c.availability_status)
+  const metaLine = metaParts.join(' | ')
 
   function go(e) {
     e?.stopPropagation()
@@ -242,7 +255,7 @@ export function CandidateResultCard({
 
           <div className="flex-1 min-w-0" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {/* row 1: name */}
-            <span className="truncate" style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)', lineHeight: 1.25 }}>
+            <span className="truncate" style={{ fontFamily: 'var(--t-font-cjk)', fontSize: 13, fontWeight: 600, color: 'var(--t-text)', lineHeight: 1.25 }}>
               {c.full_name}
             </span>
 
@@ -257,12 +270,12 @@ export function CandidateResultCard({
                 </StatusPill>
               )}
               {isUnlocked && c.availability_status && (
-                <StatusPill color={c.availability_status === 'open' ? 'green' : c.availability_status === 'passive' ? 'blue' : 'gray'}>
-                  {c.availability_status === 'open' ? 'OPEN' : c.availability_status === 'passive' ? 'PASSIVE' : 'CLOSED'}
+                <StatusPill color={c.availability_status === 'open' ? 'green' : c.availability_status === 'passive_now' ? 'amber' : c.availability_status === 'passive' ? 'blue' : 'gray'}>
+                  {AVAIL_LABEL[c.availability_status] ?? c.availability_status}
                 </StatusPill>
               )}
               {isInvited && (
-                <StatusPill color="green" icon="✓">已邀约</StatusPill>
+                <StatusPill color="green" icon="✓">已沟通</StatusPill>
               )}
               {isArchived && (
                 <StatusPill color="amber" icon="★">已收藏</StatusPill>
@@ -287,37 +300,15 @@ export function CandidateResultCard({
               )}
             </div>
 
-            {/* row 3: 经验 | 城市 | 学历 | 求职状态 */}
-            {(() => {
-              const sep = <span style={{ fontSize: 11, color: 'var(--t-text-muted)', margin: '0 2px' }}>|</span>
-              const items = []
-              if (c.experience_years != null)
-                items.push(<span key="exp" style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>{c.experience_years}年经验</span>)
-              if (city)
-                items.push(<span key="city" style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>{city}</span>)
-              if (isUnlocked && c.education)
-                items.push(<span key="edu" style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>{c.education}</span>)
-              else if (!isUnlocked)
-                items.push(<span key="edu" className="inline-flex items-center" style={{ fontSize: 11, color: 'var(--t-text-muted)', gap: 2 }}><Lock size={8} />学历</span>)
-              if (isUnlocked && c.availability_status)
-                items.push(
-                  <span key="avail" style={{
-                    fontSize: 11, fontWeight: 600,
-                    color: c.availability_status === 'open' ? 'var(--t-success)'
-                      : c.availability_status === 'passive_now' ? 'var(--t-warning)'
-                      : c.availability_status === 'passive' ? 'var(--t-chart-blue)'
-                      : 'var(--t-text-muted)',
-                  }}>
-                    {AVAIL_LABEL[c.availability_status] ?? c.availability_status}
-                  </span>
-                )
-              if (items.length === 0) return null
-              return (
-                <div className="flex items-center flex-wrap" style={{ gap: 0 }}>
-                  {items.map((el, i) => <span key={i} className="flex items-center">{i > 0 && sep}{el}</span>)}
-                </div>
-              )
-            })()}
+            {/* row 3: 经验 | 年龄 | 城市 | 学历 | 求职状态 */}
+            {metaLine && (
+              <div
+                className="terminal-result-meta-line"
+                title={metaLine}
+              >
+                {metaLine}
+              </div>
+            )}
           </div>
         </div>
 
@@ -332,6 +323,7 @@ export function CandidateResultCard({
                 <TimelineRow
                   Icon={Briefcase}
                   iconColor="var(--t-chart-blue)"
+                  label="工作"
                   period={formatWorkPeriod(latestWork)}
                   title={[latestWork.company_name ?? latestWork.company, latestWork.title].filter(Boolean).join(' · ') || '—'}
                 />
@@ -342,6 +334,7 @@ export function CandidateResultCard({
                 <TimelineRow
                   Icon={GraduationCap}
                   iconColor="var(--t-chart-purple)"
+                  label="教育"
                   period={highestEdu.period || '—'}
                   title={[highestEdu.school, highestEdu.major, highestEdu.degree ?? highestEdu.level].filter(Boolean).join(' · ') || '—'}
                 />
@@ -376,7 +369,7 @@ export function CandidateResultCard({
               )}
               <div className="flex items-center gap-1">
                 <Lock size={8} style={{ color: 'var(--t-text-muted)', flexShrink: 0 }} />
-                <span style={{ fontSize: 9, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: 9, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-cjk)', letterSpacing: '0.04em' }}>
                   完整履历 · 订阅后可见
                 </span>
               </div>
@@ -408,31 +401,31 @@ export function CandidateResultCard({
             }}
           >
             <Eye size={11} />
-            查看
+            完整简历
           </PillBtn>
 
-          {/* Invite */}
+          {/* Invite / Chat */}
           <PillBtn
             disabled={!canInvite && !isInvited}
-            onClick={() => { if (canInvite) onInvite(c) }}
+            onClick={() => { if (canInvite || isInvited) onOpenConversation(c) }}
             style={{
               background: isInvited ? 'rgba(34,197,94,0.12)' : 'rgba(96,165,250,0.08)',
               border: `1px solid ${isInvited ? 'var(--t-success)' : canInvite ? 'rgba(96,165,250,0.55)' : 'var(--t-border)'}`,
               color: isInvited ? 'var(--t-success)' : canInvite ? 'var(--t-chart-blue)' : 'var(--t-text-muted)',
               opacity: !canInvite && !isInvited ? 0.38 : 1,
-              cursor: isInvited ? 'default' : !canInvite ? 'not-allowed' : 'pointer',
+              cursor: !canInvite && !isInvited ? 'not-allowed' : 'pointer',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(96,165,250,0.16)'
-              e.currentTarget.style.borderColor = 'rgba(96,165,250,0.8)'
+              e.currentTarget.style.background = isInvited ? 'rgba(34,197,94,0.2)' : 'rgba(96,165,250,0.16)'
+              e.currentTarget.style.borderColor = isInvited ? 'var(--t-success)' : 'rgba(96,165,250,0.8)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(96,165,250,0.08)'
-              e.currentTarget.style.borderColor = canInvite ? 'rgba(96,165,250,0.55)' : 'var(--t-border)'
+              e.currentTarget.style.background = isInvited ? 'rgba(34,197,94,0.12)' : 'rgba(96,165,250,0.08)'
+              e.currentTarget.style.borderColor = isInvited ? 'var(--t-success)' : canInvite ? 'rgba(96,165,250,0.55)' : 'var(--t-border)'
             }}
           >
             {isInvited ? <CheckCircle2 size={11} /> : <Send size={11} />}
-            {isInvited ? '已邀约' : '邀约'}
+            {isInvited ? '已沟通' : '在线沟通'}
           </PillBtn>
 
           {/* Bookmark */}
@@ -473,7 +466,7 @@ export function CandidateResultCard({
           paddingBottom: 4,
         }}
       >
-        <span className="font-sans text-[9px] flex-shrink-0 mr-1" style={{ color: 'var(--t-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <span className="text-[9px] flex-shrink-0 mr-1" style={{ fontFamily: 'var(--t-font-ui)', color: 'var(--t-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Skills
         </span>
         {c.function_name && <Chip accent>{c.function_name}</Chip>}
@@ -482,7 +475,7 @@ export function CandidateResultCard({
           <Chip key={i}>{t}</Chip>
         ))}
         {overflowCnt > 0 && (
-          <span className="font-sans text-[9px]" style={{ color: 'var(--t-text-muted)' }}>+{overflowCnt}</span>
+          <span className="text-[9px]" style={{ fontFamily: 'var(--t-font-ui)', color: 'var(--t-text-muted)' }}>+{overflowCnt}</span>
         )}
         {!c.function_name && !c.english_level && visibleStrip.length === 0 && stripFallback.length === 0 && (
           <span style={{ fontSize: 10, color: 'var(--t-text-muted)' }}>暂无标签</span>

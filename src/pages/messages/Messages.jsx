@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext'
 import { conversationsApi } from '../../api/conversations'
 import { Button } from '../../components/ui/Button'
 import { useSocket } from '../../hooks/useSocket'
+import { useAutoResize } from '../../hooks/useAutoResize'
 import ConnectionBanner from '../../components/messages/ConnectionBanner'
 import TypingIndicator from '../../components/messages/TypingIndicator'
 
@@ -280,7 +281,12 @@ function Bubble({ msg, isMine, onRetry, terminal = false }) {
           border: '1px solid var(--t-danger)',
         }
       } else {
-        bubbleStyle = { background: 'var(--t-primary)', color: '#fff' }
+        bubbleStyle = {
+          background: 'var(--t-primary)',
+          color: '#fff',
+          border: '1px solid rgba(37,99,235,0.7)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)',
+        }
       }
     } else {
       bubbleStyle = {
@@ -666,6 +672,7 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
   const [nextBefore,  setNextBefore]  = useState(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [input,       setInput]       = useState('')
+  const inputRef = useAutoResize(input, { maxRows: 6, lineHeight: 22 })
   const [isTyping,    setIsTyping]    = useState(false)
 
   const bottomRef      = useRef(null)
@@ -1125,6 +1132,7 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
       >
         <div className="flex items-end gap-2">
           <textarea
+            ref={inputRef}
             rows={2}
             placeholder="输入消息... (Enter 发送，Shift+Enter 换行)"
             value={input}

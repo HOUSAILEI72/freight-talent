@@ -40,6 +40,7 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
         threads={threads}
         onSwitchThread={onSwitchThread}
         terminal={terminal}
+        myRole={myRole}
       />
       <MessageThread
         messages={msgState.messages}

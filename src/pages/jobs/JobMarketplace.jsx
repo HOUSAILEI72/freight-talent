@@ -5,11 +5,14 @@ import {
   Loader2, FolderOpen, AlertCircle,
   GraduationCap, Users, Zap, PlusCircle,
   UserSearch, UsersRound, FileText,
+  Edit3, Bookmark, BookmarkCheck, Trash2, Power, RotateCcw,
 } from 'lucide-react'
 import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
 import { headhuntingApi } from '../../api/headhunting'
+import { useAuth } from '../../context/AuthContext'
 import TerminalPageSurface from '../../components/terminal/TerminalPageSurface'
+import { TerminalSelect } from '../../components/terminal/TerminalSelect'
 import RegionSelector from '../../components/RegionSelector'
 import Pagination from '../../components/ui/Pagination'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
@@ -418,7 +421,7 @@ function HdRequestRow({ req, selected, onSelect, serviceType }) {
 }
 
 
-function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChange }) {
+function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChange, onEditJob, onDeleteJob, onSetTemplate }) {
   const tagsByCat = job.tags_by_category || {}
   const baseLocation =
     job.location_path ||
@@ -439,6 +442,97 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
     const cardStyle = { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' }
     const secTitleClass = 'flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.04em] mb-1 flex-shrink-0'
     const secTitleStyle = { color: 'var(--t-text-muted)' }
+    const actionBarStyle = {
+      flexShrink: 0,
+      marginLeft: 16,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: 4,
+      borderRadius: 'var(--t-radius)',
+      border: '1px solid var(--t-border-subtle)',
+      background: 'rgba(15, 23, 42, 0.22)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.025)',
+    }
+    const actionButtonBase = {
+      height: 28,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 5,
+      padding: '0 9px',
+      borderRadius: 'var(--t-radius-sm)',
+      fontSize: 11,
+      fontWeight: 650,
+      letterSpacing: '0.01em',
+      cursor: 'pointer',
+      whiteSpace: 'nowrap',
+      transition: 'border-color 120ms ease, background 120ms ease, color 120ms ease, opacity 120ms ease',
+    }
+    const actionStyles = {
+      primary: {
+        border: '1px solid var(--t-primary)',
+        color: '#fff',
+        background: 'var(--t-primary)',
+      },
+      neutral: {
+        border: '1px solid var(--t-border)',
+        color: 'var(--t-text-secondary)',
+        background: 'var(--t-bg-elevated)',
+      },
+      template: {
+        border: job.is_template ? '1px solid var(--t-chart-yellow)' : '1px solid var(--t-border)',
+        color: job.is_template ? 'var(--t-chart-yellow)' : 'var(--t-text-secondary)',
+        background: job.is_template ? 'rgba(245, 158, 11, 0.10)' : 'var(--t-bg-elevated)',
+      },
+      dangerGhost: {
+        border: '1px solid transparent',
+        color: 'var(--t-text-muted)',
+        background: 'transparent',
+      },
+    }
+
+    function ActionButton({ children, icon: Icon, tone = 'neutral', title, iconOnly = false, onClick }) {
+      const baseTone = actionStyles[tone] || actionStyles.neutral
+      return (
+        <button
+          type="button"
+          title={title}
+          aria-label={title}
+          onClick={onClick}
+          style={{
+            ...actionButtonBase,
+            ...baseTone,
+            width: iconOnly ? 28 : 'auto',
+            padding: iconOnly ? 0 : actionButtonBase.padding,
+          }}
+          onMouseEnter={e => {
+            if (tone === 'dangerGhost') {
+              e.currentTarget.style.borderColor = 'var(--t-danger)'
+              e.currentTarget.style.color = 'var(--t-danger)'
+              e.currentTarget.style.background = 'var(--t-danger-muted)'
+              return
+            }
+            if (tone === 'neutral') {
+              e.currentTarget.style.borderColor = 'var(--t-primary)'
+              e.currentTarget.style.color = 'var(--t-primary)'
+              e.currentTarget.style.background = 'var(--t-primary-muted)'
+              return
+            }
+            e.currentTarget.style.opacity = '0.86'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = baseTone.border.replace('1px solid ', '')
+            e.currentTarget.style.color = baseTone.color
+            e.currentTarget.style.background = baseTone.background
+            e.currentTarget.style.opacity = '1'
+          }}
+        >
+          {Icon && <Icon size={12} />}
+          {!iconOnly && children}
+        </button>
+      )
+    }
 
     return (
       <div
@@ -473,29 +567,39 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
             )}
           </div>
           {canManage && (
-            <button
-              type="button"
-              onClick={() => onStatusChange?.(job, isClosed ? 'published' : 'closed')}
-              style={{
-                flexShrink: 0, marginLeft: 12,
-                padding: '5px 14px', fontSize: 12, fontWeight: 600,
-                borderRadius: 'var(--t-radius-sm)', cursor: 'pointer',
-                border: isClosed
-                  ? '1px solid var(--t-success)'
-                  : '1px solid var(--t-danger)',
-                color: isClosed ? 'var(--t-success)' : 'var(--t-danger)',
-                background: isClosed ? 'var(--t-success-muted)' : 'var(--t-danger-muted)',
-                letterSpacing: '0.02em',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.opacity = '0.8'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.opacity = '1'
-              }}
-            >
-              {isClosed ? '重新发布' : '关闭岗位'}
-            </button>
+            <div style={actionBarStyle}>
+              <ActionButton
+                icon={Edit3}
+                tone="primary"
+                title="编辑岗位"
+                onClick={() => onEditJob?.(job)}
+              >
+                编辑
+              </ActionButton>
+              <ActionButton
+                icon={job.is_template ? BookmarkCheck : Bookmark}
+                tone="template"
+                title={job.is_template ? '取消模板' : '设为模板'}
+                onClick={() => onSetTemplate?.(job, !job.is_template)}
+              >
+                {job.is_template ? '模板' : '设为模板'}
+              </ActionButton>
+              <ActionButton
+                icon={isClosed ? RotateCcw : Power}
+                tone="neutral"
+                title={isClosed ? '重新发布' : '关闭岗位'}
+                onClick={() => onStatusChange?.(job, isClosed ? 'published' : 'closed')}
+              >
+                {isClosed ? '重新发布' : '关闭'}
+              </ActionButton>
+              <ActionButton
+                icon={Trash2}
+                tone="dangerGhost"
+                title="删除岗位"
+                iconOnly
+                onClick={() => onDeleteJob?.(job)}
+              />
+            </div>
           )}
         </div>
 
@@ -657,6 +761,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
 // ── 主页面 ────────────────────────────────────────────────────────────────────
 export default function JobMarketplace({ terminal = false, showNewJobButton = false, canApply = false }) {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [jobs, setJobs]         = useState([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState('')
@@ -701,10 +806,37 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
       .catch(() => {})
   }
 
+  function handleEditJob(job) {
+    navigate(`/employer/jobs/${job.id}/edit`)
+  }
+
+  async function handleDeleteJob(job) {
+    if (!window.confirm('确定要永久删除该岗位吗？此操作不可恢复。')) return
+    try {
+      await jobsApi.deleteJob(job.id)
+      setJobs(prev => prev.filter(j => j.id !== job.id))
+      setSelected(prev => prev?.id === job.id ? null : prev)
+    } catch (err) {
+      window.alert(err.response?.data?.message ?? '删除失败，请重试')
+    }
+  }
+
+  async function handleSetTemplate(job, nextValue) {
+    try {
+      const res = await jobsApi.setTemplate(job.id, nextValue)
+      const updated = res.data.job
+      setJobs(prev => prev.map(j => j.id === updated.id ? { ...j, is_template: updated.is_template } : j))
+      setSelected(prev => prev?.id === updated.id ? { ...prev, is_template: updated.is_template } : prev)
+    } catch (err) {
+      window.alert(err.response?.data?.message ?? '操作失败，请重试')
+    }
+  }
+
   function fetchJobs(filters, targetPage = 1) {
     setLoading(true)
     setError('')
-    jobsApi.getPublicJobs({ ...filters, page: targetPage, page_size: 20 })
+    const extra = showNewJobButton ? { own: 1 } : {}
+    jobsApi.getPublicJobs({ ...extra, ...filters, page: targetPage, page_size: 20 })
       .then(res => {
         const list = res.data.jobs
         setJobs(list)
@@ -1042,20 +1174,34 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
               岗位广场
             </h1>
             {terminal && showNewJobButton && (
-              <button
-                type="button"
-                onClick={() => navigate('/employer/jobs/new')}
-                title="发布岗位"
-                className="inline-flex items-center gap-1 rounded-[var(--t-radius)] border px-2 py-1 text-[11px] font-semibold uppercase tracking-wider transition-colors"
-                style={{
-                  background: 'var(--t-primary)',
-                  borderColor: 'var(--t-primary)',
-                  color: '#fff',
-                }}
-              >
-                <PlusCircle size={12} />
-                <span className="font-[var(--t-font-sans)]">New Job</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-[10px] font-mono tabular-nums"
+                  style={{ color: total >= 5 ? 'var(--t-danger)' : 'var(--t-text-muted)' }}
+                >
+                  {total}/5
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/employer/jobs/new')}
+                  title={total >= 5 ? '已达发布上限（5个）' : '发布岗位'}
+                  disabled={total >= 5}
+                  className="inline-flex items-center gap-1 rounded-[var(--t-radius)] border px-2 py-1 text-[11px] font-semibold uppercase tracking-wider transition-colors"
+                  style={total >= 5 ? {
+                    background: 'var(--t-bg-elevated)',
+                    borderColor: 'var(--t-border)',
+                    color: 'var(--t-text-muted)',
+                    cursor: 'not-allowed',
+                  } : {
+                    background: 'var(--t-primary)',
+                    borderColor: 'var(--t-primary)',
+                    color: '#fff',
+                  }}
+                >
+                  <PlusCircle size={12} />
+                  <span className="font-[var(--t-font-sans)]">New Job</span>
+                </button>
+              </div>
             )}
           </div>
           <form onSubmit={handleSearch} className="space-y-2">
@@ -1091,100 +1237,104 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
               terminal={terminal}
               placeholder="按地区筛选（省 / 市 / 区 / 海外国家）"
             />
+            {terminal ? (
+              <TerminalSelect
+                value={functionCode}
+                onChange={handleFunctionChange}
+                options={[
+                  { value: '', label: '按业务方向筛选（全部）' },
+                  ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label })),
+                ]}
+                placeholder="按业务方向筛选（全部）"
+                hasValue={!!functionCode}
+              />
+            ) : (
             <select
               value={functionCode}
               onChange={(e) => handleFunctionChange(e.target.value)}
-              className={
-                terminal
-                  ? 'w-full px-2 py-1.5 text-xs rounded-lg border'
-                  : 'w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
-              }
-              style={
-                terminal
-                  ? {
-                      background: 'var(--t-bg-input)',
-                      borderColor: 'var(--t-border)',
-                      color: functionCode ? 'var(--t-text)' : 'var(--t-text-muted)',
-                    }
-                  : undefined
-              }
+              className='w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
             >
               <option value="">按业务方向筛选（全部）</option>
               {FUNCTION_OPTIONS.map(f => (
                 <option key={f.key} value={f.key}>{f.label}</option>
               ))}
             </select>
+            )}
+            {terminal ? (
+              <TerminalSelect
+                value={employmentType}
+                onChange={handleEmploymentTypeChange}
+                options={[
+                  { value: '', label: '应聘类型（全部）' },
+                  { value: '全职', label: '全职' },
+                  { value: '兼职', label: '兼职' },
+                  { value: '实习生', label: '实习生' },
+                ]}
+                placeholder="应聘类型（全部）"
+                hasValue={!!employmentType}
+              />
+            ) : (
             <select
               value={employmentType}
               onChange={(e) => handleEmploymentTypeChange(e.target.value)}
-              className={
-                terminal
-                  ? 'w-full px-2 py-1.5 text-xs rounded-lg border'
-                  : 'w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
-              }
-              style={
-                terminal
-                  ? {
-                      background: 'var(--t-bg-input)',
-                      borderColor: 'var(--t-border)',
-                      color: employmentType ? 'var(--t-text)' : 'var(--t-text-muted)',
-                    }
-                  : undefined
-              }
+              className='w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
             >
               <option value="">应聘类型（全部）</option>
               <option value="全职">全职</option>
               <option value="兼职">兼职</option>
               <option value="实习生">实习生</option>
             </select>
+            )}
             {canApply && (
               <div className="grid grid-cols-2 gap-2">
+                {terminal ? (
+                  <TerminalSelect
+                    value={savedFilter}
+                    onChange={setSavedFilter}
+                    options={[
+                      { value: 'all', label: '收藏：全部' },
+                      { value: 'saved', label: '已收藏' },
+                      { value: 'unsaved', label: '未收藏' },
+                    ]}
+                    placeholder="收藏：全部"
+                    hasValue={savedFilter !== 'all'}
+                  />
+                ) : (
                 <select
                   value={savedFilter}
                   onChange={(e) => setSavedFilter(e.target.value)}
-                  className={
-                    terminal
-                      ? 'w-full px-2 py-1.5 text-xs rounded-lg border'
-                      : 'w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
-                  }
-                  style={
-                    terminal
-                      ? {
-                          background: 'var(--t-bg-input)',
-                          borderColor: 'var(--t-border)',
-                          color: savedFilter === 'all' ? 'var(--t-text-muted)' : 'var(--t-text)',
-                        }
-                      : undefined
-                  }
+                  className='w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
                   title="按收藏状态筛选"
                 >
                   <option value="all">收藏：全部</option>
                   <option value="saved">已收藏</option>
                   <option value="unsaved">未收藏</option>
                 </select>
+                )}
+                {terminal ? (
+                  <TerminalSelect
+                    value={appliedFilter}
+                    onChange={setAppliedFilter}
+                    options={[
+                      { value: 'all', label: '投递：全部' },
+                      { value: 'applied', label: '已投递' },
+                      { value: 'unapplied', label: '未投递' },
+                    ]}
+                    placeholder="投递：全部"
+                    hasValue={appliedFilter !== 'all'}
+                  />
+                ) : (
                 <select
                   value={appliedFilter}
                   onChange={(e) => setAppliedFilter(e.target.value)}
-                  className={
-                    terminal
-                      ? 'w-full px-2 py-1.5 text-xs rounded-lg border'
-                      : 'w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
-                  }
-                  style={
-                    terminal
-                      ? {
-                          background: 'var(--t-bg-input)',
-                          borderColor: 'var(--t-border)',
-                          color: appliedFilter === 'all' ? 'var(--t-text-muted)' : 'var(--t-text)',
-                        }
-                      : undefined
-                  }
+                  className='w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
                   title="按投递状态筛选"
                 >
                   <option value="all">投递：全部</option>
                   <option value="applied">已投递</option>
                   <option value="unapplied">未投递</option>
                 </select>
+                )}
               </div>
             )}
             <div className="flex gap-2">
@@ -1509,8 +1659,11 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
             <JobDetailPanel
               job={selected}
               terminal={terminal}
-              canManage={showNewJobButton}
+              canManage={showNewJobButton && !!user && selected?.company_id === user.id}
               onStatusChange={handleStatusChange}
+              onEditJob={handleEditJob}
+              onDeleteJob={handleDeleteJob}
+              onSetTemplate={handleSetTemplate}
             />
           </div>
         ) : (

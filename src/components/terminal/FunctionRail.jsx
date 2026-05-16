@@ -1,15 +1,17 @@
 import { useNavigate } from 'react-router-dom'
-import { Layers, Anchor, Plane, Truck, Train, Package, ShoppingCart, Lock } from 'lucide-react'
+import { Layers, Anchor, Plane, Truck, Train, Package, ShoppingCart, Warehouse, Scale, Lock } from 'lucide-react'
 import { useHoverRail } from './useHoverRail'
 
 export const DEFAULT_FUNCTIONS = [
-  { key: 'ALL',                label: 'ALL',                short: 'ALL',  icon: Layers },
-  { key: 'Sea',                label: 'Sea',                short: 'S',    icon: Anchor },
-  { key: 'Air',                label: 'Air',                short: 'A',    icon: Plane },
-  { key: 'Road',               label: 'Road',               short: 'R',    icon: Truck },
-  { key: 'Railway',            label: 'Railway',            short: 'Rail', icon: Train },
-  { key: 'Contract Logistics', label: 'Contract Logistics', short: 'CL',   icon: Package },
-  { key: 'ECOMS',              label: 'ECOMS',              short: 'E',    icon: ShoppingCart },
+  { key: 'ALL',               label: '全板块',          short: 'ALL',  icon: Layers },
+  { key: 'Sea',               label: '海运板块',        short: 'S',    icon: Anchor },
+  { key: 'Air',               label: '空运板块',        short: 'A',    icon: Plane },
+  { key: 'CrossBorder',       label: '跨境电商物流',    short: 'CB',   icon: ShoppingCart },
+  { key: 'Railway',           label: '铁路/中欧班列',   short: 'Rail', icon: Train },
+  { key: 'Road',              label: '陆路运输',        short: 'R',    icon: Truck },
+  { key: 'ContractLogistics', label: '合同物流/3PL',    short: '3PL',  icon: Package },
+  { key: 'Warehousing',       label: '仓储/海外仓',     short: 'WH',   icon: Warehouse },
+  { key: 'Customs',           label: '关务/合规',       short: 'CC',   icon: Scale },
 ]
 
 const COLLAPSED = 60

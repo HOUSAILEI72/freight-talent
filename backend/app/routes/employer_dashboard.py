@@ -116,8 +116,27 @@ def _period_key(dt, granularity):
     """根据粒度生成 period key 和 label"""
     if not dt:
         return None, None
-    if granularity == 'day':
-        return dt.strftime('%Y-%m-%d'), dt.strftime('%m-%d')
+    if granularity == 'bi_monthly':
+        # day 1–10  → 本月10号快照（第一个能统计到该候选人的快照点）
+        # day 11–20 → 本月20号快照
+        # day 21–末 → 下月10号快照
+        day = dt.day
+        if day <= 10:
+            snap_day = 10
+            snap_month = dt.month
+            snap_year = dt.year
+        elif day <= 20:
+            snap_day = 20
+            snap_month = dt.month
+            snap_year = dt.year
+        else:
+            snap_day = 10
+            snap_month = dt.month + 1 if dt.month < 12 else 1
+            snap_year = dt.year if dt.month < 12 else dt.year + 1
+        mm = f"{snap_month:02d}"
+        key = f"{snap_year}-{mm}-{snap_day:02d}"
+        label = f"{mm}/{snap_day:02d}"
+        return key, label
     elif granularity == 'week':
         iso_year, iso_week, _ = dt.isocalendar()
         return f"{iso_year}-W{iso_week:02d}", f"W{iso_week:02d}"
@@ -136,11 +155,33 @@ def _generate_periods(granularity):
     """生成最近 N 个完整周期作为 X 轴"""
     now = datetime.now(timezone.utc)
     periods = []
-    if granularity == 'day':
-        # 最近 14 天
-        for i in range(13, -1, -1):
-            dt = now - timedelta(days=i)
-            key, label = _period_key(dt, granularity)
+    if granularity == 'bi_monthly':
+        # 最近 24 个统计点（12 个月 × 每月 2 个）
+        year, month = now.year, now.month
+        day = now.day
+        # 当前所在的半月快照
+        if day >= 20:
+            snaps = [(year, month, 20), (year, month, 10)]
+        else:
+            snaps = [(year, month, 10)]
+            # 上个月 20 号
+            pm = month - 1 if month > 1 else 12
+            py = year if month > 1 else year - 1
+            snaps.append((py, pm, 20))
+        # 补到 24 个点
+        while len(snaps) < 24:
+            y, m, d = snaps[-1]
+            if d == 20:
+                snaps.append((y, m, 10))
+            else:
+                pm = m - 1 if m > 1 else 12
+                py = y if m > 1 else y - 1
+                snaps.append((py, pm, 20))
+        snaps = list(reversed(snaps))
+        for y, m, d in snaps:
+            mm = f"{m:02d}"
+            key = f"{y}-{mm}-{d:02d}"
+            label = f"{mm}/{d:02d}"
             periods.append((key, label))
     elif granularity == 'week':
         # 最近 12 周
@@ -757,9 +798,9 @@ def dashboard_chart():
             return sub_err
 
     # 规范化 granularity
-    valid_granularities = ('day', 'week', 'month', 'quarter', 'year')
+    valid_granularities = ('bi_monthly', 'week', 'month', 'quarter', 'year')
     if granularity not in valid_granularities:
-        granularity = 'day'
+        granularity = 'bi_monthly'
 
     result = _time_series_bars(function_value, region_value, granularity)
     stats = {
