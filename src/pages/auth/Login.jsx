@@ -170,7 +170,7 @@ export default function Login() {
               <span className="text-sm text-slate-400 font-medium leading-none">Access Career Everywhere</span>
             </div>
           </div>
-          <h2 className="text-3xl font-bold text-white mb-4">货代行业<br />精准人才撮合平台</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">物流行业<br />精准人才撮合平台</h2>
           <p className="text-slate-400 leading-relaxed mb-8">
             连接众多货代从业者与头部货代企业，快速完成精准入职。
           </p>

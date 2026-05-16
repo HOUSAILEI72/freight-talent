@@ -11,7 +11,7 @@ import { ChevronDown, Search } from 'lucide-react'
  *   onChange     — (value) => void
  *   options      — [{ value, label }]
  *   placeholder  — shown when value is empty / unmatched
- *   hasValue     — if true, border turns focus-blue (pass !!value externally)
+ *   hasValue     — reserved for API compatibility; no longer affects border color
  *   searchable   — if true, shows a fuzzy-filter input inside the panel
  *   className    — extra classes on the trigger
  *   style        — extra styles on the trigger
@@ -21,17 +21,18 @@ export function TerminalSelect({
   onChange,
   options = [],
   placeholder = '',
-  hasValue,
+  hasValue,   // kept for API compat, intentionally unused
   searchable = false,
   className = '',
   style,
 }) {
-  const [open, setOpen]       = useState(false)
-  const [query, setQuery]     = useState('')
-  const [pos, setPos]         = useState({ top: 0, left: 0, width: 0 })
-  const triggerRef            = useRef(null)
-  const panelRef              = useRef(null)
-  const searchRef             = useRef(null)
+  const [open, setOpen]         = useState(false)
+  const [hovered, setHovered]   = useState(false)
+  const [query, setQuery]       = useState('')
+  const [pos, setPos]           = useState({ top: 0, left: 0, width: 0 })
+  const triggerRef              = useRef(null)
+  const panelRef                = useRef(null)
+  const searchRef               = useRef(null)
 
   const selected = options.find(o => String(o.value) === String(value))
 
@@ -84,6 +85,13 @@ export function TerminalSelect({
     close()
   }
 
+  // border: default → hover → open/focus progression; hasValue no longer affects color
+  const borderColor = open
+    ? 'var(--t-border-focus)'
+    : hovered
+      ? 'var(--t-border-focus)'
+      : 'var(--t-border)'
+
   const triggerStyle = {
     display: 'flex',
     alignItems: 'center',
@@ -93,7 +101,7 @@ export function TerminalSelect({
     height: 30,
     padding: '0 8px',
     background: 'var(--t-bg-input)',
-    border: `1px solid ${hasValue ? 'var(--t-border-focus)' : 'var(--t-border)'}`,
+    border: `1px solid ${borderColor}`,
     borderRadius: 'var(--t-radius-sm)',
     color: selected ? 'var(--t-text)' : 'var(--t-text-muted)',
     fontFamily: 'var(--t-font-ui)',
@@ -111,10 +119,10 @@ export function TerminalSelect({
     left: pos.left,
     width: pos.width,
     zIndex: 9999,
-    background: 'var(--t-bg-elevated)',
+    background: 'var(--t-bg-input)',
     border: '1px solid var(--t-border)',
     borderRadius: 'var(--t-radius)',
-    boxShadow: 'var(--t-shadow-elevated)',
+    boxShadow: '0 12px 28px rgba(0,0,0,.28)',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
@@ -130,6 +138,8 @@ export function TerminalSelect({
         className={className}
         onClick={open ? close : openDropdown}
         onFocus={() => {}}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
         <span className="truncate" style={{ flex: 1, textAlign: 'left', fontFamily: 'var(--t-font-cjk)', fontSize: 12 }}>
           {selected ? selected.label : placeholder}
@@ -189,11 +199,13 @@ export function TerminalSelect({
                   onClick={() => pick(o.value)}
                   style={{
                     padding: '5px 10px',
+                    paddingLeft: isSel ? 8 : 10,
+                    borderLeft: isSel ? '2px solid var(--t-primary)' : '2px solid transparent',
                     cursor: 'pointer',
                     fontFamily: 'var(--t-font-cjk)',
                     fontSize: 12,
                     color: isSel ? 'var(--t-primary)' : 'var(--t-text)',
-                    background: isSel ? 'var(--t-bg-active)' : 'transparent',
+                    background: isSel ? 'var(--t-primary-muted)' : 'transparent',
                     transition: 'background 100ms',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',

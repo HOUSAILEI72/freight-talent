@@ -177,7 +177,11 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
   const [education, setEducation]                 = useState('')
   const [educationLines, setEducationLines]       = useState('')
   const [certificatesText, setCertificatesText]   = useState('')
-  const [expectedSalaryLabel, setExpectedSalaryLabel] = useState('')
+  const [expectedSalaryMin, setExpectedSalaryMin] = useState('')
+  const [expectedSalaryMax, setExpectedSalaryMax] = useState('')
+  const [expectedSalaryPeriod, setExpectedSalaryPeriod] = useState('month')
+  const [esMINFocused, setEsMinFocused] = useState(false)
+  const [esMAXFocused, setEsMaxFocused] = useState(false)
   const [desiredPosition, setDesiredPosition] = useState('')
 
   // ── Auto-resize refs ───────────────────────────────────────────────────
@@ -300,7 +304,9 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
     setEducation(p.education || '')
     setEducationLines(educationLinesToText(p.education_experiences))
     setCertificatesText(tagsToText(p.certificates))
-    setExpectedSalaryLabel(p.expected_salary_label || '')
+    setExpectedSalaryMin(p.expected_salary_min != null ? String(p.expected_salary_min) : '')
+    setExpectedSalaryMax(p.expected_salary_max != null ? String(p.expected_salary_max) : '')
+    setExpectedSalaryPeriod(p.expected_salary_period || 'month')
     setDesiredPosition(p.desired_position || '')
   }, [])
 
@@ -371,6 +377,14 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
     }
     if (csHasYeb && csYebMonths !== '' && (Number(csYebMonths) < 0 || Number(csYebMonths) > 24)) {
       return '年终奖月数必须在 0-24 之间'
+    }
+
+    const esMinRaw = expectedSalaryMin.replace(/,/g, '')
+    const esMaxRaw = expectedSalaryMax.replace(/,/g, '')
+    if (esMinRaw !== '' && !/^\d+$/.test(esMinRaw)) return '期望薪资最小值必须为纯数字'
+    if (esMaxRaw !== '' && !/^\d+$/.test(esMaxRaw)) return '期望薪资最大值必须为纯数字'
+    if (esMinRaw !== '' && esMaxRaw !== '' && Number(esMinRaw) > Number(esMaxRaw)) {
+      return '期望薪资最小值不能大于最大值'
     }
 
     if (!Array.isArray(workRows) || workRows.length === 0) return '至少填写一段工作经历'
@@ -456,7 +470,9 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
       education_experiences: parseEducationLines(educationLines),
       certificates: certsArr,
 
-      expected_salary_label: expectedSalaryLabel.trim() || null,
+      ...(expectedSalaryMin.replace(/,/g, '') !== '' ? { expected_salary_min: Number(expectedSalaryMin.replace(/,/g, '')) } : { expected_salary_min: null }),
+      ...(expectedSalaryMax.replace(/,/g, '') !== '' ? { expected_salary_max: Number(expectedSalaryMax.replace(/,/g, '')) } : { expected_salary_max: null }),
+      expected_salary_period: expectedSalaryPeriod || 'month',
       desired_position: desiredPosition.trim() || null,
 
       availability_status: availability,
@@ -744,10 +760,42 @@ export default function CandidateProfileBuilder({ terminal = false, onDone }) {
               </div>
               <div>
                 <label className={labelClass} style={labelStyle}>期望薪资</label>
-                <input className={inputClass} style={inputStyle}
-                  value={expectedSalaryLabel}
-                  onChange={e => setExpectedSalaryLabel(e.target.value)}
-                  placeholder="如：18k-25k、面议、35万/年" />
+                <div className="flex gap-2 items-center">
+                  <input
+                    className={inputClass} style={inputStyle}
+                    placeholder="最低（元）"
+                    value={esMINFocused ? expectedSalaryMin.replace(/,/g, '') : formatThousand(expectedSalaryMin.replace(/,/g, ''))}
+                    onFocus={() => { setEsMinFocused(true); setExpectedSalaryMin(expectedSalaryMin.replace(/,/g, '')) }}
+                    onBlur={() => setEsMinFocused(false)}
+                    onChange={e => setExpectedSalaryMin(e.target.value.replace(/[^\d]/g, ''))}
+                    inputMode="numeric"
+                  />
+                  <span style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>—</span>
+                  <input
+                    className={inputClass} style={inputStyle}
+                    placeholder="最高（元）"
+                    value={esMAXFocused ? expectedSalaryMax.replace(/,/g, '') : formatThousand(expectedSalaryMax.replace(/,/g, ''))}
+                    onFocus={() => { setEsMaxFocused(true); setExpectedSalaryMax(expectedSalaryMax.replace(/,/g, '')) }}
+                    onBlur={() => setEsMaxFocused(false)}
+                    onChange={e => setExpectedSalaryMax(e.target.value.replace(/[^\d]/g, ''))}
+                    inputMode="numeric"
+                  />
+                  {terminal ? (
+                    <TerminalSelect
+                      value={expectedSalaryPeriod}
+                      onChange={setExpectedSalaryPeriod}
+                      options={[{ value: 'month', label: '/月' }, { value: 'year', label: '/年' }]}
+                      hasValue={true}
+                    />
+                  ) : (
+                    <select className={inputClass} style={{ ...inputStyle, minWidth: 72 }}
+                      value={expectedSalaryPeriod}
+                      onChange={e => setExpectedSalaryPeriod(e.target.value)}>
+                      <option value="month">/月</option>
+                      <option value="year">/年</option>
+                    </select>
+                  )}
+                </div>
               </div>
               <div>
                 <label className={labelClass} style={labelStyle}>出生年月</label>

@@ -176,7 +176,7 @@ export default function TalentIndexCard({ totals = { candidates: 0, jobs: 0 }, t
       {/* ── Chart ────────────────────────────────────────────── */}
       <div style={{ padding: '22px 18px 10px', position: 'relative' }}>
         <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: -10 }}>
+          <AreaChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: -10 }} accessibilityLayer={false}>
             <defs>
               <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%"   stopColor="#2563eb" stopOpacity={0.22} />
@@ -210,7 +210,7 @@ export default function TalentIndexCard({ totals = { candidates: 0, jobs: 0 }, t
             {!noData && (
               <Tooltip
                 content={<CustomTooltip viewLabel={view.label} />}
-                cursor={{ stroke: '#dde6f5', strokeWidth: 1 }}
+                cursor={false}
               />
             )}
 

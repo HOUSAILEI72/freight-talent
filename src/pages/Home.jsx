@@ -210,7 +210,7 @@ export default function Home() {
       {/* CTA */}
       <section className="max-w-7xl mx-auto px-6 py-16">
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-10 text-center text-white">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">货代行业精准人才撮合平台</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">物流行业精准人才撮合平台</h2>
           <p className="text-blue-100 mb-8 max-w-lg mx-auto">
             精准标签匹配，告别无效投递。简历鲜度优先，找到真正活跃的候选人。行业经验验证，保障人选质量。
           </p>

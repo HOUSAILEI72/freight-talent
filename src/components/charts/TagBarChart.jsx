@@ -36,11 +36,11 @@ export function TagBarChart({
         </div>
       </div>
       <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={data} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+        <BarChart data={data} margin={{ top: 4, right: 16, bottom: 4, left: 0 }} accessibilityLayer={false}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
           <XAxis dataKey="period" tick={{ fontSize: 11 }} />
           <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-          <Tooltip formatter={(v) => [v, label]} />
+          <Tooltip formatter={(v) => [v, label]} cursor={false} />
           <Bar dataKey="count" fill={color} radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>

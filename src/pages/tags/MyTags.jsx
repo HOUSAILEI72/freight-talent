@@ -306,10 +306,12 @@ export default function MyTags({ terminal = false }) {
     <div
       className={
         terminal
-          ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar px-6 py-6 space-y-6'
+          ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar space-y-6'
           : 'max-w-5xl mx-auto px-6 py-8 space-y-6'
       }
-      style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
+      style={terminal
+        ? { background: 'var(--t-bg)', color: 'var(--t-text)', padding: 'clamp(16px, 2.5vw, 24px) clamp(12px, 2vw, 24px)' }
+        : undefined}
     >
       <div className="flex items-start justify-between">
         <div>

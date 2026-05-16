@@ -52,10 +52,11 @@ function calcExperienceYears(workExperiences) {
 function buildCandidateMeta(c) {
   const parts = []
   const expYears = calcExperienceYears(c.work_experiences) ?? c.experience_years
-  if (expYears != null) parts.push(`${expYears}年`)
-  const edu = formatEducationLevel(c.education)
-  if (edu) parts.push(edu)
+  if (expYears != null) parts.push(`${expYears}年经验`)
   if (c.age != null) parts.push(`${c.age}岁`)
+  const city = c.expected_city || c.location_name || c.current_city || c.business_area_name
+  if (city) parts.push(city)
+  if (c.education) parts.push(c.education)
   const avail = formatAvailabilityText(c.availability_status)
   if (avail) parts.push(avail)
   return parts.join(' | ')
@@ -1200,7 +1201,7 @@ export default function CandidatePool({ terminal = false, messagesBasePath = '/m
                     {/* info */}
                     <div className="flex-1 min-w-0">
                       {/* row 1: 期望职位 + 薪资 */}
-                      <div className="flex items-baseline gap-1.5 flex-wrap" style={{ marginBottom: '5px' }}>
+                      <div className="flex items-baseline gap-1.5 flex-wrap" style={{ marginBottom: '4px' }}>
                         <span style={{ fontSize: '13px', fontWeight: 600, color: '#1a1f2e' }}>
                           期望：{jobTitle}
                         </span>
@@ -1210,9 +1211,13 @@ export default function CandidatePool({ terminal = false, messagesBasePath = '/m
                       </div>
                       {/* row 2: meta */}
                       {metaLine && (
-                        <p style={{ fontSize: '13px', color: '#8a8f98', lineHeight: 1.4, margin: 0 }}>
-                          {metaLine}
-                        </p>
+                        <div className="flex items-baseline flex-wrap" style={{ gap: '0 4px' }}>
+                          {metaLine.split(' | ').map((part, i, arr) => (
+                            <span key={i} style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap' }}>
+                              {part}{i < arr.length - 1 && <span style={{ fontWeight: 400, color: '#c4c9d4', margin: '0 2px' }}>|</span>}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
 

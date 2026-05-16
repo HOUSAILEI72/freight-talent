@@ -11,6 +11,7 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
     <aside
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      className="terminal-pool-rail-narrow"
       style={{
         width: open ? EXPANDED : COLLAPSED,
         background: 'var(--t-bg-panel)',
@@ -41,7 +42,7 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
         }}>
           PL
         </span>
-        <span style={{
+        <span className="pool-rail-header-text" style={{
           position: 'absolute', left: 12,
           fontFamily: 'var(--t-font-sans)', fontSize: 10, fontWeight: 700,
           textTransform: 'uppercase', letterSpacing: '0.04em',
@@ -107,7 +108,7 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
               </span>
 
               {/* Label + count — always in DOM */}
-              <span style={{
+              <span className="pool-rail-label" style={{
                 flex: 1,
                 display: 'flex',
                 alignItems: 'center',
@@ -132,7 +133,7 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
                   {tab.label}
                 </span>
                 {count != null && (
-                  <span style={{
+                  <span className="pool-rail-count" style={{
                     fontFamily: 'var(--t-font-sans)', fontSize: 10,
                     padding: '1px 6px', borderRadius: 10,
                     background: active ? 'rgba(255,255,255,0.2)' : 'var(--t-bg-elevated)',

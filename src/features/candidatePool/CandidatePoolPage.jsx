@@ -1,4 +1,4 @@
-import { User } from 'lucide-react'
+import { User, MessageSquare, X } from 'lucide-react'
 import { useRef, useState, useEffect } from 'react'
 import TerminalPageSurface from '../../components/terminal/TerminalPageSurface'
 import Pagination from '../../components/ui/Pagination'
@@ -10,6 +10,8 @@ import { CandidateList } from './components/CandidateList'
 import { CandidateDetailPanel } from './components/CandidateDetailPanel'
 import { CandidatePoolRail } from './components/CandidatePoolRail'
 import { CandidateChatModal } from './components/CandidateChatModal'
+import { CandidateConversationDock } from './components/CandidateConversationDock'
+import { CandidateMiniChatWindow } from './components/CandidateMiniChatWindow'
 import { CANDIDATE_POOL_TABS } from './constants'
 import { conversationsApi } from '../../api/conversations'
 
@@ -19,8 +21,12 @@ export default function CandidatePoolPage({ terminal = false }) {
   const archive = useCandidateArchive()
 
   const [selected, setSelected] = useState(null)
-  const [chatModal, setChatModal] = useState(null)    // { threadId, candidate, job }
+  const [chatModal, setChatModal] = useState(null)    // { threadId, candidate, job } — public light only
   const [chatToast, setChatToast] = useState(null)
+  const [activeDockConv,  setActiveDockConv]  = useState(null)  // terminal dock mini-chat
+  const [dockCollapsed,   setDockCollapsed]   = useState(false)
+  const [dockRefreshKey,  setDockRefreshKey]  = useState(0)
+  const [dockOpen,        setDockOpen]        = useState(false)  // responsive drawer
   const lastFiltersRef = useRef({ availability_status: 'open' })
 
   useEffect(() => {
@@ -94,11 +100,26 @@ export default function CandidatePoolPage({ terminal = false }) {
       return
     }
 
-    const invKey = `${pool.selectedJob.id}_${candidate.id}`
+    const invKey  = `${pool.selectedJob.id}_${candidate.id}`
     const existing = pool.invited[invKey]
 
+    function buildConvFromCandidate(threadId) {
+      return {
+        threadId,
+        candidateId:     candidate.id,
+        candidateName:   candidate.full_name,
+        candidateInitial: (candidate.full_name?.[0] ?? '?').toUpperCase(),
+        jobId:           pool.selectedJob?.id ?? null,
+        jobTitle:        pool.selectedJob?.title ?? null,
+      }
+    }
+
     if (typeof existing === 'number') {
-      setChatModal({ threadId: existing, candidate, job: pool.selectedJob })
+      if (terminal) {
+        setActiveDockConv(buildConvFromCandidate(existing))
+      } else {
+        setChatModal({ threadId: existing, candidate, job: pool.selectedJob })
+      }
       return
     }
 
@@ -109,7 +130,12 @@ export default function CandidatePoolPage({ terminal = false }) {
       })
       const threadId = res.data.thread_id
       pool.markInvited(pool.selectedJob.id, candidate.id, threadId)
-      setChatModal({ threadId, candidate, job: pool.selectedJob })
+      if (terminal) {
+        setActiveDockConv(buildConvFromCandidate(threadId))
+        setDockRefreshKey(k => k + 1)   // 新建会话后刷新 Dock 列表
+      } else {
+        setChatModal({ threadId, candidate, job: pool.selectedJob })
+      }
     } catch (err) {
       showToast(err.response?.data?.message || '打开沟通失败')
     }
@@ -166,13 +192,16 @@ export default function CandidatePoolPage({ terminal = false }) {
   if (terminal) {
     return (
       <>
-        {chatModal && (
-          <CandidateChatModal
-            threadId={chatModal.threadId}
-            candidate={chatModal.candidate}
-            job={chatModal.job}
-            terminal
-            onClose={() => setChatModal(null)}
+        {activeDockConv && (
+          <CandidateMiniChatWindow
+            key={activeDockConv.threadId}
+            activeDockConv={activeDockConv}
+            dockCollapsed={dockCollapsed}
+            onClose={() => {
+              setActiveDockConv(null)
+              setDockRefreshKey(k => k + 1)   // 关闭时刷新一次未读数
+            }}
+            onReadDone={() => setDockRefreshKey(k => k + 1)}
           />
         )}
         {chatToastEl}
@@ -192,8 +221,8 @@ export default function CandidatePoolPage({ terminal = false }) {
           />
 
           <aside
-            className="flex-shrink-0 flex flex-col overflow-hidden"
-            style={{ width: 260, background: 'var(--t-bg-panel)', borderRight: '1px solid var(--t-border)' }}
+            className="terminal-filter-sidebar"
+            style={{ background: 'var(--t-bg-panel)', borderRight: '1px solid var(--t-border)' }}
           >
             <div className="flex-1 overflow-y-auto terminal-scrollbar">
               <CandidateFilterBar
@@ -203,7 +232,18 @@ export default function CandidatePoolPage({ terminal = false }) {
             </div>
           </aside>
 
-          <main className="flex-1 min-w-0 flex flex-col overflow-hidden" style={{ background: 'var(--t-bg)' }}>
+          <main className="terminal-candidate-list-container flex-1 min-w-0 flex flex-col overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(37,99,235,0.035) 0%, var(--t-bg) 200px), var(--t-bg)' }}>
+            {/* Dock trigger — document flow, only visible at ≤1535px */}
+            <div className="terminal-candidate-dock-trigger-row">
+              <button
+                type="button"
+                className="terminal-candidate-dock-trigger"
+                onClick={() => setDockOpen(true)}
+              >
+                <MessageSquare size={13} />
+                沟通列表
+              </button>
+            </div>
             <div className="flex-1 overflow-y-auto terminal-scrollbar">
               <CandidateList
                 {...listProps}
@@ -219,7 +259,51 @@ export default function CandidatePoolPage({ terminal = false }) {
               terminal
             />
           </main>
+
+          {/* Desktop dock — hidden at ≤1535px */}
+          <div className="terminal-candidate-dock-desktop">
+            <CandidateConversationDock
+              activeThreadId={activeDockConv?.threadId ?? null}
+              onSelect={setActiveDockConv}
+              onCollapsedChange={setDockCollapsed}
+              refreshKey={dockRefreshKey}
+            />
+          </div>
         </TerminalPageSurface>
+
+        {/* Responsive drawer — visible at ≤1535px */}
+        {dockOpen && (
+          <div
+            className="terminal-candidate-dock-overlay"
+            onClick={() => setDockOpen(false)}
+          >
+            <aside
+              className="terminal-candidate-dock-drawer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="terminal-candidate-dock-drawer-header">
+                <span>沟通列表</span>
+                <button
+                  type="button"
+                  onClick={() => setDockOpen(false)}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--t-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6 }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--t-bg-hover)'; e.currentTarget.style.color = 'var(--t-text)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--t-text-muted)' }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="terminal-candidate-dock-drawer-body">
+                <CandidateConversationDock
+                  activeThreadId={activeDockConv?.threadId ?? null}
+                  onSelect={(conv) => { setActiveDockConv(conv); setDockOpen(false) }}
+                  onCollapsedChange={setDockCollapsed}
+                  refreshKey={dockRefreshKey}
+                />
+              </div>
+            </aside>
+          </div>
+        )}
       </>
     )
   }

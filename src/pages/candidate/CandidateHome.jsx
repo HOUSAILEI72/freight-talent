@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Briefcase, Database, Send, Tags, TrendingUp, FileText, Building2, SquareDashed } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Briefcase, Send, Tags, FileText, Users, UsersRound, Wrench, MessageSquare } from 'lucide-react'
 import TerminalLayout from '../../components/terminal/TerminalLayout'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 import { DEFAULT_AREAS } from '../../components/terminal/AreaSidebar'
@@ -7,11 +8,16 @@ import AreaRail from '../../components/terminal/AreaRail'
 import FunctionSidebar from '../../components/terminal/FunctionSidebar'
 import CandidateChartPanel from '../../components/terminal/CandidateChartPanel'
 import TerminalActionBar from '../../components/terminal/TerminalActionBar'
+import TrendSummaryCard from '../../components/terminal/TrendSummaryCard'
+import LockedInsightsPanel from '../../components/terminal/LockedInsightsPanel'
 import MetricCard from '../../components/data/MetricCard'
 import { CANDIDATE_ICON_NAV } from '../../components/terminal/navItems'
 import { useAuth } from '../../context/AuthContext'
 import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
+import { conversationsApi } from '../../api/conversations'
+import { subscriptionsApi } from '../../api/subscriptions'
+import { candidateDashboardApi } from '../../api/candidateDashboard'
 
 const DEFAULT_FUNCTION = 'ALL'
 const DEFAULT_AREA = 'China'
@@ -63,24 +69,9 @@ function matchesArea(job, areaKey) {
   return hasAny(textOfJob(job), AREA_KEYWORDS[areaKey])
 }
 
-function inferAreas(job) {
-  const areas = DEFAULT_AREAS
-    .filter((area) => !area.type && area.key !== DEFAULT_AREA && matchesArea(job, area.key))
-    .map((area) => area.key)
-  return areas.length > 0 ? areas : [DEFAULT_AREA]
-}
-
-function countBy(items, keys, predicate) {
-  return keys
-    .map((item) => ({
-      label: item.label,
-      count: items.filter((job) => predicate(job, item.key)).length,
-    }))
-    .filter((bar) => bar.count > 0)
-}
-
 export default function CandidateHome() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [selectedFunction, setSelectedFunction] = useState(DEFAULT_FUNCTION)
   const [selectedArea, setSelectedArea] = useState(DEFAULT_AREA)
   const [granularity, setGranularity] = useState('week')
@@ -90,6 +81,11 @@ export default function CandidateHome() {
   const [updatedAt, setUpdatedAt] = useState('—')
   const [applications, setApplications] = useState([])
   const [applicationsLoading, setApplicationsLoading] = useState(true)
+  const [conversations, setConversations] = useState([])
+  const [convsLoading, setConvsLoading] = useState(true)
+  const [trendSummary, setTrendSummary] = useState(null)
+  const [trendLoading, setTrendLoading] = useState(true)
+  const [hasSubscription, setHasSubscription] = useState(null)
 
   useEffect(() => {
     let alive = true
@@ -105,31 +101,44 @@ export default function CandidateHome() {
         setJobs([])
         setError(err.response?.data?.message ?? '岗位数据加载失败')
       })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-    return () => {
-      alive = false
-    }
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
   }, [])
 
   useEffect(() => {
     let alive = true
     applicationsApi
       .getMyApplications()
-      .then((res) => {
-        if (!alive) return
-        setApplications(res.data?.applications ?? [])
-      })
-      .catch(() => {
-        if (alive) setApplications([])
-      })
-      .finally(() => {
-        if (alive) setApplicationsLoading(false)
-      })
-    return () => {
-      alive = false
-    }
+      .then((res) => { if (alive) setApplications(res.data?.applications ?? []) })
+      .catch(() => { if (alive) setApplications([]) })
+      .finally(() => { if (alive) setApplicationsLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    conversationsApi
+      .getMyConversations()
+      .then((res) => { if (alive) setConversations(res.data?.threads ?? res.data ?? []) })
+      .catch(() => { if (alive) setConversations([]) })
+      .finally(() => { if (alive) setConvsLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    candidateDashboardApi
+      .getSummary()
+      .then((res) => { if (alive) setTrendSummary(res.data) })
+      .catch(() => { if (alive) setTrendSummary(null) })
+      .finally(() => { if (alive) setTrendLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    subscriptionsApi.getMySubscription()
+      .then((res) => setHasSubscription(res.data.has_active))
+      .catch(() => setHasSubscription(false))
   }, [])
 
   const filteredJobs = useMemo(
@@ -138,7 +147,6 @@ export default function CandidateHome() {
   )
 
   const chartBars = useMemo(() => {
-    // Time-based aggregation: X axis is always time
     function periodKey(dateStr) {
       const d = new Date(dateStr)
       if (isNaN(d.getTime())) return null
@@ -161,7 +169,6 @@ export default function CandidateHome() {
         return { period, label: `${mm}/${String(snapDay).padStart(2, '0')}` }
       }
       if (granularity === 'week') {
-        // ISO week approximation
         const oneJan = new Date(d.getFullYear(), 0, 1)
         const week = Math.ceil(((d - oneJan) / 86400000 + oneJan.getDay() + 1) / 7)
         return { period: `${d.getFullYear()}-W${String(week).padStart(2, '0')}`, label: `W${String(week).padStart(2, '0')}` }
@@ -190,18 +197,10 @@ export default function CandidateHome() {
         count: (counter.get(pk.period)?.count || 0) + 1,
       })
     }
-
     return Array.from(counter.values()).sort((a, b) => a.period.localeCompare(b.period))
   }, [filteredJobs, granularity])
 
-  const areaCoverage = useMemo(() => {
-    const uniqueAreas = new Set()
-    for (const job of jobs) {
-      for (const area of inferAreas(job)) uniqueAreas.add(area)
-    }
-    uniqueAreas.delete(DEFAULT_AREA)
-    return uniqueAreas.size
-  }, [jobs])
+  const platformTotals = useMemo(() => trendSummary?.platform_totals ?? {}, [trendSummary])
 
   const appliedJobCount = useMemo(() => {
     const ids = new Set(
@@ -213,15 +212,24 @@ export default function CandidateHome() {
     return ids.size
   }, [applications])
 
-  const savedCompanyCount = useMemo(() => {
-    const companies = new Set(
+  const savedJobCount = useMemo(() => {
+    const ids = new Set(
       applications
-        .filter((item) => item?.status === 'saved')
-        .map((item) => item.employer_id ?? item.job?.company_name)
+        .filter((item) => item?.is_saved)
+        .map((item) => item.job_id)
         .filter(Boolean)
     )
-    return companies.size
+    return ids.size
   }, [applications])
+
+  const messagedJobCount = useMemo(() => {
+    const ids = new Set(
+      (Array.isArray(conversations) ? conversations : [])
+        .filter((t) => t?.job_id)
+        .map((t) => t.job_id)
+    )
+    return ids.size
+  }, [conversations])
 
   const subtitle = `FUNC=${selectedFunction} / AREA=${selectedArea}`
   const displayName = user?.name || 'Candidate'
@@ -241,7 +249,7 @@ export default function CandidateHome() {
         hasSubscription={true}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto terminal-scrollbar">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-5 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <span className="font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
@@ -261,66 +269,83 @@ export default function CandidateHome() {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
-          <div className="terminal-card-grid shrink-0">
+        <div className="terminal-dashboard-body terminal-scrollbar min-w-0">
+          <div className="terminal-platform-count-grid shrink-0">
             <MetricCard
               compact
-              label="Jobs"
-              value={loading ? '—' : filteredJobs.length}
-              helper={subtitle}
+              label="PLATFORM CANDIDATES"
+              value={trendLoading ? '—' : (platformTotals.candidates ?? 0)}
+              icon={<Users size={14} />}
+            />
+            <MetricCard
+              compact
+              label="PLATFORM JOBS"
+              value={trendLoading ? '—' : (platformTotals.jobs ?? 0)}
               icon={<Briefcase size={14} />}
             />
             <MetricCard
               compact
-              label="Functions"
-              value={DEFAULT_FUNCTIONS.length - 1}
-              helper={selectedFunction === DEFAULT_FUNCTION ? 'ALL' : selectedFunction}
-              icon={<Database size={14} />}
+              label="PLATFORM TEAMS"
+              value={trendLoading ? '—' : (platformTotals.teams ?? 0)}
+              icon={<UsersRound size={14} />}
             />
             <MetricCard
               compact
-              label="Areas"
-              value={areaCoverage || DEFAULT_AREAS.length - 1}
-              helper={selectedArea}
-              icon={<TrendingUp size={14} />}
-            />
-          </div>
-
-          <div className="terminal-card-grid shrink-0">
-            <MetricCard
-              compact
-              label="Applied Jobs"
-              value={applicationsLoading ? '—' : appliedJobCount}
-              helper="SUBMITTED POSITIONS"
-              icon={<Send size={14} />}
-            />
-            <MetricCard
-              compact
-              label="Saved Companies"
-              value={applicationsLoading ? '—' : savedCompanyCount}
-              helper="UNIQUE EMPLOYERS"
-              icon={<Building2 size={14} />}
-            />
-            <MetricCard
-              compact
-              label="Reserved"
+              label="TO BE SOON"
               value="—"
-              helper="Coming Soon"
-              icon={<SquareDashed size={14} />}
+              helper="COMING SOON"
+              icon={<Wrench size={14} />}
             />
           </div>
 
-          <CandidateChartPanel
-            data={chartBars}
-            title="JOB TREND"
-            subtitle={subtitle}
-            loading={loading}
-            meta={updatedAt}
-            unitLabel="jobs"
-            emptyText={error || '暂无岗位数据'}
-            granularity={granularity}
-            onGranularityChange={setGranularity}
-          />
+          <div className="terminal-dashboard-main min-w-0">
+            <CandidateChartPanel
+              data={chartBars}
+              title="JOB TREND"
+              subtitle={subtitle}
+              loading={loading}
+              meta={updatedAt}
+              unitLabel="jobs"
+              emptyText={error || '暂无岗位数据'}
+              granularity={granularity}
+              onGranularityChange={setGranularity}
+            />
+            <aside className="terminal-dashboard-stats-aside-wrap">
+              <TrendSummaryCard type="jobs"       data={trendSummary} loading={trendLoading} />
+              <TrendSummaryCard type="candidates" data={trendSummary} loading={trendLoading} />
+            </aside>
+          </div>
+
+          <LockedInsightsPanel
+            locked={hasSubscription === false}
+            onPricingClick={() => navigate('/employer/pricing')}
+          >
+            <div className="terminal-insights-panel flex flex-col">
+              <div className="terminal-card-grid">
+                <MetricCard
+                  compact
+                  label="APPLIED JOBS"
+                  value={applicationsLoading ? '—' : appliedJobCount}
+                  helper="SUBMITTED POSITIONS"
+                  icon={<Send size={14} />}
+                />
+                <MetricCard
+                  compact
+                  label="SAVED JOBS"
+                  value={applicationsLoading ? '—' : savedJobCount}
+                  helper="BOOKMARKED POSITIONS"
+                  icon={<Tags size={14} />}
+                />
+                <MetricCard
+                  compact
+                  label="MESSAGED JOBS"
+                  value={convsLoading ? '—' : messagedJobCount}
+                  helper="ACTIVE CONVERSATIONS"
+                  icon={<MessageSquare size={14} />}
+                />
+              </div>
+            </div>
+          </LockedInsightsPanel>
 
           <TerminalActionBar
             actions={[

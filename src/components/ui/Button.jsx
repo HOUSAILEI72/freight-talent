@@ -1,11 +1,11 @@
-const BASE = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+const BASE = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.975]'
 
 const LIGHT_VARIANTS = {
-  primary:   'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 shadow-sm',
-  secondary: 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 hover:border-blue-300',
-  ghost:     'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800',
-  danger:    'bg-red-600 text-white hover:bg-red-700',
-  success:   'bg-emerald-600 text-white hover:bg-emerald-700',
+  primary:   'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
+  secondary: 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 hover:border-blue-300 active:bg-blue-100 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2',
+  ghost:     'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800 active:bg-neutral-200 focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2',
+  danger:    'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2',
+  success:   'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2',
 }
 
 const SIZES = {
@@ -39,7 +39,13 @@ export function Button({ children, variant = 'primary', size = 'md', className =
     return (
       <button
         className={`${BASE} ${SIZES[size]} ${className}`}
-        style={{ ...base, borderRadius: 'var(--t-radius-sm)', ...styleProp }}
+        style={{
+          ...base,
+          borderRadius: 'var(--t-radius-sm)',
+          transition: 'all 150ms ease-out',
+          outline: 'none',
+          ...styleProp,
+        }}
         onMouseEnter={e => {
           if (props.disabled) return
           Object.assign(e.currentTarget.style, hoverStyle)
@@ -47,6 +53,17 @@ export function Button({ children, variant = 'primary', size = 'md', className =
         onMouseLeave={e => {
           Object.assign(e.currentTarget.style, base)
           e.currentTarget.style.borderRadius = 'var(--t-radius-sm)'
+          e.currentTarget.style.transform = ''
+          e.currentTarget.style.opacity = ''
+        }}
+        onMouseDown={e => {
+          if (props.disabled) return
+          e.currentTarget.style.transform = 'scale(0.975)'
+          e.currentTarget.style.opacity = '0.88'
+        }}
+        onMouseUp={e => {
+          e.currentTarget.style.transform = ''
+          e.currentTarget.style.opacity = ''
         }}
         {...props}
       >

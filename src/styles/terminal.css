@@ -14,10 +14,19 @@
   /* ── Typography ── */
   --t-font-mono: "JetBrains Mono", "SFMono-Regular", "Cascadia Code", ui-monospace, monospace;
   --t-font-sans: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  /* UI-first: Inter leads (English labels, numbers, symbols) */
+  /* UI-first: Inter leads (English labels, numbers, symbols, mixed content) */
   --t-font-ui:  "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  /* CJK-first: PingFang SC leads (names, chips, Chinese-dense body text) */
+  /* CJK-first: PingFang SC leads (names, Chinese-dense body text) */
   --t-font-cjk: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Inter", system-ui, sans-serif;
+
+  /* ── Letter-spacing scale ── */
+  --t-letter-ui:   0.01em;   /* default body, CJK names */
+  --t-letter-caps: 0.08em;   /* uppercase nav/section labels */
+  --t-letter-mono: 0.02em;   /* numeric / code labels */
+
+  /* ── Line-height scale ── */
+  --t-line-tight:  1.25;     /* headings, names */
+  --t-line-normal: 1.45;     /* body, meta info */
 
   --t-text-xs:   0.75rem;     /* 12px */
   --t-text-sm:   0.875rem;    /* 14px */
@@ -35,6 +44,14 @@
   --t-rail-expand-duration:  400ms;
   --t-rail-collapse-duration:300ms;
   --t-rail-ease:             cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ── Responsive layout tokens ── */
+  --t-filter-sidebar-width:  clamp(210px, 18vw, 280px);
+  --t-conv-list-width:       clamp(200px, 17vw, 256px);
+  --t-dock-width:            clamp(200px, 16vw, 240px);
+  --t-detail-panel-width:    clamp(320px, 28vw, 480px);
+  --t-page-h-pad:            clamp(12px, 2vw, 24px);
+  --t-card-min:              220px;
 
   /* ── Chart Palette (theme-independent) ── */
   --t-chart-purple:  #a78bfa;
@@ -268,6 +285,16 @@
   border-color: var(--t-border) !important;
   color: var(--t-text) !important;
 }
+/* Native select option fallback (for any remaining <select> in terminal pages) */
+.terminal-mode select option,
+.terminal-mode select optgroup {
+  background-color: var(--t-bg-elevated);
+  color: var(--t-text);
+}
+.terminal-mode select option:checked {
+  background-color: var(--t-bg-active);
+  color: var(--t-text);
+}
 .terminal-mode input::placeholder,
 .terminal-mode textarea::placeholder {
   color: var(--t-text-muted) !important;
@@ -275,9 +302,19 @@
 .terminal-mode input:focus,
 .terminal-mode textarea:focus,
 .terminal-mode select:focus {
-  outline: none;
+  outline: none !important;
   border-color: var(--t-border-focus) !important;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18) !important;
+  box-shadow: none !important;
+}
+.terminal-mode input:focus-visible,
+.terminal-mode textarea:focus-visible,
+.terminal-mode select:focus-visible {
+  outline: none !important;
+  border-color: var(--t-border-focus) !important;
+  box-shadow: none !important;
+}
+.terminal-mode button:focus-visible {
+  outline: none !important;
 }
 
 /* Hovers commonly used as row highlights ──────────── */
@@ -419,8 +456,58 @@
 }
 
 
+/* ── min-width:0 scoped to candidate-pool and split-sidebar containers only.
+   Prevents flex overflow on narrow screens WITHOUT collapsing Dashboard cards. ── */
+.terminal-candidate-list-container *,
+.terminal-split-sidebar * {
+  min-width: 0;
+}
+
+/* ── Text overflow utility classes (scoped to terminal-mode) ── */
+.t-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.t-wrap {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.t-chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Terminal focus management ────────────────────────────────────────────
+   Inside the terminal shell: use token-coloured focus ring for keyboard nav;
+   suppress mouse-click outlines; SVG elements (Recharts) never show outlines.
+───────────────────────────────────────────────────────────────────────────── */
+.terminal-shell *:focus:not(:focus-visible) {
+  outline: none !important;
+}
+
+.terminal-shell *:focus-visible {
+  outline: 2px solid var(--t-border-focus) !important;
+  outline-offset: 2px !important;
+  border-radius: var(--t-radius-sm) !important;
+}
+
+/* Recharts inside terminal shell — suppress mouse-click focus ring */
+.terminal-shell .recharts-wrapper:focus,
+.terminal-shell .recharts-wrapper:focus-visible,
+.terminal-shell .recharts-surface:focus,
+.terminal-shell .recharts-surface:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --t-transition:                0ms;
     --t-rail-expand-duration:   0ms;
     --t-rail-collapse-duration: 0ms;
   }
@@ -732,7 +819,7 @@
 
 /* ── Split sidebar (CandidatePool / JobMarketplace) ── */
 .terminal-split-sidebar {
-  width: clamp(220px, 22vw, 288px);
+  width: var(--t-filter-sidebar-width);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -741,13 +828,13 @@
 
 @media (max-width: 1180px) {
   .terminal-split-sidebar {
-    width: clamp(200px, 20vw, 240px);
+    width: clamp(190px, 17vw, 230px);
   }
 }
 
 @media (max-width: 1024px) {
   .terminal-split-sidebar {
-    width: 200px;
+    width: 190px;
   }
 }
 
@@ -1033,53 +1120,66 @@
   }
 }
 
+/* ── candidate list container — drives card container queries ── */
+.terminal-candidate-list-container {
+  container-type: inline-size;
+  container-name: candidate-list;
+  min-width: 0;
+}
+
 /* pill button inside result card actions column */
 .terminal-result-pill-btn {
   width: 100%;
-}
-
-/* when actions column becomes a flex row (≤900px), buttons share space */
-@media (max-width: 900px) {
-  .terminal-result-pill-btn {
-    width: auto;
-    flex: 1;
-    min-width: 72px;
-  }
+  min-width: 148px;
+  max-width: 180px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   CANDIDATE RESULT CARD — responsive 3-column grid
-   Wide  (≥1440): identity(clamp 320-460px) · timeline(1fr) · actions(136-148px)
-   Mid   (1280–1440): identity(clamp 300-410px) · timeline(1fr) · actions(128-136px)
-   Narrow(<1280): identity+timeline in one flex row, actions move to right edge
-   Very  (<1024): stack identity above timeline; actions row at bottom
+   CANDIDATE RESULT CARD — container-query responsive reflow
+   Container >980px:  identity | timeline | actions  (3-col)
+   Container ≤980px:  identity | actions / timeline  (2-col)
+   Container ≤760px:  single column stack
+   Breakpoints are relative to the LIST container width, not the
+   viewport, so zoom level and dock visibility don't cause jumps.
    ═══════════════════════════════════════════════════════════════ */
 
+/* ── Default: 3-col layout (identity | timeline | actions) ── */
 .terminal-result-card-body {
   display: grid;
-  grid-template-columns: clamp(380px, 31vw, 460px) minmax(0, 1fr) 148px;
+  grid-template-columns:
+    minmax(260px, 0.95fr)
+    minmax(200px, 1.15fr)
+    max-content;
+  grid-template-rows: auto;
+  grid-template-areas: 'identity timeline actions';
   min-width: 0;
 }
+
+.terminal-candidate-identity { grid-area: identity; }
+.terminal-candidate-timeline { grid-area: timeline; }
+.terminal-candidate-actions  { grid-area: actions; }
 
 .terminal-result-meta-line {
   display: block;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--t-text-muted);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: rgba(148, 163, 184, 0.82);
   font-size: 11px;
-  line-height: 1.35;
+  line-height: var(--t-line-normal, 1.45);
+  letter-spacing: var(--t-letter-ui, 0.01em);
+  font-family: var(--t-font-ui);
 }
 
 .terminal-timeline-row {
   display: grid;
-  grid-template-columns: 48px minmax(92px, 118px) minmax(0, 1fr);
+  grid-template-columns: max-content minmax(110px, max-content) minmax(0, 1fr);
   align-items: center;
+  width: 100%;
   min-width: 0;
   min-height: 24px;
-  column-gap: 10px;
+  column-gap: 12px;
 }
 
 .terminal-timeline-kind {
@@ -1093,122 +1193,446 @@
   border: 1px solid currentColor;
   border-radius: var(--t-radius-sm);
   background: rgba(255, 255, 255, 0.03);
-  font-family: var(--t-font-cjk);
+  font-family: var(--t-font-ui);
   font-size: 10px;
   font-weight: 600;
+  letter-spacing: 0.03em;
   line-height: 1;
   white-space: nowrap;
 }
 
 .terminal-timeline-period {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   color: var(--t-text-muted);
-  font-family: var(--t-font-ui);
+  font-family: var(--t-font-mono);
   font-size: 10px;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
 }
 
 .terminal-timeline-title {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.4;
   color: var(--t-text-secondary);
   font-family: var(--t-font-cjk);
   font-size: 11px;
 }
 
-/* actions column — always a consistent minimum width so buttons never wrap */
+/* actions column — sized to button content */
 .terminal-result-card-actions {
-  min-width: 120px;
+  width: max-content;
+  min-width: 148px;
+  max-width: 180px;
+  justify-self: end;
+  align-self: center;
 }
 
-@media (max-width: 1600px) {
+/* ── Wide-mid: list container ≤1180px — compress columns, still 3-col ── */
+@container candidate-list (max-width: 1180px) {
   .terminal-result-card-body {
-    grid-template-columns: clamp(350px, 29vw, 430px) minmax(0, 1fr) 140px;
+    grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.2fr) max-content;
+    grid-template-rows: auto;
+    grid-template-areas:
+      'identity timeline actions';
   }
 }
 
-@media (max-width: 1440px) {
+/* ── Mid: list container ≤680px — identity|actions top, timeline below ── */
+@container candidate-list (max-width: 680px) {
   .terminal-result-card-body {
-    grid-template-columns: clamp(320px, 28vw, 410px) minmax(0, 1fr) 136px;
-  }
-}
-
-@media (max-width: 1280px) {
-  .terminal-result-card-body {
-    /* identity slightly wider, but don't let it starve actions */
-    grid-template-columns: clamp(300px, 36%, 390px) minmax(0, 1fr) 128px;
-  }
-}
-
-@media (max-width: 1100px) {
-  /* Below 1100px collapse to 2-col: identity | actions, timeline becomes full row */
-  .terminal-result-card-body {
-    grid-template-columns: minmax(0, 1fr) 120px;
+    grid-template-columns: minmax(0, 1fr) max-content;
     grid-template-rows: auto auto;
+    grid-template-areas:
+      'identity actions'
+      'timeline timeline';
   }
-  /* identity stays top-left */
-  .terminal-result-card-body > *:nth-child(1) {
-    grid-column: 1;
-    grid-row: 1;
-    border-right: none;
+  .terminal-candidate-identity {
+    border-right: none !important;
     border-bottom: 1px solid var(--t-border-subtle);
   }
-  /* timeline spans full width on row 2 */
-  .terminal-result-card-body > *:nth-child(2) {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    border-right: none;
-  }
-  /* actions stack on top-right */
-  .terminal-result-card-body > *:nth-child(3) {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .terminal-timeline-row {
-    grid-template-columns: 48px minmax(92px, 118px) minmax(0, 1fr);
+  .terminal-candidate-timeline {
+    border-right: none !important;
   }
 }
 
-@media (max-width: 900px) {
-  /* Single column: all sections stack */
+/* ── Narrow: list container ≤500px — single column ── */
+@container candidate-list (max-width: 500px) {
   .terminal-result-card-body {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
+    grid-template-areas:
+      'identity'
+      'timeline'
+      'actions';
   }
-  .terminal-result-card-body > *:nth-child(1) {
-    grid-column: 1;
-    grid-row: 1;
-    border-right: none;
+  .terminal-candidate-identity {
+    border-right: none !important;
     border-bottom: 1px solid var(--t-border-subtle);
   }
-  .terminal-result-card-body > *:nth-child(2) {
-    grid-column: 1;
-    grid-row: 2;
-    border-right: none;
+  .terminal-candidate-timeline {
+    border-right: none !important;
     border-bottom: 1px solid var(--t-border-subtle);
   }
-  /* actions row at bottom, horizontal */
-  .terminal-result-card-body > *:nth-child(3) {
-    grid-column: 1;
-    grid-row: 3;
-    flex-direction: row;
-    padding: 8px 12px;
-    gap: 8px;
+  .terminal-candidate-actions {
+    flex-direction: row !important;
+    padding: 8px 12px !important;
+    gap: 8px !important;
   }
   .terminal-result-card-actions {
     min-width: unset;
   }
-  .terminal-timeline-row {
-    grid-template-columns: 48px minmax(86px, 108px) minmax(0, 1fr);
+  .terminal-result-pill-btn {
+    width: auto;
+    flex: 1;
+    min-width: 72px;
   }
 }
 
 @media (max-width: 720px) {
   .terminal-platform-count-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ── Dock: hidden at ≤1535px (legacy class, keep for safety) ── */
+@media (max-width: 1535px) {
+  .terminal-responsive-hide-dock {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CANDIDATE CONVERSATION DOCK — responsive desktop + drawer
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Widescreen: show desktop dock, hide trigger row + overlay */
+.terminal-candidate-dock-desktop {
+  display: contents;
+}
+
+.terminal-candidate-dock-trigger-row,
+.terminal-candidate-dock-overlay {
+  display: none;
+}
+
+/* ≤1535px: hide desktop dock, show trigger row in document flow */
+@media (max-width: 1535px) {
+  .terminal-candidate-dock-desktop {
+    display: none;
+  }
+
+  .terminal-candidate-dock-trigger-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 6px 14px 4px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--t-border-subtle);
+  }
+
+  .terminal-candidate-dock-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: var(--t-radius);
+    border: 1px solid var(--t-border);
+    background: var(--t-bg-elevated);
+    color: var(--t-text-secondary);
+    font-size: 11px;
+    font-family: var(--t-font-cjk);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .terminal-candidate-dock-trigger:hover {
+    background: var(--t-bg-hover);
+    border-color: rgba(96, 165, 250, 0.4);
+    color: var(--t-text);
+  }
+
+  .terminal-candidate-dock-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    background: rgba(0, 0, 0, 0.42);
+  }
+
+  .terminal-candidate-dock-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: min(420px, 92vw);
+    height: 100%;
+    background: var(--t-bg-panel);
+    border-left: 1px solid var(--t-border);
+    box-shadow: -20px 0 50px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .terminal-candidate-dock-drawer-header {
+    height: 52px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--t-border);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--t-text-muted);
+    font-family: var(--t-font-ui);
+  }
+
+  .terminal-candidate-dock-drawer-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Force dock to fill drawer body */
+  .terminal-candidate-dock-drawer-body > aside {
+    width: 100% !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    height: 100% !important;
+  }
+}
+
+/* ── Pool Rail: force collapsed (icon-only) at ≤1535px ── */
+@media (max-width: 1535px) {
+  .terminal-pool-rail-narrow {
+    width: 52px !important;
+    transition: none !important;
+  }
+  .terminal-pool-rail-narrow .pool-rail-label,
+  .terminal-pool-rail-narrow .pool-rail-count,
+  .terminal-pool-rail-narrow .pool-rail-header-text {
+    display: none !important;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   AI Generating Animation — keyframes
+   Used by: src/components/ui/AIGeneratingAnimation.jsx
+──────────────────────────────────────────────────────────────────── */
+
+@keyframes ai-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes ai-exit {
+  0%   { opacity: 1; transform: scale(1);    }
+  100% { opacity: 0; transform: scale(0.97); }
+}
+
+@keyframes ai-wave {
+  from { transform: scaleY(0.25); }
+  to   { transform: scaleY(1);    }
+}
+
+@keyframes ai-particle {
+  0%   { transform: translateY(0)      translateX(0);                     opacity: 0;    }
+  10%  { opacity: 0.75; }
+  90%  { opacity: 0.2; }
+  100% { transform: translateY(-120px) translateX(var(--p-drift, 0px));   opacity: 0;    }
+}
+
+@keyframes ai-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes ai-orb-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0   rgba(59, 130, 246, 0);
+    transform:  scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.28), 0 0 8px rgba(59, 130, 246, 0.4);
+    transform:  scale(1.35);
+  }
+}
+
+@keyframes ai-dot-bounce {
+  0%, 75%, 100% { transform: translateY(0);    opacity: 0.38; }
+  38%            { transform: translateY(-5px); opacity: 1;    }
+}
+
+@keyframes ai-scanline-move {
+  0%   { background-position: 0 0;   }
+  100% { background-position: 0 8px; }
+}
+
+@keyframes ai-progress-slide {
+  0%   { transform: translateX(-150%); }
+  100% { transform: translateX(380%);  }
+}
+
+@keyframes ai-progress-done {
+  from { transform: scaleX(0); transform-origin: left; }
+  to   { transform: scaleX(1); transform-origin: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-gen-root,
+  .ai-gen-root * {
+    animation:  none !important;
+    transition: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MESSAGES — conversation list responsive width
+   ═══════════════════════════════════════════════════════════════ */
+
+.terminal-conv-list {
+  width: var(--t-conv-list-width);
+  flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+  .terminal-conv-list {
+    width: clamp(190px, 16vw, 240px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-conv-list {
+    width: 185px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CANDIDATE CONVERSATION DOCK — responsive width
+   ═══════════════════════════════════════════════════════════════ */
+
+.terminal-conv-dock {
+  width: var(--t-dock-width);
+  flex-shrink: 0;
+  transition: width var(--t-rail-collapse-duration) var(--t-rail-ease);
+}
+
+.terminal-conv-dock.collapsed {
+  width: 40px;
+}
+
+@media (max-width: 1280px) {
+  .terminal-conv-dock {
+    width: clamp(185px, 15vw, 220px);
+  }
+}
+
+@media (max-width: 1100px) {
+  .terminal-conv-dock {
+    width: clamp(170px, 14vw, 200px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MATCH RESULT — job summary header responsive
+   ═══════════════════════════════════════════════════════════════ */
+
+.terminal-match-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: clamp(12px, 1.5vw, 20px);
+}
+
+.terminal-match-stats-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.5vw, 20px);
+  flex-wrap: wrap;
+}
+
+.terminal-match-page-pad {
+  padding-left: var(--t-page-h-pad);
+  padding-right: var(--t-page-h-pad);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CANDIDATE RESULT CARD — polish & status indicators
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Left accent stripe: colored bar that shows invite/unlock status */
+.terminal-result-card-stripe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: var(--t-radius) 0 0 var(--t-radius);
+  pointer-events: none;
+  z-index: 1;
+  transition: background 200ms;
+}
+
+/* Avatar pulse ring — "today updated" candidates */
+@keyframes t-pulse-ring {
+  0%   { box-shadow: 0 0 0 0   rgba(34, 197, 94, 0.50); }
+  70%  { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.00); }
+  100% { box-shadow: 0 0 0 0   rgba(34, 197, 94, 0.00); }
+}
+
+.terminal-avatar-fresh {
+  animation: t-pulse-ring 2.4s ease-out infinite;
+}
+
+/* Filter bar section header — left accent bar */
+.terminal-filter-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.terminal-filter-section-pip {
+  width: 2px;
+  height: 10px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CANDIDATE POOL FILTER SIDEBAR — width token usage
+   ═══════════════════════════════════════════════════════════════ */
+
+.terminal-filter-sidebar {
+  width: var(--t-filter-sidebar-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 1180px) {
+  .terminal-filter-sidebar {
+    width: clamp(190px, 16vw, 240px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-filter-sidebar {
+    width: 185px;
   }
 }

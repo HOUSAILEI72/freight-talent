@@ -289,10 +289,12 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
       <div
         className={
           terminal
-            ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar px-6 py-8'
+            ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar'
             : 'max-w-6xl mx-auto px-6 py-10'
         }
-        style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
+        style={terminal
+          ? { background: 'var(--t-bg)', color: 'var(--t-text)', padding: 'clamp(16px, 2.5vw, 32px) clamp(12px, 2vw, 24px)' }
+          : undefined}
       >
         <div className={terminal ? 'mx-auto w-full max-w-6xl' : ''}>
         <button
@@ -311,23 +313,25 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
 
         {/* ── 岗位摘要（真实数据）── */}
         <div
-          className={terminal ? 'p-6 mb-6 rounded-[var(--t-radius-lg)] border' : 'card p-6 mb-6'}
-          style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
+          className={terminal ? 'mb-6 rounded-[var(--t-radius-lg)] border' : 'card p-6 mb-6'}
+          style={terminal
+            ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)', padding: 'clamp(14px, 1.5vw, 24px)' }
+            : undefined}
         >
-          <div className="flex items-start justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
+          <div className="terminal-match-header">
+            <div className="flex items-center gap-4 min-w-0">
               <div
                 className={
                   terminal
-                    ? 'w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg'
-                    : 'w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg'
+                    ? 'w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0'
+                    : 'w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0'
                 }
                 style={terminal ? { background: 'var(--t-primary)' } : undefined}
               >
                 {(job?.company_name ?? job?.title ?? '?')[0]}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h1
                     className={terminal ? 'text-xl font-bold' : 'text-xl font-bold text-slate-800'}
                     style={terminal ? { color: 'var(--t-text)' } : undefined}
@@ -337,7 +341,7 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
                   <StatusBadge status={job?.status} terminal={terminal} />
                 </div>
                 <p
-                  className={terminal ? 'text-sm mt-0.5' : 'text-sm text-slate-500 mt-0.5'}
+                  className={terminal ? 'text-sm mt-0.5 truncate' : 'text-sm text-slate-500 mt-0.5'}
                   style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}
                 >
                   {job?.company_name ?? '—'} · {job?.city} · {salaryText}{job?.employment_type ? ` · ${job.employment_type}` : ''}
@@ -346,7 +350,7 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
             </div>
 
             {/* 统计数字（真实） */}
-            <div className="flex items-center gap-5">
+            <div className="terminal-match-stats-row">
               <div className="text-center">
                 <p
                   className={terminal ? 'text-2xl font-bold' : 'text-2xl font-bold text-blue-600'}
@@ -534,7 +538,7 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
             const modalCandidate = { ...c, matchScore: match.score }
 
             const cardClass = terminal
-              ? 'p-6 rounded-[var(--t-radius-lg)] border transition-all duration-300'
+              ? 'p-6 rounded-[var(--t-radius-lg)] border'
               : `card p-6 transition-all duration-300 ${
                   isInvited ? 'border-emerald-200 bg-emerald-50/30' : 'hover:border-blue-200'
                 }`
@@ -542,6 +546,7 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
               ? {
                   background: isInvited ? 'rgba(34, 197, 94, 0.06)' : 'var(--t-bg-panel)',
                   borderColor: isInvited ? 'var(--t-success)' : 'var(--t-border)',
+                  transition: 'border-color 150ms ease-out, background 150ms ease-out',
                 }
               : undefined
 
@@ -560,7 +565,21 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
               : undefined
 
             return (
-              <div key={c.id} className={cardClass} style={cardStyle}>
+              <div
+                key={c.id}
+                className={cardClass}
+                style={cardStyle}
+                onMouseEnter={e => {
+                  if (!terminal || isInvited) return
+                  e.currentTarget.style.borderColor = 'var(--t-border-focus)'
+                  e.currentTarget.style.background = 'var(--t-bg-hover)'
+                }}
+                onMouseLeave={e => {
+                  if (!terminal || isInvited) return
+                  e.currentTarget.style.borderColor = 'var(--t-border)'
+                  e.currentTarget.style.background = 'var(--t-bg-panel)'
+                }}
+              >
                 <div className="flex items-start gap-5">
                   {/* 排名 + 头像 */}
                   <div className="flex flex-col items-center gap-2 flex-shrink-0">
@@ -627,7 +646,7 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 flex-wrap flex-shrink-0">
                         <div className="text-right">
                           <MatchScore score={match.score} />
                           {/* 双边匹配小分数 */}
@@ -767,7 +786,7 @@ export default function MatchResult({ messagesBasePath = '/messages', terminal =
                     )}
 
                     {/* 操作按钮 */}
-                    <div className="flex items-center gap-2 mt-4">
+                    <div className="flex items-center gap-2 mt-4 flex-wrap">
                       {isInvited ? (
                         <span
                           className={

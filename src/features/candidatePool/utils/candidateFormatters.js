@@ -12,6 +12,19 @@ export function formatSalaryRange(min, max) {
   return `${min ?? '—'} ~ ${max ?? '—'}`
 }
 
+/**
+ * Format expected salary for display in candidate pool.
+ * Returns e.g. "18K-25K/月", "180K/年", falls back to label.
+ */
+export function formatExpectedSalary(min, max, period, label) {
+  if (min == null && max == null) return label || null
+  const suffix = period === 'year' ? '/年' : '/月'
+  const fmt = n => `${Math.round(n / 1000)}K`
+  if (min != null && max != null && min !== max) return `${fmt(min)}-${fmt(max)}${suffix}`
+  const val = min ?? max
+  return `${fmt(val)}${suffix}`
+}
+
 export function formatYearEndBonus(hasBonus, months) {
   if (hasBonus === true) return months != null ? `${months} 月` : '有'
   if (hasBonus === false) return '无'

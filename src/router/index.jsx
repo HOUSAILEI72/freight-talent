@@ -1,6 +1,13 @@
 import { Suspense, lazy } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import App from '../App'
+import { useAuth } from '../context/AuthContext'
+
+function JobsRoute() {
+  const { user } = useAuth()
+  if (user?.role === 'employer') return <Navigate to="/employer/jobs" replace />
+  return <JobMarketplace />
+}
 
 // ── Lazy-loaded route components (code-split per page group) ──────────────────
 const Home               = lazy(() => import('../pages/Home'))
@@ -76,12 +83,12 @@ export const router = createBrowserRouter([
         ),
       },
 
-      // 岗位广场（candidate / employer / admin 均可访问）
+      // 岗位广场（candidate / admin 直接显示；employer 重定向到 /employer/jobs 保证 own=1 过滤）
       {
         path: 'jobs',
         element: (
           <Lazy><RequireAuth roles={['candidate', 'employer', 'admin']}>
-            <JobMarketplace />
+            <JobsRoute />
           </RequireAuth></Lazy>
         ),
       },
@@ -331,7 +338,7 @@ export const router = createBrowserRouter([
       {
         path: 'employer/pricing',
         element: (
-          <RequireAuth roles={['employer', 'admin']}>
+          <RequireAuth roles={['employer', 'admin', 'candidate']}>
             <TerminalPricing />
           </RequireAuth>
         ),

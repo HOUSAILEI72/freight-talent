@@ -726,7 +726,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                 <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>⚡ 加速服务</span>
                   <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>
-                    1 个月内成功入职 · A 类 28% / B 类 +30%
+                    1 个月内候选人接受 Offer · A 类 28% / B 类 +30%
                   </span>
                 </span>
               </label>
@@ -738,7 +738,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                     onChange={e => toggleAddon(setBackgroundCheck, e.target.checked)}
                     style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--t-primary)', width: 13, height: 13 }} />
                   <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>候选人背调</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>候选人背调服务</span>
                     <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>¥500 / 份</span>
                   </span>
                 </label>
@@ -760,7 +760,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
                     onChange={e => toggleAddon(setPersonalityReport, e.target.checked)}
                     style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--t-primary)', width: 13, height: 13 }} />
                   <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>性格测试 &amp; 职业报告</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>候选人性格测试及职业发展偏向报告</span>
                     <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)' }}>¥100 / 份</span>
                   </span>
                 </label>

@@ -162,7 +162,7 @@ export default function CandidateChartPanel({
             <GranularityControl
               value={granularity}
               onChange={onGranularityChange}
-              options={granularityOptions}
+              options={granularityOptions ?? DEFAULT_GRANULARITY_OPTIONS}
               c={c}
             />
           )}
@@ -191,7 +191,7 @@ export default function CandidateChartPanel({
         ) : (
           <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={normalizedData} margin={{ top: 12, right: 12, bottom: 4, left: 0 }}>
+              <BarChart data={normalizedData} margin={{ top: 12, right: 12, bottom: 4, left: 0 }} accessibilityLayer={false}>
                 <CartesianGrid vertical={false} stroke={c.grid} />
                 <XAxis
                   dataKey="x_label"
@@ -213,7 +213,7 @@ export default function CandidateChartPanel({
                 />
                 <Tooltip
                   content={<DarkTooltip unitLabel={unitLabel} />}
-                  cursor={{ fill: c.cursor }}
+                  cursor={false}
                 />
                 <Bar
                   dataKey="count"

@@ -71,6 +71,8 @@ class Job(db.Model):
     employment_type = db.Column(db.String(20), nullable=True)  # 全职 / 兼职 / 实习生
     job_level = db.Column(db.String(30), nullable=True)        # 高管层 / 总监级 / 高级经理级 / 经理级 / 主管级 / 专员级 / 助理岗
 
+    benefits = db.Column(db.JSON, nullable=True)               # 如 ["五险一金", "带薪年假"]
+
     # 模板标记
     is_template = db.Column(db.Boolean, nullable=False, default=False, index=True)
 

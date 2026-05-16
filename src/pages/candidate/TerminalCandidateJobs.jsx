@@ -436,7 +436,7 @@ export default function TerminalCandidateJobs() {
         const saved   = new Map()
         for (const a of (res.data?.applications ?? [])) {
           if (!a) continue
-          if (a.status === 'saved') {
+          if (a.is_saved) {
             saved.set(a.job_id, a.id)
           } else if (a.status !== 'withdrawn') {
             applied.set(a.job_id, a.id)
@@ -566,7 +566,7 @@ export default function TerminalCandidateJobs() {
       if (!appId || savingJobId === job.id) return
       setSavingJobId(job.id)
       try {
-        await applicationsApi.updateApplicationStatus(appId, 'withdrawn')
+        await applicationsApi.unsaveJob(job.id)
         setSavedJobMap(prev => { const next = new Map(prev); next.delete(job.id); return next })
       } catch (err) {
         setApplyError(err.response?.data?.message ?? '取消收藏失败，请重试')
@@ -578,9 +578,10 @@ export default function TerminalCandidateJobs() {
     try {
       const res = await applicationsApi.saveJob(job.id)
       const a = res.data?.application
-      if (a?.status === 'saved') {
+      if (a?.is_saved) {
         setSavedJobMap(prev => { const next = new Map(prev); next.set(job.id, a.id); return next })
-      } else if (a && a.status !== 'withdrawn') {
+      }
+      if (a && !['saved', 'withdrawn'].includes(a.status)) {
         setAppliedJobMap(prev => { const next = new Map(prev); next.set(job.id, a.id); return next })
       }
     } catch (err) {

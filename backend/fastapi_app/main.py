@@ -14,15 +14,17 @@ FreightTalent FastAPI 服务入口。
 生产启动（Docker 内）：
   uvicorn fastapi_app.main:app --host 0.0.0.0 --port 8000 --workers 4
 """
+import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+import httpx
 
 from logging_config import setup_logging
 from fastapi_app.core.config import get_settings
-from fastapi_app.api.v2 import health, conversations, tags, chart
+from fastapi_app.api.v2 import health, conversations, tags, chart, ai_analyze
 from fastapi_app.api.v2 import settings as settings_router
 
 # FastAPI 启动时初始化日志（与 Flask 共用同一份配置，写入 fastapi.log）
@@ -63,11 +65,26 @@ async def lifespan(app: FastAPI):
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
     except Exception as e:
-        import logging
         logging.getLogger("fastapi_app").warning(f"DB warmup failed: {e}")
+
+    # 全局复用的 DeepSeek httpx 客户端（连接池 10，避免每次建连）
+    app.state.deepseek_client = httpx.AsyncClient(
+        limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
+        timeout=httpx.Timeout(30.0),
+    )
+
+    _log = logging.getLogger("fastapi_app")
+    if _settings.deepseek_api_key:
+        _log.info("DeepSeek API key loaded (length=%d)", len(_settings.deepseek_api_key))
+    else:
+        _log.warning(
+            "DeepSeek API key NOT set — add DEEPSEEK_API_KEY=sk-... to backend/.env"
+        )
+
     yield
     scheduler.shutdown(wait=False)
     engine.dispose()
+    await app.state.deepseek_client.aclose()
 
 
 # 生产关闭 swagger docs，避免暴露接口信息
@@ -99,6 +116,7 @@ app.include_router(conversations.router,   prefix="/api/v2")
 app.include_router(tags.router,            prefix="/api/v2")
 app.include_router(settings_router.router, prefix="/api/v2")
 app.include_router(chart.router,           prefix="/api/v2")
+app.include_router(ai_analyze.router,      prefix="/api/v2")
 
 
 @app.middleware("http")

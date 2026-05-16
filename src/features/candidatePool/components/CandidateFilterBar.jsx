@@ -3,9 +3,7 @@ import RegionSelector from '../../../components/RegionSelector'
 import { TerminalSelect } from '../../../components/terminal/TerminalSelect'
 import { FUNCTION_OPTIONS, AVAIL_OPTIONS } from '../constants'
 
-const SEL_CLASS = (terminal) => terminal
-  ? 'w-full px-2 py-1.5 text-xs rounded border focus:outline-none'
-  : 'w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
+const SEL_CLASS = () => 'w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
 
 export function CandidateFilterBar({
   q, setQ,
@@ -49,7 +47,7 @@ export function CandidateFilterBar({
           />
           <span
             style={terminal
-              ? { fontFamily: 'var(--t-font-ui)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)' }
+              ? { fontFamily: 'var(--t-font-ui)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--t-text-muted)' }
               : { fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }
             }
           >
@@ -120,7 +118,7 @@ export function CandidateFilterBar({
               <select
                 value={selectedJob?.id ?? ''}
                 onChange={e => setSelectedJob(myJobs.find(j => j.id === Number(e.target.value)) ?? null)}
-                className={SEL_CLASS(false)}
+                className={SEL_CLASS()}
               >
                 {myJobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}
               </select>
@@ -156,7 +154,7 @@ export function CandidateFilterBar({
               onChange={e => setQ(e.target.value)}
               placeholder="姓名 / 职位 / 城市..."
               className={terminal
-                ? 'w-full pl-7 pr-3 py-1.5 text-xs rounded focus:outline-none'
+                ? 'w-full pl-7 pr-3 py-1.5 text-xs rounded'
                 : 'w-full pl-7 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'
               }
               style={terminal ? { ...inputStyle, borderColor: q ? 'var(--t-border-focus)' : 'var(--t-border)', fontSize: 12 } : undefined}
@@ -178,9 +176,12 @@ export function CandidateFilterBar({
 
           {/* Section label */}
           {terminal && (
-            <p style={{ fontFamily: 'var(--t-font-ui)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }}>
-              属性筛选
-            </p>
+            <div className="terminal-filter-section-header">
+              <span className="terminal-filter-section-pip" style={{ background: 'var(--t-primary)' }} />
+              <p style={{ fontFamily: 'var(--t-font-ui)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--t-text-muted)', margin: 0 }}>
+                属性筛选
+              </p>
+            </div>
           )}
 
           {/* Function */}
@@ -199,7 +200,7 @@ export function CandidateFilterBar({
             <select
               value={functionCode}
               onChange={e => onFunctionChange(e.target.value)}
-              className={SEL_CLASS(false)}
+              className={SEL_CLASS()}
             >
               <option value="">业务方向（全部）</option>
               {FUNCTION_OPTIONS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
@@ -219,7 +220,7 @@ export function CandidateFilterBar({
             <select
               value={avail}
               onChange={e => setAvail(e.target.value)}
-              className={SEL_CLASS(false)}
+              className={SEL_CLASS()}
             >
               {AVAIL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
@@ -242,7 +243,7 @@ export function CandidateFilterBar({
             <select
               value={gender ?? ''}
               onChange={e => setGender(e.target.value)}
-              className={SEL_CLASS(false)}
+              className={SEL_CLASS()}
             >
               <option value="">性别（不限）</option>
               <option value="male">男</option>
@@ -257,9 +258,12 @@ export function CandidateFilterBar({
 
           {/* Section label */}
           {terminal && (
-            <p style={{ fontFamily: 'var(--t-font-ui)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }}>
-              互动状态
-            </p>
+            <div className="terminal-filter-section-header">
+              <span className="terminal-filter-section-pip" style={{ background: 'var(--t-chart-amber)' }} />
+              <p style={{ fontFamily: 'var(--t-font-ui)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--t-text-muted)', margin: 0 }}>
+                互动状态
+              </p>
+            </div>
           )}
 
           {/* Archive filter */}
@@ -279,7 +283,7 @@ export function CandidateFilterBar({
             <select
               value={archiveFilter}
               onChange={e => setArchiveFilter(e.target.value)}
-              className={SEL_CLASS(false)}
+              className={SEL_CLASS()}
             >
               <option value="all">收藏（全部）</option>
               <option value="archived">已收藏</option>
@@ -304,7 +308,7 @@ export function CandidateFilterBar({
             <select
               value={inviteFilter}
               onChange={e => setInviteFilter(e.target.value)}
-              className={SEL_CLASS(false)}
+              className={SEL_CLASS()}
             >
               <option value="all">邀约（全部）</option>
               <option value="invited">已邀约</option>

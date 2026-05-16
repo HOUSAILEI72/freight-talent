@@ -8,6 +8,7 @@ import {
   Edit3, Bookmark, BookmarkCheck, Trash2, Power, RotateCcw,
 } from 'lucide-react'
 import { jobsApi } from '../../api/jobs'
+import { useToast } from '../../components/ui/Toast'
 import { applicationsApi } from '../../api/applications'
 import { headhuntingApi } from '../../api/headhunting'
 import { useAuth } from '../../context/AuthContext'
@@ -154,8 +155,8 @@ function PersonalHdDetail({ req }) {
 
   return (
     <div
-      className="terminal-mode flex-1 min-h-0 overflow-y-auto terminal-scrollbar flex flex-col px-6 py-5"
-      style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}
+      className="terminal-mode flex-1 min-h-0 overflow-y-auto terminal-scrollbar flex flex-col"
+      style={{ background: 'var(--t-bg)', color: 'var(--t-text)', padding: 'clamp(14px, 2vw, 20px) clamp(12px, 1.8vw, 24px)' }}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3 flex-shrink-0">
@@ -286,8 +287,8 @@ function TeamHdDetail({ req }) {
 
   return (
     <div
-      className="terminal-mode flex-1 min-h-0 overflow-y-auto terminal-scrollbar flex flex-col px-6 py-5"
-      style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}
+      className="terminal-mode flex-1 min-h-0 overflow-y-auto terminal-scrollbar flex flex-col"
+      style={{ background: 'var(--t-bg)', color: 'var(--t-text)', padding: 'clamp(14px, 2vw, 20px) clamp(12px, 1.8vw, 24px)' }}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3 flex-shrink-0">
@@ -536,8 +537,8 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
 
     return (
       <div
-        className="terminal-mode flex-1 min-h-0 overflow-y-auto terminal-scrollbar flex flex-col px-6 py-5"
-        style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}
+        className="terminal-mode flex-1 min-h-0 overflow-y-auto terminal-scrollbar flex flex-col"
+        style={{ background: 'var(--t-bg)', color: 'var(--t-text)', padding: 'clamp(14px, 2vw, 20px) clamp(12px, 1.8vw, 24px)' }}
       >
         {/* Header row */}
         <div className="flex items-start justify-between mb-3 flex-shrink-0">
@@ -762,6 +763,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
 export default function JobMarketplace({ terminal = false, showNewJobButton = false, canApply = false }) {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const toast = useToast()
   const [jobs, setJobs]         = useState([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState('')
@@ -827,6 +829,11 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
       const updated = res.data.job
       setJobs(prev => prev.map(j => j.id === updated.id ? { ...j, is_template: updated.is_template } : j))
       setSelected(prev => prev?.id === updated.id ? { ...prev, is_template: updated.is_template } : prev)
+      if (nextValue) {
+        toast.show('已设为模板 — 发布新岗位时可从模板快速填充', 'success', 5000)
+      } else {
+        toast.show('已取消模板', 'info', 3000)
+      }
     } catch (err) {
       window.alert(err.response?.data?.message ?? '操作失败，请重试')
     }
@@ -882,7 +889,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
         const saved   = new Map()
         for (const a of (res.data?.applications ?? [])) {
           if (!a) continue
-          if (a.status === 'saved') {
+          if (a.is_saved) {
             saved.set(a.job_id, a.id)
           } else if (!['withdrawn'].includes(a.status)) {
             applied.set(a.job_id, a.id)
@@ -971,7 +978,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
       if (!appId || savingJobId === job.id) return
       setSavingJobId(job.id)
       try {
-        await applicationsApi.updateApplicationStatus(appId, 'withdrawn')
+        await applicationsApi.unsaveJob(job.id)
         setSavedJobMap(prev => { const next = new Map(prev); next.delete(job.id); return next })
       } catch (err) {
         setApplyError(err.response?.data?.message ?? '取消收藏失败，请重试')
@@ -986,9 +993,10 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
     try {
       const res = await applicationsApi.saveJob(job.id)
       const a = res.data?.application
-      if (a?.status === 'saved') {
+      if (a?.is_saved) {
         setSavedJobMap(prev => { const next = new Map(prev); next.set(job.id, a.id); return next })
-      } else if (a && a.status !== 'withdrawn') {
+      }
+      if (a && !['saved', 'withdrawn'].includes(a.status)) {
         setAppliedJobMap(prev => { const next = new Map(prev); next.set(job.id, a.id); return next })
       }
     } catch (err) {
@@ -1069,7 +1077,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
       {/* Left: request list */}
       <div
         style={{
-          width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          width: 'clamp(220px, 20vw, 280px)', flexShrink: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden',
           background: 'var(--t-bg-panel)', borderRight: '1px solid var(--t-border)',
         }}
       >

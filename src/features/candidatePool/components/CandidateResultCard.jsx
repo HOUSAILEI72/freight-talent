@@ -4,7 +4,7 @@ import {
   Eye,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { formatWorkPeriod } from '../utils/candidateFormatters'
+import { formatWorkPeriod, formatExpectedSalary } from '../utils/candidateFormatters'
 
 const AVAIL_LABEL = {
   open: '离职-随时到岗', passive_now: '在职-月内到岗', passive: '在职-考虑机会',
@@ -88,15 +88,30 @@ const APP_STATUS_PILL = {
 
 /* ── micro helpers ──────────────────────────────────────────────── */
 
-function Chip({ children, accent }) {
+function Chip({ children, accent, chipType }) {
+  let bg, border, color
+  if (accent) {
+    bg = 'rgba(37,99,235,0.13)'; border = 'rgba(37,99,235,0.32)'; color = 'var(--t-chart-blue)'
+  } else if (chipType === 'know') {
+    bg = 'rgba(59,130,246,0.10)'; border = 'rgba(59,130,246,0.30)'; color = 'var(--t-primary)'
+  } else if (chipType === 'hard') {
+    bg = 'rgba(34,197,94,0.09)'; border = 'rgba(34,197,94,0.28)'; color = 'var(--t-success)'
+  } else if (chipType === 'soft') {
+    bg = 'rgba(167,139,250,0.09)'; border = 'rgba(167,139,250,0.28)'; color = 'var(--t-chart-purple)'
+  } else {
+    bg = 'rgba(255,255,255,0.04)'; border = 'var(--t-border)'; color = 'var(--t-text-secondary)'
+  }
   return (
     <span
-      className="text-[10px] px-1.5 py-[2px] whitespace-nowrap"
+      className="px-1.5 py-[2px] whitespace-nowrap"
       style={{
         fontFamily: 'var(--t-font-cjk)',
-        background: accent ? 'rgba(37,99,235,0.13)' : 'rgba(255,255,255,0.04)',
-        border: `1px solid ${accent ? 'rgba(37,99,235,0.32)' : 'var(--t-border)'}`,
-        color: accent ? 'var(--t-chart-blue)' : 'var(--t-text-secondary)',
+        fontSize: 10,
+        fontWeight: 500,
+        lineHeight: '16px',
+        background: bg,
+        border: `1px solid ${border}`,
+        color,
         borderRadius: 'var(--t-radius-sm)',
       }}
     >
@@ -138,13 +153,13 @@ function PillBtn({ onClick, disabled, style, onMouseEnter, onMouseLeave, childre
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
-        borderRadius: 999,
+        borderRadius: 'var(--t-radius-sm)',
         fontFamily: 'var(--t-font-cjk)',
         fontSize: 11,
         fontWeight: 600,
-        letterSpacing: '0.04em',
+        letterSpacing: '0.02em',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'background 130ms, border-color 130ms, box-shadow 130ms',
+        transition: 'background 130ms, border-color 130ms',
         border: '1px solid transparent',
         ...style,
       }}
@@ -173,25 +188,25 @@ export function CandidateResultCard({
   const latestWork = getLatestWorkExperience(c.work_experiences)
   const highestEdu = getHighestEducation(c.education_experiences)
 
-  const publicTags = [
-    ...(c.knowledge_tags  ?? []),
-    ...(c.hard_skill_tags ?? []),
-    ...(c.soft_skill_tags ?? []),
+  const publicTagged = [
+    ...(c.knowledge_tags  ?? []).map(t => ({ t, chipType: 'know' })),
+    ...(c.hard_skill_tags ?? []).map(t => ({ t, chipType: 'hard' })),
+    ...(c.soft_skill_tags ?? []).map(t => ({ t, chipType: 'soft' })),
   ]
 
-  const stripTags = [
-    ...(c.knowledge_tags  ?? []),
-    ...(c.hard_skill_tags ?? []),
-    ...(c.soft_skill_tags ?? []),
-    ...(c.route_tags      ?? []),
-    ...(c.skill_tags      ?? []),
+  const allTagged = [
+    ...(c.knowledge_tags  ?? []).map(t => ({ t, chipType: 'know' })),
+    ...(c.hard_skill_tags ?? []).map(t => ({ t, chipType: 'hard' })),
+    ...(c.soft_skill_tags ?? []).map(t => ({ t, chipType: 'soft' })),
+    ...(c.route_tags      ?? []).map(t => ({ t, chipType: null })),
+    ...(c.skill_tags      ?? []).map(t => ({ t, chipType: null })),
   ]
   const STRIP_LIMIT   = 6
-  const visibleStrip  = stripTags.slice(0, STRIP_LIMIT)
-  const overflowCnt   = stripTags.length - STRIP_LIMIT
+  const visibleTagged = allTagged.slice(0, STRIP_LIMIT)
+  const overflowCnt   = allTagged.length - STRIP_LIMIT
   const stripFallback = [c.business_type, c.job_type, c.business_area_name].filter(Boolean)
 
-  const city = c.current_city ?? c.expected_city ?? c.location_name ?? c.business_area_name
+  const city = c.expected_city || c.location_name || c.current_city || c.business_area_name
   const metaParts = []
   if (c.experience_years != null) metaParts.push(`${c.experience_years}年经验`)
   if (isUnlocked && c.age != null) metaParts.push(`${c.age}岁`)
@@ -211,32 +226,43 @@ export function CandidateResultCard({
       onClick={go}
       className="cursor-pointer overflow-hidden"
       style={{
+        position: 'relative',
         background: 'var(--t-bg-panel)',
-        border: '1px solid var(--t-border)',
+        border: '1px solid rgba(96,165,250,0.15)',
         borderRadius: 'var(--t-radius)',
-        transition: 'border-color 140ms, background 140ms',
+        transition: 'border-color 160ms, background 160ms',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background  = 'var(--t-bg-hover)'
-        e.currentTarget.style.borderColor = 'var(--t-primary)'
+        e.currentTarget.style.borderColor = 'rgba(96,165,250,0.36)'
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background  = 'var(--t-bg-panel)'
-        e.currentTarget.style.borderColor = 'var(--t-border)'
+        e.currentTarget.style.borderColor = 'rgba(96,165,250,0.15)'
       }}
     >
+      {/* left accent stripe — status indicator */}
+      <div
+        className="terminal-result-card-stripe"
+        style={{
+          background: isInvited
+            ? 'var(--t-success)'
+            : isUnlocked ? 'var(--t-primary)' : 'transparent',
+        }}
+      />
+
       {/* ── 3-col body ─────────────────────────────────────────────── */}
       <div className="terminal-result-card-body">
 
         {/* ── LEFT: identity ─────────────────────────────────────────── */}
         <div
-          className="flex items-center gap-3 px-4 py-2"
+          className="terminal-candidate-identity flex items-center gap-3 px-4 py-2"
           style={{ borderRight: '1px solid var(--t-border-subtle)' }}
         >
           {/* avatar */}
           <div className="relative flex-shrink-0">
             <div
-              className="w-9 h-9 rounded flex items-center justify-center font-bold text-sm"
+              className={`w-9 h-9 rounded flex items-center justify-center font-bold text-sm${c.freshness_days != null && c.freshness_days <= 1 ? ' terminal-avatar-fresh' : ''}`}
               style={{
                 background: isInvited
                   ? 'var(--t-success-muted)'
@@ -255,7 +281,7 @@ export function CandidateResultCard({
 
           <div className="flex-1 min-w-0" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {/* row 1: name */}
-            <span className="truncate" style={{ fontFamily: 'var(--t-font-cjk)', fontSize: 13, fontWeight: 600, color: 'var(--t-text)', lineHeight: 1.25 }}>
+            <span className="truncate" style={{ fontFamily: 'var(--t-font-cjk)', fontSize: 13, fontWeight: 700, color: 'var(--t-text)', lineHeight: 'var(--t-line-tight, 1.25)', letterSpacing: 'var(--t-letter-ui, 0.01em)' }}>
               {c.full_name}
             </span>
 
@@ -267,11 +293,6 @@ export function CandidateResultCard({
                   dot={c.freshness_days <= 3}
                 >
                   {c.freshness_days <= 1 ? '今日更新' : `${c.freshness_days}天前`}
-                </StatusPill>
-              )}
-              {isUnlocked && c.availability_status && (
-                <StatusPill color={c.availability_status === 'open' ? 'green' : c.availability_status === 'passive_now' ? 'amber' : c.availability_status === 'passive' ? 'blue' : 'gray'}>
-                  {AVAIL_LABEL[c.availability_status] ?? c.availability_status}
                 </StatusPill>
               )}
               {isInvited && (
@@ -287,35 +308,34 @@ export function CandidateResultCard({
               )}
             </div>
 
-            {/* row 2: 目标岗位 | 期望薪资 */}
+            {/* row 3: 目标岗位 | 期望薪资 */}
             <div className="flex items-center flex-wrap" style={{ gap: '0 4px', lineHeight: 1.3 }}>
               {c.desired_position && (
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-secondary)' }}>{c.desired_position}</span>
               )}
-              {c.desired_position && c.expected_salary_label && (
+              {c.desired_position && (c.expected_salary_min != null || c.expected_salary_label) && (
                 <span style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>|</span>
               )}
-              {c.expected_salary_label && (
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-chart-blue)' }}>{c.expected_salary_label}</span>
+              {formatExpectedSalary(c.expected_salary_min, c.expected_salary_max, c.expected_salary_period, c.expected_salary_label) && (
+                <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11.5, fontWeight: 600, color: 'rgba(96,165,250,0.85)', letterSpacing: '0.02em', fontVariantNumeric: 'tabular-nums' }}>
+                  {formatExpectedSalary(c.expected_salary_min, c.expected_salary_max, c.expected_salary_period, c.expected_salary_label)}
+                </span>
               )}
             </div>
 
-            {/* row 3: 经验 | 年龄 | 城市 | 学历 | 求职状态 */}
             {metaLine && (
-              <div
-                className="terminal-result-meta-line"
-                title={metaLine}
-              >
+              <p className="terminal-result-meta-line">
                 {metaLine}
-              </div>
+              </p>
             )}
+
           </div>
         </div>
 
         {/* ── CENTER: timeline (unlocked) / public portrait (locked) ── */}
         <div
-          className="px-4 py-2 flex flex-col justify-center"
-          style={{ borderRight: '1px solid var(--t-border-subtle)', minWidth: 0, gap: 4 }}
+          className="terminal-candidate-timeline px-4 py-2 flex flex-col justify-start"
+          style={{ borderRight: '1px solid var(--t-border-subtle)', minWidth: 0, gap: 5 }}
         >
           {isUnlocked ? (
             <>
@@ -359,12 +379,12 @@ export function CandidateResultCard({
                   {c.summary}
                 </p>
               )}
-              {publicTags.slice(0, 4).length > 0 && (
+              {publicTagged.slice(0, 4).length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {publicTags.slice(0, 4).map((t, i) => <Chip key={i}>{t}</Chip>)}
+                  {publicTagged.slice(0, 4).map(({ t, chipType }, i) => <Chip key={i} chipType={chipType}>{t}</Chip>)}
                 </div>
               )}
-              {!c.summary && publicTags.length === 0 && (
+              {!c.summary && publicTagged.length === 0 && (
                 <p style={{ fontSize: 10, color: 'var(--t-text-muted)' }}>暂无公开简介</p>
               )}
               <div className="flex items-center gap-1">
@@ -379,25 +399,24 @@ export function CandidateResultCard({
 
         {/* ── RIGHT: actions ──────────────────────────────────────────── */}
         <div
-          className="terminal-result-card-actions flex flex-col justify-center gap-1.5 px-2.5 py-2"
+          className="terminal-candidate-actions terminal-result-card-actions flex flex-col justify-center gap-1.5 px-2.5 py-2"
           onClick={(e) => e.stopPropagation()}
         >
           {/* View */}
           <PillBtn
             onClick={go}
             style={{
-              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-              color: '#fff',
-              border: 'none',
-              boxShadow: '0 1px 5px rgba(37,99,235,0.35)',
+              background: 'rgba(37,99,235,0.14)',
+              color: 'var(--t-text)',
+              border: '1px solid rgba(96,165,250,0.42)',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(37,99,235,0.5)'
-              e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+              e.currentTarget.style.background = 'rgba(37,99,235,0.22)'
+              e.currentTarget.style.borderColor = 'rgba(96,165,250,0.65)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 1px 5px rgba(37,99,235,0.35)'
-              e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
+              e.currentTarget.style.background = 'rgba(37,99,235,0.14)'
+              e.currentTarget.style.borderColor = 'rgba(96,165,250,0.42)'
             }}
           >
             <Eye size={11} />
@@ -466,18 +485,21 @@ export function CandidateResultCard({
           paddingBottom: 4,
         }}
       >
-        <span className="text-[9px] flex-shrink-0 mr-1" style={{ fontFamily: 'var(--t-font-ui)', color: 'var(--t-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <span className="flex-shrink-0 mr-1" style={{ fontFamily: 'var(--t-font-ui)', fontSize: 9, color: 'var(--t-text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--t-letter-caps, 0.08em)', fontWeight: 600 }}>
           Skills
         </span>
         {c.function_name && <Chip accent>{c.function_name}</Chip>}
         {c.english_level  && <Chip>EN·{c.english_level}</Chip>}
-        {(visibleStrip.length > 0 ? visibleStrip : stripFallback).map((t, i) => (
-          <Chip key={i}>{t}</Chip>
+        {(visibleTagged.length > 0
+          ? visibleTagged
+          : stripFallback.map(t => ({ t, chipType: null }))
+        ).map(({ t, chipType }, i) => (
+          <Chip key={i} chipType={chipType}>{t}</Chip>
         ))}
         {overflowCnt > 0 && (
           <span className="text-[9px]" style={{ fontFamily: 'var(--t-font-ui)', color: 'var(--t-text-muted)' }}>+{overflowCnt}</span>
         )}
-        {!c.function_name && !c.english_level && visibleStrip.length === 0 && stripFallback.length === 0 && (
+        {!c.function_name && !c.english_level && visibleTagged.length === 0 && stripFallback.length === 0 && (
           <span style={{ fontSize: 10, color: 'var(--t-text-muted)' }}>暂无标签</span>
         )}
       </div>

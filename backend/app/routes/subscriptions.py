@@ -85,7 +85,7 @@ def get_my_subscription():
     user = _current_user()
     if not user or not user.is_active:
         return _err("用户不存在", 404)
-    if user.role not in ("employer", "admin"):
+    if user.role not in ("employer", "admin", "candidate"):
         return _err("仅企业账号可查看订阅", 403)
 
     sub = (
@@ -127,7 +127,7 @@ def dev_activate():
     user = _current_user()
     if not user or not user.is_active:
         return _err("用户不存在", 404)
-    if user.role not in ("employer", "admin"):
+    if user.role not in ("employer", "admin", "candidate"):
         return _err("仅企业或管理员账号可激活订阅", 403)
 
     data = request.get_json(silent=True) or {}

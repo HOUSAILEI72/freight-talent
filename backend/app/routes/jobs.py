@@ -297,6 +297,10 @@ def _build_job_fields(data):
     if job_level and job_level not in VALID_JOB_LEVELS:
         return None, _err("职级层级不在可选范围内")
 
+    benefits_raw, ben_err = _vtags(data.get("benefits"), "benefits")
+    if ben_err:
+        return None, ben_err
+
     fields = {
         "title":        title,
         "city":         city,
@@ -339,6 +343,7 @@ def _build_job_fields(data):
         "year_end_bonus_months": year_end_bonus_months,
         "employment_type": employment_type,
         "job_level":       job_level,
+        "benefits":        benefits_raw,
     }
     return fields, None
 
@@ -398,8 +403,8 @@ def public_jobs():
 
     query = Job.query.filter_by(status="published")
 
-    # ?own=1 → 只返回当前登录企业自己发布的岗位
-    if request.args.get("own") == "1" and user and user.role == "employer":
+    # employer 永远只能看到自己发布的岗位，与 ?own=1 参数无关
+    if user.role == "employer":
         query = query.filter(Job.company_id == user.id)
 
     city = request.args.get("city", "").strip()
@@ -776,11 +781,9 @@ def delete_job(job_id):
     if user.role == "employer" and job.company_id != user.id:
         return _err("无权操作该岗位", 403)
 
-    # 先清除 job_tags（无 CASCADE 时兜底）
-    db.session.execute(db.text("DELETE FROM job_tags WHERE job_id = :jid"), {"jid": job_id})
-    # 其余依赖表（match_results / job_applications / invitations / conversation_threads /
-    # candidate_email_actions）依赖 MySQL ON DELETE CASCADE 外键级联删除。
-    db.session.delete(job)
+    # 用原生 SQL DELETE 让 MySQL 自己触发 ON DELETE CASCADE，
+    # 避免 SQLAlchemy ORM 先将子行 FK 置 NULL 导致 NOT NULL 报错。
+    db.session.execute(db.text("DELETE FROM jobs WHERE id = :jid"), {"jid": job_id})
     db.session.commit()
     return jsonify({"success": True})
 

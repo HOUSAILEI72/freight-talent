@@ -106,12 +106,11 @@ def save_job(job_id):
         job_id=job.id, candidate_id=profile.id,
     ).first()
     if existing:
-        # A submitted/viewed/shortlisted application is stronger than a save.
-        # A withdrawn record can be saved again.
         if existing.status == "withdrawn":
             existing.status = "saved"
-            existing.updated_at = datetime.now(timezone.utc)
-            db.session.commit()
+        existing.is_saved = True
+        existing.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
         return jsonify({
             "success": True,
             "duplicate": True,
@@ -123,11 +122,42 @@ def save_job(job_id):
         candidate_id=profile.id,
         employer_id=job.company_id,
         status="saved",
+        is_saved=True,
     )
     db.session.add(app_row)
     db.session.commit()
 
     return jsonify({"success": True, "application": app_row.to_dict()}), 201
+
+
+# ── DELETE /api/jobs/<job_id>/saved ──────────────────────────────────────────
+@applications_bp.delete("/api/jobs/<int:job_id>/saved")
+@jwt_required()
+def unsave_job(job_id):
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role != "candidate":
+        return _err("仅候选人账号可以取消收藏", 403)
+
+    profile = Candidate.query.filter_by(user_id=user.id).first()
+    if not profile:
+        return _err("候选人档案不存在", 404)
+
+    existing = JobApplication.query.filter_by(
+        job_id=job_id, candidate_id=profile.id,
+    ).first()
+    if not existing:
+        return jsonify({"success": True, "message": "记录不存在"}), 200
+
+    if existing.status == "saved":
+        # pure save-only record — remove entirely
+        db.session.delete(existing)
+    else:
+        existing.is_saved = False
+        existing.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    return jsonify({"success": True}), 200
 
 
 # ── POST /api/jobs/<job_id>/applications ─────────────────────────────────────

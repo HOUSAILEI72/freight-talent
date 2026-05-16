@@ -24,6 +24,7 @@ class JobApplication(db.Model):
         nullable=False,
         default="submitted",
     )
+    is_saved = db.Column(db.Boolean, nullable=False, default=False)
     message = db.Column(db.Text, nullable=True)
 
     created_at = db.Column(
@@ -55,6 +56,7 @@ class JobApplication(db.Model):
             "candidate_id": self.candidate_id,
             "employer_id":  self.employer_id,
             "status":       self.status,
+            "is_saved":     self.is_saved,
             "message":      self.message,
             "created_at":   self.created_at.isoformat() + "Z" if self.created_at else None,
             "updated_at":   self.updated_at.isoformat() + "Z" if self.updated_at else None,

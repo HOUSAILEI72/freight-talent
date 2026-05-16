@@ -34,16 +34,18 @@ def _allowed_file(filename):
     return ext in current_app.config["ALLOWED_EXTENSIONS"]
 
 
-def _parse_salary(label):
-    if not label or label == "面议":
-        return None, None
-    try:
-        parts = label.lower().replace("k", "000").split("-")
-        lo = int(parts[0])
-        hi = int(parts[1]) if len(parts) > 1 else lo
-        return lo, hi
-    except Exception:
-        return None, None
+def _build_salary_label(salary_min, salary_max, period):
+    """Auto-compute display label, e.g. '18K-25K/月' or '180K/年'."""
+    if not salary_min and not salary_max:
+        return None
+    period_label = "/年" if period == "year" else "/月"
+    def fmt(n):
+        k = round(n / 1000)
+        return f"{k}K"
+    if salary_min and salary_max and salary_min != salary_max:
+        return f"{fmt(salary_min)}-{fmt(salary_max)}{period_label}"
+    val = salary_min or salary_max
+    return f"{fmt(val)}{period_label}"
 
 
 @candidates_bp.get("/me")
@@ -150,10 +152,29 @@ def update_me():
     if gender_val is not None and gender_val not in VALID_GENDER:
         return _err("gender 只能是 male / female")
 
-    salary_label = (data.get("expected_salary_label") or "").strip() or None
-    salary_min, salary_max = _parse_salary(salary_label)
-    if salary_min and salary_max and salary_min > salary_max:
+    VALID_SALARY_PERIOD = {'month', 'year'}
+    salary_period = data.get("expected_salary_period") or None
+    if salary_period is not None and salary_period not in VALID_SALARY_PERIOD:
+        return _err("expected_salary_period 只能是 month / year")
+
+    def _parse_int_field(key, label):
+        val = data.get(key)
+        if val is None or val == "":
+            return None, None
+        try:
+            return int(val), None
+        except (ValueError, TypeError):
+            return None, f"{label} 必须为整数"
+
+    salary_min, err = _parse_int_field("expected_salary_min", "期望薪资最小值")
+    if err:
+        return _err(err)
+    salary_max, err = _parse_int_field("expected_salary_max", "期望薪资最大值")
+    if err:
+        return _err(err)
+    if salary_min is not None and salary_max is not None and salary_min > salary_max:
         return _err("薪资最小值不能大于最大值")
+    salary_label = _build_salary_label(salary_min, salary_max, salary_period)
 
     def _validate_tags(val, field_name):
         if val is None:
@@ -340,9 +361,10 @@ def update_me():
     profile.current_city = current_city
     profile.current_company = (data.get("current_company") or "").strip() or None
     profile.expected_city = (data.get("expected_city") or "").strip() or None
-    profile.expected_salary_label = salary_label
     profile.expected_salary_min = salary_min
     profile.expected_salary_max = salary_max
+    profile.expected_salary_period = salary_period
+    profile.expected_salary_label = salary_label
     profile.experience_years = exp
     if age_val is not None:
         profile.age = age_val

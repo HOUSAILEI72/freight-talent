@@ -10,7 +10,7 @@ export function ConversationList({
 }) {
   return (
     <div
-      className={terminal ? 'w-64 flex flex-col flex-shrink-0' : 'w-64 border-r border-slate-100 flex flex-col flex-shrink-0'}
+      className={terminal ? 'terminal-conv-list flex flex-col flex-shrink-0' : 'w-64 border-r border-slate-100 flex flex-col flex-shrink-0'}
       style={terminal ? { borderRight: '1px solid var(--t-border)' } : undefined}
     >
       <div

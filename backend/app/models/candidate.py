@@ -17,9 +17,10 @@ class Candidate(db.Model):
     current_company = db.Column(db.String(100), nullable=True)
     current_city = db.Column(db.String(50), nullable=False)
     expected_city = db.Column(db.String(50), nullable=True)
-    expected_salary_min = db.Column(db.Integer, nullable=True)   # 元/月
+    expected_salary_min = db.Column(db.Integer, nullable=True)
     expected_salary_max = db.Column(db.Integer, nullable=True)
-    expected_salary_label = db.Column(db.String(30), nullable=True)  # "18k-25k" / "面议"
+    expected_salary_period = db.Column(db.String(10), nullable=True)  # "month" / "year"
+    expected_salary_label = db.Column(db.String(40), nullable=True)  # auto-computed, e.g. "18K-25K/月"
 
     experience_years = db.Column(db.Integer, nullable=True)
     age              = db.Column(db.Integer, nullable=True)
@@ -139,6 +140,7 @@ class Candidate(db.Model):
             "expected_city": self.expected_city,
             "expected_salary_min": self.expected_salary_min,
             "expected_salary_max": self.expected_salary_max,
+            "expected_salary_period": self.expected_salary_period,
             "expected_salary_label": self.expected_salary_label,
             "english_level": self.english_level,
             "summary": self.summary,

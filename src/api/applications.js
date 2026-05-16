@@ -17,6 +17,10 @@ export const applicationsApi = {
     return client.post(`/jobs/${jobId}/saved`)
   },
 
+  unsaveJob(jobId) {
+    return client.delete(`/jobs/${jobId}/saved`)
+  },
+
   /**
    * 候选人向某岗位投递。
    * @param {number} jobId

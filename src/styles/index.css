@@ -53,11 +53,34 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Focus management ────────────────────────────────────────────────────────
+   Suppress ugly browser-default blue outline on mouse/touch click.
+   Keyboard Tab navigation still gets a clean focus ring via :focus-visible.
+───────────────────────────────────────────────────────────────────────────── */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Recharts containers — suppress mouse-click focus ring without touching other SVG */
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible,
+.recharts-surface:focus,
+.recharts-surface:focus-visible {
+  outline: none;
+}
+
 .card {
   background: white;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   border: 1px solid var(--color-neutral-100);
+  transition: box-shadow 150ms ease-out;
 }
 
 .card:hover {
@@ -72,5 +95,16 @@ body {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Respect user OS preference — disable all transitions and animations.
+───────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

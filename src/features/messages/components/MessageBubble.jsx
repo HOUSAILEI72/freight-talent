@@ -57,7 +57,7 @@ export function MessageBubble({ msg, isMine, onRetry, terminal = false }) {
         <div title={senderLabel} className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: avatarBg, color: avatarColor }}>
           {senderLabel[0].toUpperCase()}
         </div>
-        <div className="flex flex-col gap-0.5" style={{ maxWidth: '65%' }}>
+        <div className="flex flex-col gap-0.5" style={{ maxWidth: 'clamp(260px, 62%, 720px)' }}>
           {!isMine && <span className="text-[10px] ml-1" style={{ color: 'var(--t-text-muted)' }}>{senderLabel}</span>}
           <div
             className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed transition-opacity ${isMine ? 'rounded-br-sm' : 'rounded-bl-sm'} ${(isSending || isRetrying) ? 'opacity-60' : ''}`}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Lock, CheckCircle, Send } from 'lucide-react'
 import { FreshBadge, AvailBadge } from './FreshBadge'
 import { LockedBadge, LockedSection } from './LockedBadge'
-import { formatSalaryRange, formatYearEndBonus, formatWorkPeriod } from '../utils/candidateFormatters'
+import { formatSalaryRange, formatYearEndBonus, formatWorkPeriod, formatExpectedSalary } from '../utils/candidateFormatters'
 import { applicationsApi } from '../../../api/applications'
 
 function SectionHeader({ terminal, mutedColor, titleColor, children }) {
@@ -118,12 +118,12 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
                 {candidate.function_name}
               </span>
             )}
-            {candidate.function_name && candidate.expected_salary_label && (
+            {candidate.function_name && (candidate.expected_salary_min != null || candidate.expected_salary_label) && (
               <span style={{ color: terminal ? 'var(--t-border)' : '#cbd5e1' }}>|</span>
             )}
-            {candidate.expected_salary_label && (
+            {formatExpectedSalary(candidate.expected_salary_min, candidate.expected_salary_max, candidate.expected_salary_period, candidate.expected_salary_label) && (
               <span className={terminal ? 'text-xs font-semibold' : 'text-sm font-bold text-blue-600'} style={terminal ? accentColor : undefined}>
-                {candidate.expected_salary_label}
+                {formatExpectedSalary(candidate.expected_salary_min, candidate.expected_salary_max, candidate.expected_salary_period, candidate.expected_salary_label)}
               </span>
             )}
           </div>

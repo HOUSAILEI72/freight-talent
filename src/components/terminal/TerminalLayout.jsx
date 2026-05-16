@@ -183,22 +183,22 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
       style={{ background: 'var(--t-bg-elevated)' }}
     >
       <div className="flex items-center gap-3 min-w-0 terminal-header-brand">
-        <span className="font-[var(--t-font-sans)] text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--t-chart-cyan)]">
+        <span className="font-[var(--t-font-sans)] text-[13px] font-bold uppercase tracking-[0.06em] text-[color:var(--t-chart-cyan)]">
           ACE
         </span>
         <span className="brand-sep font-[var(--t-font-sans)] text-[12px] font-bold text-[color:var(--t-chart-cyan)]">×</span>
-        <span className="brand-terminal font-[var(--t-font-sans)] text-[11px] uppercase tracking-[0.08em] text-[color:var(--t-text-secondary)]">
+        <span className="brand-terminal font-[var(--t-font-sans)] text-[11px] font-medium uppercase tracking-[0.08em] text-[color:var(--t-text-secondary)]" style={{ opacity: 0.7 }}>
           LOGISTICS
         </span>
         <span className="brand-sep text-[color:var(--t-text-muted)]">·</span>
-        <span className="brand-page font-[var(--t-font-sans)] text-[14px] font-semibold uppercase tracking-[0.08em] text-[color:var(--t-text)] truncate">
+        <span className="brand-page font-[var(--t-font-sans)] text-[14px] font-bold uppercase tracking-[0.12em] text-[color:var(--t-text)] truncate">
           {title}
         </span>
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Pricing button — employer only */}
-        {user?.role === 'employer' && (
+        {/* Pricing button — employer + candidate */}
+        {(user?.role === 'employer' || user?.role === 'candidate') && (
           <PricingButton onClick={() => navigate('/employer/pricing')} />
         )}
 

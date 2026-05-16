@@ -1,5 +1,5 @@
 import { MapPin, Bookmark } from 'lucide-react'
-import { getSubtitleText } from '../utils/candidateFormatters'
+import { getSubtitleText, formatExpectedSalary } from '../utils/candidateFormatters'
 
 export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInvite, terminal, onSelect, onArchive, onInvite }) {
   const rowClass = terminal
@@ -124,16 +124,16 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
           </div>
 
           {/* 行2：目标岗位 + 期望薪资（仅在有值时渲染） */}
-          {(c.desired_position || c.expected_salary_label) && (
+          {(c.desired_position || c.expected_salary_min != null || c.expected_salary_label) && (
             <div className="flex items-center gap-2 text-xs mt-0.5 flex-wrap" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#64748b' }}>
               {c.desired_position && (
                 <span style={terminal ? { color: 'var(--t-text-secondary)' } : undefined}>
                   {c.desired_position}
                 </span>
               )}
-              {c.expected_salary_label && (
+              {formatExpectedSalary(c.expected_salary_min, c.expected_salary_max, c.expected_salary_period, c.expected_salary_label) && (
                 <span className={terminal ? 'font-semibold' : 'font-semibold text-blue-600'} style={terminal ? { color: 'var(--t-chart-blue)' } : undefined}>
-                  {c.expected_salary_label}
+                  {formatExpectedSalary(c.expected_salary_min, c.expected_salary_max, c.expected_salary_period, c.expected_salary_label)}
                 </span>
               )}
             </div>
