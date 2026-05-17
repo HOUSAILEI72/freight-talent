@@ -2191,9 +2191,9 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
           <div className="terminal-form-grid-3">
 
             {/* ── Col 1: 基本信息 ── */}
-            <div className={cardClass} style={{ ...cardStyle, borderTop: '2px solid var(--t-primary)' }}>
-              <div className={sectionTitleClass} style={{ color: 'var(--t-primary)', borderBottom: '1px solid var(--t-border-subtle)', paddingBottom: 6, marginBottom: 0 }}>
-                <Briefcase size={11} /> 基本信息
+            <div className={cardClass} style={{ ...cardStyle, borderTop: '2px solid rgba(59, 130, 246, 0.32)' }}>
+              <div className={sectionTitleClass} style={{ color: 'var(--t-text-muted)', borderBottom: '1px solid var(--t-border-subtle)', paddingBottom: 6, marginBottom: 0 }}>
+                <span style={{ color: 'var(--t-primary)' }}><Briefcase size={11} /></span> 基本信息
               </div>
               <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
                 {fieldTitle}
@@ -2210,9 +2210,9 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
             </div>
 
             {/* ── Col 2: 岗位描述 ── */}
-            <div className={cardClass} style={{ ...cardStyle, borderTop: '2px solid var(--t-success)' }}>
-              <div className={sectionTitleClass} style={{ color: 'var(--t-success)', borderBottom: '1px solid var(--t-border-subtle)', paddingBottom: 6, marginBottom: 0 }}>
-                <FileText size={11} /> 岗位描述
+            <div className={cardClass} style={{ ...cardStyle, borderTop: '2px solid rgba(34, 197, 94, 0.28)' }}>
+              <div className={sectionTitleClass} style={{ color: 'var(--t-text-muted)', borderBottom: '1px solid var(--t-border-subtle)', paddingBottom: 6, marginBottom: 0 }}>
+                <span style={{ color: 'var(--t-success)' }}><FileText size={11} /></span> 岗位描述
               </div>
               <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
                 {fieldDescription}
@@ -2222,9 +2222,9 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
             </div>
 
             {/* ── Col 3: 薪酬福利 ── */}
-            <div className={cardClass} style={{ ...cardStyle, borderTop: '2px solid var(--t-chart-amber)' }}>
-              <div className={sectionTitleClass} style={{ color: 'var(--t-chart-amber)', borderBottom: '1px solid var(--t-border-subtle)', paddingBottom: 6, marginBottom: 0 }}>
-                <DollarSign size={11} /> 薪酬福利
+            <div className={cardClass} style={{ ...cardStyle, borderTop: '2px solid rgba(251, 191, 36, 0.28)' }}>
+              <div className={sectionTitleClass} style={{ color: 'var(--t-text-muted)', borderBottom: '1px solid var(--t-border-subtle)', paddingBottom: 6, marginBottom: 0 }}>
+                <span style={{ color: 'var(--t-chart-amber)' }}><DollarSign size={11} /></span> 薪酬福利
               </div>
               <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
                 {fieldSalaryRange}
