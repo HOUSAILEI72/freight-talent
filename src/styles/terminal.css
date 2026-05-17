@@ -57,6 +57,12 @@
   --t-trend-up:      #22c55e;
   --t-trend-down:    #ef4444;
   --t-trend-neutral: #94a3b8;
+
+  /* ── Chip selected state (theme-independent — rgba works on both dark/light) ── */
+  --t-chip-selected-bg:           rgba(59, 130, 246, 0.07);
+  --t-chip-selected-border:       rgba(59, 130, 246, 0.28);
+  --t-chip-selected-bg-hover:     rgba(59, 130, 246, 0.11);
+  --t-chip-selected-border-hover: rgba(59, 130, 246, 0.38);
 }
 
 /* ── Dark theme ── */
@@ -1724,8 +1730,8 @@
 
 /* 选中态 — 低饱和度蓝底 */
 .terminal-chip-selected {
-  background: rgba(59, 130, 246, 0.07);
-  border-color: rgba(59, 130, 246, 0.28);
+  background: var(--t-chip-selected-bg);
+  border-color: var(--t-chip-selected-border);
   color: var(--t-text);
 }
 
@@ -1737,8 +1743,8 @@
 
 /* hover（选中） */
 .terminal-chip.terminal-chip-selected:hover {
-  background: rgba(59, 130, 246, 0.11);
-  border-color: rgba(59, 130, 246, 0.38);
+  background: var(--t-chip-selected-bg-hover);
+  border-color: var(--t-chip-selected-border-hover);
 }
 
 /* disabled */
