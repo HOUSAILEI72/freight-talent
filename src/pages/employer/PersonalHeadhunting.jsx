@@ -199,7 +199,7 @@ function disabledInput() {
 
 function chipStyle(active) {
   return active
-    ? { padding: '4px 11px', borderRadius: 4, border: '1px solid var(--t-primary)', background: 'var(--t-primary)', color: '#fff', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em' }
+    ? { padding: '4px 11px', borderRadius: 4, border: '1px solid rgba(59, 130, 246, 0.28)', background: 'rgba(59, 130, 246, 0.07)', color: 'var(--t-text)', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em' }
     : { padding: '4px 11px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em' }
 }
 
