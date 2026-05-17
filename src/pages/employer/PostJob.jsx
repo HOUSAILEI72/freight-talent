@@ -1241,10 +1241,12 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
           <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 400, color: '#f59e0b' }}>← AI 分析需先填写</span>
         )}
       </label>
-      <div style={aiFieldHint && !title.trim() ? hintBorderStyle : {}}>
+      <div style={!terminal && aiFieldHint && !title.trim() ? hintBorderStyle : {}}>
       <input
         className={inputClass}
-        style={terminal ? { ...inputStyle, paddingLeft: 14, paddingRight: 14 } : inputStyle}
+        style={terminal
+          ? { ...inputStyle, paddingLeft: 14, paddingRight: 14, ...(aiFieldHint && !title.trim() ? hintTriggerStyle : {}) }
+          : inputStyle}
         placeholder="例：海运操作主管"
         value={title}
         autoComplete="off"
