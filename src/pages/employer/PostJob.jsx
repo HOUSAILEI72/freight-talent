@@ -334,9 +334,9 @@ function SelectedSkillTag({ skill, description, terminal }) {
         fontSize: 11, lineHeight: '1.4',
         padding: '2px 7px',
         borderRadius: 4,
-        background: terminal ? 'var(--t-primary-muted)' : '#eff6ff',
-        color: terminal ? 'var(--t-primary)' : '#2563eb',
-        border: `1px solid ${terminal ? 'var(--t-primary)' : '#bfdbfe'}`,
+        background: terminal ? 'rgba(59, 130, 246, 0.07)' : '#eff6ff',
+        color: terminal ? 'var(--t-text)' : '#2563eb',
+        border: `1px solid ${terminal ? 'rgba(59, 130, 246, 0.28)' : '#bfdbfe'}`,
         whiteSpace: 'nowrap',
         cursor: 'default',
       }}
@@ -751,9 +751,9 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
   // ── Style helpers (terminal vs light) ─────────────────────────────────────
 
   const labelClass = terminal
-    ? 'block text-xs font-medium mb-1'
+    ? 'block terminal-field-label-cn mb-1'
     : 'block text-sm font-medium text-slate-700 mb-1'
-  const labelStyle = terminal ? { color: 'var(--t-text-secondary)' } : undefined
+  const labelStyle = terminal ? {} : undefined
 
   const helperClass = terminal ? 'mt-1 text-xs' : 'mt-1 text-xs text-slate-400'
   const helperStyle = terminal ? { color: 'var(--t-text-muted)' } : undefined
@@ -762,11 +762,13 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
     ? 'w-full px-3 py-2 rounded border text-sm focus:outline-none'
     : 'w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'
   const inputStyle = terminal
-    ? { background: 'var(--t-bg-input)', color: 'var(--t-text)', borderColor: 'var(--t-border)' }
+    ? { background: 'var(--t-bg-input)', color: 'var(--t-text)', borderColor: 'var(--t-border)', height: 30 }
     : undefined
 
   const textareaClass = inputClass + ' resize-none'
-  const textareaStyle = inputStyle
+  const textareaStyle = terminal
+    ? { background: 'var(--t-bg-input)', color: 'var(--t-text)', borderColor: 'var(--t-border)' }
+    : undefined
 
   const cardClass = terminal
     ? 'p-4 space-y-3 rounded-[var(--t-radius-lg)] border flex flex-col min-h-0'
@@ -794,7 +796,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
     return {
       className: 'px-3 py-1.5 rounded-lg text-sm border transition-colors',
       style: active
-        ? { background: 'var(--t-primary)', color: '#fff', borderColor: 'var(--t-primary)' }
+        ? { background: 'rgba(59, 130, 246, 0.07)', color: 'var(--t-text)', borderColor: 'rgba(59, 130, 246, 0.28)' }
         : { background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', borderColor: 'var(--t-border)' },
     }
   }
@@ -1102,6 +1104,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
     boxShadow: '0 0 0 2px #f59e0b inset',
     borderRadius: 6,
   }
+  const hintTriggerStyle = { boxShadow: '0 0 0 2px #f59e0b inset' }
 
   const aiButtonReady = canAiAnalyze || aiLoading
   const aiButtonStyle = terminal
@@ -1359,7 +1362,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
           <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 400, color: '#f59e0b' }}>← AI 分析需先填写</span>
         )}
       </label>
-      <div style={aiFieldHint && !functionCode ? hintBorderStyle : {}}>
+      <div style={!terminal && aiFieldHint && !functionCode ? hintBorderStyle : {}}>
       {terminal ? (
         <TerminalSelect
           value={functionCode}
@@ -1367,6 +1370,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
           options={[{ value: '', label: '请选择板块' }, ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label }))]}
           placeholder="请选择板块"
           hasValue={!!functionCode}
+          highlightStyle={aiFieldHint && !functionCode ? hintTriggerStyle : undefined}
         />
       ) : (
         <select className={inputClass} style={inputStyle} value={functionCode}
@@ -1863,7 +1867,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
     <div className="grid grid-cols-3 gap-3">
       <div>
         <label className={labelClass} style={labelStyle}>最低月薪 *</label>
-        <input type="text" inputMode="numeric" className={inputClass} style={inputStyle}
+        <input type="text" inputMode="numeric" className={`${inputClass}${terminal ? ' terminal-tabular-num' : ''}`} style={inputStyle}
           placeholder="20,000" value={salaryMinDisplay}
           onFocus={() => setSalaryMinFocused(true)} onBlur={() => setSalaryMinFocused(false)}
           onChange={(e) => {
@@ -1874,7 +1878,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
       </div>
       <div>
         <label className={labelClass} style={labelStyle}>最高月薪 *</label>
-        <input type="text" inputMode="numeric" className={inputClass} style={inputStyle}
+        <input type="text" inputMode="numeric" className={`${inputClass}${terminal ? ' terminal-tabular-num' : ''}`} style={inputStyle}
           placeholder="30,000" value={salaryMaxDisplay}
           onFocus={() => setSalaryMaxFocused(true)} onBlur={() => setSalaryMaxFocused(false)}
           onChange={(e) => {
@@ -1927,7 +1931,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
       </div>
       <div>
         <label className={labelClass} style={labelStyle}>预估平均额</label>
-        <input type="text" inputMode="numeric" className={commissionAmountDisabled ? disabledInputClass : inputClass}
+        <input type="text" inputMode="numeric" className={`${commissionAmountDisabled ? disabledInputClass : inputClass}${terminal ? ' terminal-tabular-num' : ''}`}
           style={commissionAmountDisabled ? disabledInputStyle : inputStyle}
           placeholder={commissionAmountDisabled ? '请先选择周期' : '例：5,000'}
           value={commissionAmountDisabled ? '' : commissionAmountDisplay}
