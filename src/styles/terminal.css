@@ -173,6 +173,7 @@
   font-size: var(--terminal-rem-base);
 
   /* ── Typography tokens (all scale with --terminal-rem-base) ── */
+  --t-text-2xs:  calc(var(--terminal-rem-base) * 0.7143);  /* ≈10px @ 14px */
   --t-text-xs:   calc(var(--terminal-rem-base) * 0.7857);  /* ≈11px @ 14px */
   --t-text-sm:   calc(var(--terminal-rem-base) * 0.8571);  /* ≈12px @ 14px */
   --t-text-base: var(--terminal-rem-base);                 /* =14px @ 14px */
@@ -1246,7 +1247,7 @@
   border-radius: var(--t-radius-sm);
   background: rgba(255, 255, 255, 0.03);
   font-family: var(--t-font-ui);
-  font-size: 10px;
+  font-size: var(--t-text-2xs);
   font-weight: 600;
   letter-spacing: 0.03em;
   line-height: 1;
@@ -1259,7 +1260,7 @@
   word-break: break-word;
   color: var(--t-text-muted);
   font-family: var(--t-font-mono);
-  font-size: 10px;
+  font-size: var(--t-text-2xs);
   letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
   line-height: 1.4;
