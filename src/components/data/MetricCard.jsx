@@ -56,7 +56,7 @@ export default function MetricCard({
       {/* value + helper */}
       <div>
         <span
-          className="block text-[length:var(--t-text-xl)] font-extrabold leading-tight"
+          className="block text-[length:var(--t-text-xl)] font-extrabold leading-tight terminal-tabular-num"
           style={{ color: valueColor }}
         >
           {value ?? '—'}
