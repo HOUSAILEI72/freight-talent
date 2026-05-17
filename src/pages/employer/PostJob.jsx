@@ -334,9 +334,9 @@ function SelectedSkillTag({ skill, description, terminal }) {
         fontSize: 11, lineHeight: '1.4',
         padding: '2px 7px',
         borderRadius: 4,
-        background: terminal ? 'rgba(59, 130, 246, 0.07)' : '#eff6ff',
+        background: terminal ? 'var(--t-chip-selected-bg)' : '#eff6ff',
         color: terminal ? 'var(--t-text)' : '#2563eb',
-        border: `1px solid ${terminal ? 'rgba(59, 130, 246, 0.28)' : '#bfdbfe'}`,
+        border: `1px solid ${terminal ? 'var(--t-chip-selected-border)' : '#bfdbfe'}`,
         whiteSpace: 'nowrap',
         cursor: 'default',
       }}
@@ -796,7 +796,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
     return {
       className: 'px-3 py-1.5 rounded-lg text-sm border transition-colors',
       style: active
-        ? { background: 'rgba(59, 130, 246, 0.07)', color: 'var(--t-text)', borderColor: 'rgba(59, 130, 246, 0.28)' }
+        ? { background: 'var(--t-chip-selected-bg)', color: 'var(--t-text)', borderColor: 'var(--t-chip-selected-border)' }
         : { background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', borderColor: 'var(--t-border)' },
     }
   }
@@ -1517,12 +1517,13 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
           <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 400, color: '#f59e0b' }}>← AI 分析需先填写</span>
         )}
       </label>
-      <div style={aiFieldHint && !location?.location_code ? hintBorderStyle : {}}>
+      <div style={!terminal && aiFieldHint && !location?.location_code ? hintBorderStyle : {}}>
         <RegionSelector
           value={location}
           onChange={setLocation}
           terminal={terminal}
           placeholder="请选择岗位城市"
+          highlightStyle={aiFieldHint && !location?.location_code ? hintTriggerStyle : undefined}
         />
       </div>
       {location?.location_path && (

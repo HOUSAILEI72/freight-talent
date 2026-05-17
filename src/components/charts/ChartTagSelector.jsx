@@ -237,12 +237,12 @@ export function ChartTagSelector({
                         style={{
                           width: '100%', textAlign: 'left', padding: '7px 20px',
                           fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          background: selected ? 'rgba(59, 130, 246, 0.07)' : 'transparent',
+                          background: selected ? 'var(--t-chip-selected-bg)' : 'transparent',
                           color: selected ? 'var(--t-text)' : 'var(--t-text-secondary)',
                           border: 'none', cursor: 'pointer',
                         }}
                         onMouseEnter={e => { if (!selected) e.currentTarget.style.background = 'var(--t-bg-hover)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = selected ? 'rgba(59, 130, 246, 0.07)' : 'transparent' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = selected ? 'var(--t-chip-selected-bg)' : 'transparent' }}
                       >
                         {tag.name}
                         {selected && <Check size={11} style={{ color: 'var(--t-text-secondary)', flexShrink: 0 }} />}
