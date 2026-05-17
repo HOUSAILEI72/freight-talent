@@ -52,6 +52,7 @@ export default function RegionSelector({
   placeholder = 'Select location',
   terminal = false,
   className = '',
+  highlightStyle,
 }) {
   const [open, setOpen]       = useState(false)
   const [query, setQuery]     = useState('')
@@ -121,7 +122,7 @@ export default function RegionSelector({
   // ── Styling primitives (split per terminal/light to avoid tailwind hover
   //    leaking into public mode) ─────────────────────────────────────────────
   const triggerStyle = terminal
-    ? { background: 'var(--t-bg-input)', borderColor: 'var(--t-border)', color: value ? 'var(--t-text)' : 'var(--t-text-muted)' }
+    ? { background: 'var(--t-bg-input)', borderColor: 'var(--t-border)', color: value ? 'var(--t-text)' : 'var(--t-text-muted)', ...highlightStyle }
     : undefined
   const popoverStyle = terminal
     ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }
