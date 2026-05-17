@@ -1099,8 +1099,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
   }
 
   const hintBorderStyle = {
-    outline: '2px solid #f59e0b',
-    outlineOffset: 2,
+    boxShadow: '0 0 0 2px #f59e0b inset',
     borderRadius: 6,
   }
 
