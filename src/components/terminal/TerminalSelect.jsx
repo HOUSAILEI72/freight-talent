@@ -25,6 +25,7 @@ export function TerminalSelect({
   searchable = false,
   className = '',
   style,
+  highlightStyle,
 }) {
   const [open, setOpen]         = useState(false)
   const [hovered, setHovered]   = useState(false)
@@ -111,6 +112,7 @@ export function TerminalSelect({
     userSelect: 'none',
     transition: 'border-color 120ms',
     ...style,
+    ...highlightStyle,
   }
 
   const panelStyle = {
