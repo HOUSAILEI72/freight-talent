@@ -237,15 +237,15 @@ export function ChartTagSelector({
                         style={{
                           width: '100%', textAlign: 'left', padding: '7px 20px',
                           fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          background: selected ? 'rgba(96,165,250,0.08)' : 'transparent',
-                          color: selected ? 'var(--t-chart-blue)' : 'var(--t-text-secondary)',
+                          background: selected ? 'rgba(59, 130, 246, 0.07)' : 'transparent',
+                          color: selected ? 'var(--t-text)' : 'var(--t-text-secondary)',
                           border: 'none', cursor: 'pointer',
                         }}
                         onMouseEnter={e => { if (!selected) e.currentTarget.style.background = 'var(--t-bg-hover)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = selected ? 'rgba(96,165,250,0.08)' : 'transparent' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = selected ? 'rgba(59, 130, 246, 0.07)' : 'transparent' }}
                       >
                         {tag.name}
-                        {selected && <Check size={11} style={{ color: 'var(--t-chart-blue)', flexShrink: 0 }} />}
+                        {selected && <Check size={11} style={{ color: 'var(--t-text-secondary)', flexShrink: 0 }} />}
                       </button>
                     )
                   })}
