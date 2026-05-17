@@ -1791,6 +1791,7 @@
 /* Section label：uppercase + 0.06em，bold variant */
 .terminal-section-label {
   display: block;
+  font-family: var(--t-font-ui);
   font-size: var(--t-text-xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
