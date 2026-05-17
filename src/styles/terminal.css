@@ -618,8 +618,8 @@
 .terminal-dashboard-body {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
-  gap: clamp(10px, 1.4vh, 16px);
-  padding: clamp(10px, 1.6vh, 16px) 20px;
+  gap: clamp(calc(var(--terminal-rem-base) * 0.714), 1.4vh, var(--t-space-md));
+  padding: clamp(calc(var(--terminal-rem-base) * 0.714), 1.6vh, var(--t-space-md)) var(--t-space-md);
   flex: 1;
   min-height: 0;
   height: 100%;
@@ -631,7 +631,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 300px);
   align-items: stretch;
-  gap: 16px;
+  gap: var(--t-space-md);
   min-height: 0;
   height: 100%;
 }
@@ -639,7 +639,7 @@
 .terminal-dashboard-stats-aside-wrap {
   display: grid;
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: calc(var(--terminal-rem-base) * 1);
   height: 100%;
   min-height: 0;
   overflow: visible;
@@ -648,18 +648,18 @@
 .terminal-card-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: var(--t-space-md);
 }
 
 .terminal-platform-count-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--t-space-md);
 }
 
 .terminal-insights-panel {
-  gap: 16px;
-  padding: 16px;
+  gap: var(--t-space-md);
+  padding: var(--t-space-md);
 }
 
 /* ── Growth cards (right sidebar) ── */
@@ -673,13 +673,13 @@
   justify-content: center;
   min-height: 0;
   height: 100%;
-  padding: clamp(16px, 2vh, 24px) 22px;
+  padding: clamp(var(--t-space-md), 2vh, var(--t-space-lg)) calc(var(--terminal-rem-base) * 1.571);
   box-sizing: border-box;
 }
 
 .terminal-growth-card-label {
   display: block;
-  margin-bottom: clamp(14px, 2vh, 26px);
+  margin-bottom: clamp(calc(var(--terminal-rem-base) * 1), 2vh, calc(var(--terminal-rem-base) * 1.857));
   color: var(--t-text-muted);
   font-size: var(--t-text-xs);
   font-weight: 700;
@@ -690,14 +690,14 @@
 .terminal-growth-card-rows {
   display: flex;
   flex-direction: column;
-  gap: clamp(10px, 1.6vh, 18px);
+  gap: clamp(calc(var(--terminal-rem-base) * 0.714), 1.6vh, calc(var(--terminal-rem-base) * 1.286));
 }
 
 .terminal-growth-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--t-space-sm);
   color: var(--t-text-secondary);
   font-size: var(--t-text-xs);
   font-weight: 500;
@@ -722,10 +722,10 @@
 @media (max-width: 1440px) {
   .terminal-dashboard-main {
     grid-template-columns: minmax(0, 1fr) minmax(260px, 280px);
-    gap: 14px;
+    gap: calc(var(--terminal-rem-base) * 1);
   }
   .terminal-dashboard-stats-aside-wrap {
-    gap: 12px;
+    gap: var(--t-space-sm);
   }
 }
 
@@ -733,8 +733,8 @@
 @media (max-width: 1280px) {
   .terminal-dashboard-body {
     grid-template-rows: auto auto auto auto;
-    padding: 12px 14px;
-    gap: 12px;
+    padding: var(--t-space-sm) calc(var(--terminal-rem-base) * 1);
+    gap: var(--t-space-sm);
   }
   .terminal-dashboard-main {
     grid-template-columns: 1fr;
@@ -763,12 +763,12 @@
 /* 1024 — further compact */
 @media (max-width: 1024px) {
   .terminal-dashboard-body {
-    padding: 10px 12px;
-    gap: 10px;
+    padding: calc(var(--terminal-rem-base) * 0.714) 12px;
+    gap: calc(var(--terminal-rem-base) * 0.714);
   }
   .terminal-card-grid {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
+    gap: calc(var(--terminal-rem-base) * 0.714);
   }
 }
 
@@ -787,26 +787,26 @@
   }
 
   .terminal-insights-panel {
-    gap: 10px;
+    gap: calc(var(--terminal-rem-base) * 0.714);
     padding: 12px;
   }
 
   .terminal-card-grid {
-    gap: 10px;
+    gap: calc(var(--terminal-rem-base) * 0.714);
   }
 
 }
 
 @media (max-height: 820px) {
   .terminal-dashboard-body {
-    gap: 10px;
-    padding-top: 10px;
-    padding-bottom: 10px;
+    gap: calc(var(--terminal-rem-base) * 0.714);
+    padding-top: calc(var(--terminal-rem-base) * 0.714);
+    padding-bottom: calc(var(--terminal-rem-base) * 0.714);
   }
 
   .terminal-insights-panel {
-    gap: 8px;
-    padding: 10px;
+    gap: var(--t-space-xs);
+    padding: calc(var(--terminal-rem-base) * 0.714);
   }
 
 }
@@ -815,10 +815,10 @@
 .terminal-action-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--t-space-sm);
   flex-wrap: wrap;
   overflow-x: auto;
-  padding: 12px 4px 4px;
+  padding: var(--t-space-sm) calc(var(--terminal-rem-base) * 0.286) calc(var(--terminal-rem-base) * 0.286);
   border-top: 1px solid var(--t-border-subtle);
   flex-shrink: 0;
 }
@@ -826,11 +826,11 @@
 .terminal-action-bar-btn {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 44px;
+  gap: calc(var(--terminal-rem-base) * 0.714);
+  min-height: var(--t-control-height-xl);
   height: auto;
   min-width: clamp(130px, 16vw, 180px);
-  padding: 8px 16px;
+  padding: calc(var(--terminal-rem-base) * 0.571) var(--t-space-md);
   border-radius: var(--t-radius);
   flex-shrink: 0;
 }
@@ -840,10 +840,10 @@
     gap: 8px;
   }
   .terminal-action-bar-btn {
-    min-height: 40px;
+    min-height: calc(var(--terminal-rem-base) * 2.857);
     height: auto;
     min-width: clamp(110px, 14vw, 160px);
-    padding: 7px 12px;
+    padding: calc(var(--terminal-rem-base) * 0.5) var(--t-space-sm);
   }
 }
 
@@ -1014,7 +1014,7 @@
   align-content: stretch;
   height: 100%;
   min-height: 0;
-  padding: 18px 22px 20px;
+  padding: calc(var(--terminal-rem-base) * 1.286) calc(var(--terminal-rem-base) * 1.571) calc(var(--terminal-rem-base) * 1.429);
   overflow: visible;
   box-sizing: border-box;
 }
@@ -1023,7 +1023,7 @@
   display: block;
   line-height: 1.3;
   min-height: 16px;
-  margin-bottom: 10px;
+  margin-bottom: calc(var(--terminal-rem-base) * 0.714);
   white-space: nowrap;
 }
 
@@ -1051,8 +1051,8 @@
 .terminal-trend-card-footer {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding-top: 10px;
+  gap: calc(var(--terminal-rem-base) * 0.357);
+  padding-top: calc(var(--terminal-rem-base) * 0.714);
   padding-bottom: 0;
 }
 
@@ -1066,7 +1066,7 @@
 
 @media (max-width: 1440px) {
   .terminal-trend-card {
-    padding: 16px 20px 18px;
+    padding: var(--t-space-md) calc(var(--terminal-rem-base) * 1.429) calc(var(--terminal-rem-base) * 1.286);
   }
   .terminal-trend-card-value {
     min-height: 56px;
@@ -1183,8 +1183,8 @@
 /* pill button inside result card actions column */
 .terminal-result-pill-btn {
   width: 100%;
-  min-width: 148px;
-  max-width: 180px;
+  min-width: calc(var(--terminal-rem-base) * 6.857);
+  max-width: calc(var(--terminal-rem-base) * 8.571);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1231,8 +1231,8 @@
   align-items: center;
   width: 100%;
   min-width: 0;
-  min-height: 24px;
-  column-gap: 12px;
+  min-height: calc(var(--terminal-rem-base) * 1.714);
+  column-gap: var(--t-space-sm);
 }
 
 .terminal-timeline-kind {
@@ -1240,9 +1240,9 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  height: 18px;
-  min-width: 44px;
-  padding: 0 5px;
+  height: calc(var(--terminal-rem-base) * 1.286);
+  min-width: calc(var(--terminal-rem-base) * 3.143);
+  padding: 0 calc(var(--terminal-rem-base) * 0.357);
   border: 1px solid currentColor;
   border-radius: var(--t-radius-sm);
   background: rgba(255, 255, 255, 0.03);
@@ -1280,8 +1280,8 @@
 /* actions column — sized to button content */
 .terminal-result-card-actions {
   width: max-content;
-  min-width: 148px;
-  max-width: 180px;
+  min-width: calc(var(--terminal-rem-base) * 6.857);
+  max-width: calc(var(--terminal-rem-base) * 8.571);
   justify-self: end;
   align-self: center;
 }
