@@ -1636,3 +1636,105 @@
     width: 185px;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Terminal Utility Classes
+   可在任何 .terminal-mode 内直接用，不绑定具体业务页面
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Chip / Tag / Filter Button ─────────────────────────────────── */
+
+/* 基础轮廓（未选中） */
+.terminal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--t-radius-sm);
+  border: 1px solid var(--t-border);
+  background: transparent;
+  color: var(--t-text-secondary);
+  font-family: var(--t-font-ui);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+
+/* 选中态 — 低饱和度蓝底 */
+.terminal-chip-selected {
+  background: rgba(59, 130, 246, 0.07);
+  border-color: rgba(59, 130, 246, 0.28);
+  color: var(--t-text);
+}
+
+/* hover（未选中） */
+.terminal-chip:not(.terminal-chip-selected):hover {
+  background: var(--t-bg-hover);
+  border-color: var(--t-border-focus);
+}
+
+/* hover（选中） */
+.terminal-chip.terminal-chip-selected:hover {
+  background: rgba(59, 130, 246, 0.11);
+  border-color: rgba(59, 130, 246, 0.38);
+}
+
+/* disabled */
+.terminal-chip:disabled,
+.terminal-chip[aria-disabled="true"] {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* focus-visible — 键盘可访问性 */
+.terminal-chip:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* ── Field Labels ────────────────────────────────────────────────── */
+
+/* 英文 label：uppercase + 0.06em */
+.terminal-field-label {
+  display: block;
+  font-family: var(--t-font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--t-text-secondary);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+/* 中文 label：不 uppercase，0.04em */
+.terminal-field-label-cn {
+  display: block;
+  font-family: var(--t-font-cjk);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--t-text-secondary);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+/* ── Tabular Numbers ─────────────────────────────────────────────── */
+
+.terminal-tabular-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 数字输入框全局覆盖（terminal-mode 内） */
+.terminal-mode input[inputmode="numeric"],
+.terminal-mode input[inputmode="decimal"],
+.terminal-mode input[type="number"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
