@@ -16,7 +16,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN sed -i "s|https://dl-cdn.alpinelinux.org/alpine|${ALPINE_MIRROR}|g" /etc/apk/repositories \
     && npm config set registry "$NPM_REGISTRY" \
-    && npm ci --frozen-lockfile
+    && npm ci --frozen-lockfile --legacy-peer-deps
 
 COPY . .
 RUN npm run build
