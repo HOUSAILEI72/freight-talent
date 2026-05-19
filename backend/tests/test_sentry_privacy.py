@@ -53,6 +53,12 @@ def test_clears_request_data():
     assert result["request"]["data"] is None
 
 
+def test_clears_request_data_when_absent():
+    event = {"request": {"headers": {}}}  # no "data" key
+    result = _before_send(event, {})
+    assert result["request"].get("data") is None
+
+
 def test_always_returns_event_not_none():
     event = {"request": {"headers": {"X-Custom": "value"}}, "extra": {}}
     result = _before_send(event, {})

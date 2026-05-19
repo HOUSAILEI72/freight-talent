@@ -61,8 +61,7 @@ def _before_send_fa(event, hint):
     req = event.get("request", {})
     if "headers" in req:
         req["headers"] = _strip_sensitive_fa(req["headers"])
-    if "data" in req:
-        req["data"] = None
+    req["data"] = None
     if "extra" in event:
         event["extra"] = _strip_sensitive_fa(event["extra"])
     return event
