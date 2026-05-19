@@ -197,28 +197,28 @@ def send_candidate_action_email(candidate_email, candidate_name, company_name, a
         logger.info("MAIL_ENABLED=false, skip candidate action email to %s", candidate_email)
         return
 
-    mail_host     = current_app.config.get("MAIL_HOST")
-    mail_port     = current_app.config.get("MAIL_PORT")
-    mail_use_ssl  = current_app.config.get("MAIL_USE_SSL")
+    mail_host = current_app.config.get("MAIL_HOST")
+    mail_port = current_app.config.get("MAIL_PORT")
+    mail_use_ssl = current_app.config.get("MAIL_USE_SSL")
     mail_username = current_app.config.get("MAIL_USERNAME")
     mail_password = current_app.config.get("MAIL_PASSWORD")
-    mail_sender   = current_app.config.get("MAIL_DEFAULT_SENDER")
+    mail_sender = current_app.config.get("MAIL_DEFAULT_SENDER")
 
     if not mail_username or not mail_password:
         logger.warning("MAIL_USERNAME or MAIL_PASSWORD not configured, skip sending email")
         return
 
     tpl = _ACTION_TEMPLATES[action]
-    subject   = tpl["subject"]
+    subject = tpl["subject"]
     text_body = tpl["body"].format(name=candidate_name, company_name=company_name)
 
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"]    = mail_sender
-    msg["To"]      = candidate_email
-    msg["Date"]    = formatdate(localtime=False, usegmt=True)
+    msg["From"] = mail_sender
+    msg["To"] = candidate_email
+    msg["Date"] = formatdate(localtime=False, usegmt=True)
 
-    sender_email  = parseaddr(mail_sender)[1] or mail_username
+    sender_email = parseaddr(mail_sender)[1] or mail_username
     sender_domain = sender_email.rsplit("@", 1)[1] if "@" in sender_email else "globalogin.com"
     msg["Message-ID"] = make_msgid(idstring="ace-talent-action", domain=sender_domain)
 

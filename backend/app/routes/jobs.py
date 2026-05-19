@@ -87,7 +87,7 @@ def _build_job_fields(data):
         return None, _err("岗位名称不能为空")
 
     location_code_raw = (data.get("location_code") or "").strip()
-    legacy_city       = (data.get("city") or "").strip()
+    legacy_city = (data.get("city") or "").strip()
     location_dict = None
 
     if location_code_raw:
@@ -210,12 +210,15 @@ def _build_job_fields(data):
         if management_headcount <= 0 or management_headcount > 9999:
             return None, _err("预计团队人数必须是 1-9999 之间的数字")
 
-    knowledge_arr,  k_err = _vtags(data.get("knowledge_requirements"),  "knowledge_requirements")
-    if k_err: return None, _err(k_err)
+    knowledge_arr, k_err = _vtags(data.get("knowledge_requirements"), "knowledge_requirements")
+    if k_err:
+        return None, _err(k_err)
     hard_skill_arr, h_err = _vtags(data.get("hard_skill_requirements"), "hard_skill_requirements")
-    if h_err: return None, _err(h_err)
+    if h_err:
+        return None, _err(h_err)
     soft_skill_arr, s_err = _vtags(data.get("soft_skill_requirements"), "soft_skill_requirements")
-    if s_err: return None, _err(s_err)
+    if s_err:
+        return None, _err(s_err)
 
     salary_months = data.get("salary_months")
     if salary_months is not None:
@@ -268,7 +271,7 @@ def _build_job_fields(data):
         year_end_bonus_months = None
 
     legacy_province = (data.get("province") or "").strip() or None
-    legacy_city_nm  = (data.get("city_name") or "").strip() or None
+    legacy_city_nm = (data.get("city_name") or "").strip() or None
     legacy_district = (data.get("district") or "").strip() or None
 
     if location_dict and location_dict["location_type"] == "mainland_china":
@@ -276,9 +279,12 @@ def _build_job_fields(data):
         parts = [p for p in path.split("/") if p]
         if parts and parts[0] == "China":
             sub = parts[1:]
-            if not legacy_province and len(sub) >= 1: legacy_province = sub[0]
-            if not legacy_city_nm  and len(sub) >= 2: legacy_city_nm  = sub[1]
-            if not legacy_district and len(sub) >= 3: legacy_district = sub[2]
+            if not legacy_province and len(sub) >= 1:
+                legacy_province = sub[0]
+            if not legacy_city_nm and len(sub) >= 2:
+                legacy_city_nm = sub[1]
+            if not legacy_district and len(sub) >= 3:
+                legacy_district = sub[2]
 
     business_type_val = (data.get("business_type") or "").strip() or function_name or None
     job_type_val = (data.get("job_type") or "").strip() or None
@@ -302,48 +308,48 @@ def _build_job_fields(data):
         return None, ben_err
 
     fields = {
-        "title":        title,
-        "city":         city,
-        "province":     legacy_province,
-        "city_name":    legacy_city_nm,
-        "district":     legacy_district,
-        "salary_min":   salary_min,
-        "salary_max":   salary_max,
+        "title": title,
+        "city": city,
+        "province": legacy_province,
+        "city_name": legacy_city_nm,
+        "district": legacy_district,
+        "salary_min": salary_min,
+        "salary_max": salary_max,
         "salary_label": salary_label,
         "experience_required": experience_required,
-        "degree_required":     degree_required,
-        "headcount":    headcount,
-        "description":  description or "",
+        "degree_required": degree_required,
+        "headcount": headcount,
+        "description": description or "",
         "requirements": (data.get("requirements") or "").strip() or None,
         "business_type": business_type_val,
-        "job_type":      job_type_val,
-        "route_tags":    route_tags_raw,
-        "skill_tags":    skill_tags_raw,
+        "job_type": job_type_val,
+        "route_tags": route_tags_raw,
+        "skill_tags": skill_tags_raw,
         "urgency_level": urgency_level,
-        "status":        status,
+        "status": status,
         "location_code": location_dict["location_code"] if location_dict else None,
         "location_name": location_dict["location_name"] if location_dict else None,
         "location_path": location_dict["location_path"] if location_dict else None,
         "location_type": location_dict["location_type"] if location_dict else None,
-        "address":       address,
+        "address": address,
         "business_area_code": location_dict["business_area_code"] if location_dict else None,
         "business_area_name": location_dict["business_area_name"] if location_dict else None,
         "function_code": function_code,
         "function_name": function_name,
-        "is_management_role":   is_management_role,
+        "is_management_role": is_management_role,
         "management_headcount": management_headcount,
-        "knowledge_requirements":  knowledge_arr,
+        "knowledge_requirements": knowledge_arr,
         "hard_skill_requirements": hard_skill_arr,
         "soft_skill_requirements": soft_skill_arr,
-        "salary_months":          salary_months,
-        "average_bonus_percent":  average_bonus_percent,
+        "salary_months": salary_months,
+        "average_bonus_percent": average_bonus_percent,
         "commission_bonus_period": commission_bonus_period,
         "commission_bonus_amount": commission_bonus_amount,
-        "has_year_end_bonus":    has_year_end_bonus,
+        "has_year_end_bonus": has_year_end_bonus,
         "year_end_bonus_months": year_end_bonus_months,
         "employment_type": employment_type,
-        "job_level":       job_level,
-        "benefits":        benefits_raw,
+        "job_level": job_level,
+        "benefits": benefits_raw,
     }
     return fields, None
 
@@ -475,7 +481,7 @@ def public_jobs():
             query = query.filter(sub.exists())
 
     try:
-        page      = max(1, int(request.args.get("page", 1)))
+        page = max(1, int(request.args.get("page", 1)))
         page_size = max(1, min(int(request.args.get("page_size", 20)), 500))
     except (ValueError, TypeError):
         page, page_size = 1, 20
@@ -677,33 +683,33 @@ def match_job(job_id):
 
         mr = existing_mrs.get(c.id)
         if mr:
-            mr.score          = match["score"]
-            mr.matched_tags   = match["matched_tags"]
+            mr.score = match["score"]
+            mr.matched_tags = match["matched_tags"]
             mr.score_breakdown = match["score_breakdown"]
-            mr.reason_list    = match["reason_list"]
-            mr.updated_at     = now
+            mr.reason_list = match["reason_list"]
+            mr.updated_at = now
         else:
             mr = MatchResult(
-                job_id         = job.id,
-                candidate_id   = c.id,
-                score          = match["score"],
-                matched_tags   = match["matched_tags"],
-                score_breakdown = match["score_breakdown"],
-                reason_list    = match["reason_list"],
+                job_id=job.id,
+                candidate_id=c.id,
+                score=match["score"],
+                matched_tags=match["matched_tags"],
+                score_breakdown=match["score_breakdown"],
+                reason_list=match["reason_list"],
             )
             new_mrs.append(mr)
 
         results.append({
             **{
-                "id":             mr.id,
-                "job_id":         mr.job_id if mr.id else job.id,
-                "candidate_id":   c.id,
-                "score":          match["score"],
-                "matched_tags":   match["matched_tags"],
+                "id": mr.id,
+                "job_id": mr.job_id if mr.id else job.id,
+                "candidate_id": c.id,
+                "score": match["score"],
+                "matched_tags": match["matched_tags"],
                 "score_breakdown": match["score_breakdown"],
-                "reason_list":    match["reason_list"],
-                "created_at":     (mr.created_at.isoformat() if mr.created_at else None),
-                "updated_at":     now.isoformat(),
+                "reason_list": match["reason_list"],
+                "created_at": (mr.created_at.isoformat() if mr.created_at else None),
+                "updated_at": now.isoformat(),
             },
             "candidate": _public_dict(
                 c,

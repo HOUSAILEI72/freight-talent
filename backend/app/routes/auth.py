@@ -10,7 +10,7 @@ from flask_jwt_extended import (
     get_jwt,
     decode_token,
 )
-from app.extensions import db, limiter, blocklist_add, blocklist_contains, _get_redis, send_mail
+from app.extensions import db, limiter, blocklist_add, _get_redis, send_mail
 from app.models.user import User
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")

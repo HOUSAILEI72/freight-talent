@@ -21,7 +21,7 @@ CHINA_AREA_CODES = frozenset({
 class Subscription(db.Model):
     __tablename__ = "subscriptions"
 
-    id          = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     employer_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id", ondelete="CASCADE"),
@@ -29,7 +29,7 @@ class Subscription(db.Model):
     )
 
     __table_args__ = (
-        db.Index('ix_subscription_employer_id',     'employer_id'),
+        db.Index('ix_subscription_employer_id', 'employer_id'),
         db.Index('ix_subscription_employer_status', 'employer_id', 'status'),
     )
 
@@ -41,15 +41,15 @@ class Subscription(db.Model):
     )
     plan_type = db.Column(db.String(30), nullable=False, default="standard")
     # tier: basic | pro | enterprise
-    tier      = db.Column(db.String(30), nullable=False, default="basic")
+    tier = db.Column(db.String(30), nullable=False, default="basic")
 
     # --- scope ---
     # JSON arrays of codes (strings).  ["ALL"] = unrestricted in that dimension.
-    function_codes     = db.Column(db.JSON, nullable=False, default=list)
+    function_codes = db.Column(db.JSON, nullable=False, default=list)
     business_area_codes = db.Column(db.JSON, nullable=False, default=list)
 
-    starts_at  = db.Column(db.DateTime(timezone=True), nullable=True)
-    ends_at    = db.Column(db.DateTime(timezone=True), nullable=True)
+    starts_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    ends_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     # --- quota tracking ---
     resume_views_used = db.Column(db.Integer, nullable=False, default=0)
@@ -72,7 +72,7 @@ class Subscription(db.Model):
     def quota_dict(self, contacts_initiated: int) -> dict:
         return {
             "resume_views": {"used": self.resume_views_used, "limit": self.RESUME_VIEW_LIMIT},
-            "contacts":     {"used": contacts_initiated,      "limit": self.CONTACT_LIMIT},
+            "contacts": {"used": contacts_initiated, "limit": self.CONTACT_LIMIT},
         }
 
     def is_active(self) -> bool:
@@ -128,20 +128,20 @@ class Subscription(db.Model):
 
     def to_dict(self) -> dict:
         return {
-            "id":          self.id,
+            "id": self.id,
             "employer_id": self.employer_id,
-            "status":      self.status,
-            "is_active":   self.is_active(),
+            "status": self.status,
+            "is_active": self.is_active(),
             # plan_type / tier are legacy column names; plan_id / billing_cycle are the canonical keys
-            "plan_id":       self.tier,
+            "plan_id": self.tier,
             "billing_cycle": self.plan_type,
-            "plan_type":     self.plan_type,   # keep for backward compatibility
-            "tier":          self.tier,         # keep for backward compatibility
-            "function_codes":      self.function_codes,
+            "plan_type": self.plan_type,   # keep for backward compatibility
+            "tier": self.tier,         # keep for backward compatibility
+            "function_codes": self.function_codes,
             "business_area_codes": self.business_area_codes,
             "resume_views_used": self.resume_views_used,
-            "starts_at":   self.starts_at.isoformat() if self.starts_at else None,
-            "ends_at":     self.ends_at.isoformat() if self.ends_at else None,
-            "created_at":  self.created_at.isoformat() if self.created_at else None,
-            "updated_at":  self.updated_at.isoformat() if self.updated_at else None,
+            "starts_at": self.starts_at.isoformat() if self.starts_at else None,
+            "ends_at": self.ends_at.isoformat() if self.ends_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

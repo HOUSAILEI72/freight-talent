@@ -143,10 +143,10 @@ def create_app(config_class=None):
         from app.models import user         # noqa: F401
         from app.models import job          # noqa: F401
         from app.models import candidate    # noqa: F401
-        from app.models import match_result # noqa: F401
+        from app.models import match_result  # noqa: F401
         from app.models import invitation   # noqa: F401
         from app.models import job_application  # noqa: F401
-        from app.models import conversation # noqa: F401
+        from app.models import conversation  # noqa: F401
         from app.models import import_models  # noqa: F401
         from app.models import tag          # noqa: F401
         from app.models import junction_tags  # noqa: F401

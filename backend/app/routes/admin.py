@@ -26,21 +26,21 @@ def overview():
     seven_days_ago = now - timedelta(days=7)
 
     # ── 核心计数 ──────────────────────────────────────────────
-    total_users       = User.query.count()
-    total_candidates  = Candidate.query.count()
-    total_employers   = User.query.filter_by(role='employer').count()
-    total_admins      = User.query.filter_by(role='admin').count()
-    total_jobs        = Job.query.count()
-    published_jobs    = Job.query.filter_by(status='published').count()
+    total_users = User.query.count()
+    total_candidates = Candidate.query.count()
+    total_employers = User.query.filter_by(role='employer').count()
+    total_admins = User.query.filter_by(role='admin').count()
+    total_jobs = Job.query.count()
+    published_jobs = Job.query.filter_by(status='published').count()
     total_invitations = Invitation.query.count()
-    pending_inv       = Invitation.query.filter_by(status='pending').count()
-    accepted_inv      = Invitation.query.filter_by(status='accepted').count()
-    declined_inv      = Invitation.query.filter_by(status='declined').count()
-    total_matches     = MatchResult.query.count()
+    pending_inv = Invitation.query.filter_by(status='pending').count()
+    accepted_inv = Invitation.query.filter_by(status='accepted').count()
+    declined_inv = Invitation.query.filter_by(status='declined').count()
+    total_matches = MatchResult.query.count()
 
     # ── 近7天新增 ─────────────────────────────────────────────
-    new_users_7d      = User.query.filter(User.created_at >= seven_days_ago).count()
-    new_jobs_7d       = Job.query.filter(Job.created_at >= seven_days_ago).count()
+    new_users_7d = User.query.filter(User.created_at >= seven_days_ago).count()
+    new_jobs_7d = Job.query.filter(Job.created_at >= seven_days_ago).count()
     new_candidates_7d = Candidate.query.filter(Candidate.created_at >= seven_days_ago).count()
     new_invitations_7d = Invitation.query.filter(Invitation.created_at >= seven_days_ago).count()
 
@@ -65,7 +65,7 @@ def overview():
 
     activity = []
     for inv in recent_invs:
-        cand_name    = inv.candidate.full_name if inv.candidate else '—'
+        cand_name = inv.candidate.full_name if inv.candidate else '—'
         company_name = (inv.employer.company_name or inv.employer.name) if inv.employer else '—'
         activity.append({
             'icon': 'send',
@@ -124,31 +124,31 @@ def overview():
         day = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
         day_str = day.strftime('%Y-%m-%d')
         trend_7d.append({
-            'date':        day.strftime('%m-%d'),
-            'candidates':  cand_by_day.get(day_str, 0),
-            'jobs':        job_by_day.get(day_str, 0),
+            'date': day.strftime('%m-%d'),
+            'candidates': cand_by_day.get(day_str, 0),
+            'jobs': job_by_day.get(day_str, 0),
             'invitations': inv_by_day.get(day_str, 0),
         })
 
     return jsonify({
         'stats': {
-            'total_users':        total_users,
-            'total_candidates':   total_candidates,
-            'total_employers':    total_employers,
-            'total_admins':       total_admins,
-            'total_jobs':         total_jobs,
-            'published_jobs':     published_jobs,
-            'total_invitations':  total_invitations,
-            'pending_invitations':  pending_inv,
+            'total_users': total_users,
+            'total_candidates': total_candidates,
+            'total_employers': total_employers,
+            'total_admins': total_admins,
+            'total_jobs': total_jobs,
+            'published_jobs': published_jobs,
+            'total_invitations': total_invitations,
+            'pending_invitations': pending_inv,
             'accepted_invitations': accepted_inv,
             'declined_invitations': declined_inv,
-            'total_match_results':  total_matches,
-            'new_users_7d':       new_users_7d,
-            'new_jobs_7d':        new_jobs_7d,
-            'new_candidates_7d':  new_candidates_7d,
+            'total_match_results': total_matches,
+            'new_users_7d': new_users_7d,
+            'new_jobs_7d': new_jobs_7d,
+            'new_candidates_7d': new_candidates_7d,
             'new_invitations_7d': new_invitations_7d,
         },
-        'activity':  activity,
-        'trend_7d':  trend_7d,
+        'activity': activity,
+        'trend_7d': trend_7d,
         'fetched_at': now.strftime("%Y-%m-%dT%H:%M:%S") + "Z",
     }), 200

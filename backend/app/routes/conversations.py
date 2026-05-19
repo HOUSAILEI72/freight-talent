@@ -35,23 +35,23 @@ def _thread_summary_single(thread, current_user_id=None):
         )
 
     return {
-        'id':                thread.id,
-        'invitation_id':     thread.invitation_id,
+        'id': thread.id,
+        'invitation_id': thread.invitation_id,
         'invitation_status': inv.status if inv else 'pending',
-        'job_id':            thread.job_id,
-        'job_title':         thread.job.title if thread.job else '—',
-        'company_name':      (thread.job.company.company_name if thread.job and thread.job.company else '—'),
-        'candidate_id':      thread.candidate_id,
-        'candidate_name':    thread.candidate.full_name if thread.candidate else '—',
-        'employer_id':       thread.employer_id,
-        'function_code':     thread.job.function_code if thread.job else None,
-        'function_name':     thread.job.function_name if thread.job else None,
-        'province':          thread.job.province if thread.job else None,
-        'city_name':         thread.job.city_name if thread.job else None,
-        'latest_message':    latest_msg.content[:60] if latest_msg else None,
+        'job_id': thread.job_id,
+        'job_title': thread.job.title if thread.job else '—',
+        'company_name': (thread.job.company.company_name if thread.job and thread.job.company else '—'),
+        'candidate_id': thread.candidate_id,
+        'candidate_name': thread.candidate.full_name if thread.candidate else '—',
+        'employer_id': thread.employer_id,
+        'function_code': thread.job.function_code if thread.job else None,
+        'function_name': thread.job.function_name if thread.job else None,
+        'province': thread.job.province if thread.job else None,
+        'city_name': thread.job.city_name if thread.job else None,
+        'latest_message': latest_msg.content[:60] if latest_msg else None,
         'latest_message_at': latest_msg.created_at.isoformat() if latest_msg else None,
-        'updated_at':        thread.updated_at.isoformat() if thread.updated_at else None,
-        'unread_count':      unread_count,
+        'updated_at': thread.updated_at.isoformat() if thread.updated_at else None,
+        'unread_count': unread_count,
     }
 
 
@@ -145,30 +145,30 @@ def get_my_conversations():
             latest_msg = latest_map.get(t.id)
             inv = t.invitation
             summaries.append({
-                'id':                t.id,
-                'invitation_id':     t.invitation_id,
+                'id': t.id,
+                'invitation_id': t.invitation_id,
                 'invitation_status': inv.status if inv else 'pending',
-                'job_id':            t.job_id,
-                'job_title':         t.job.title if t.job else '—',
-                'company_name':      (t.job.company.company_name if t.job and t.job.company else '—'),
-                'candidate_id':      t.candidate_id,
-                'candidate_name':    t.candidate.full_name if t.candidate else '—',
-                'employer_id':       t.employer_id,
-                'function_code':     t.job.function_code if t.job else None,
-                'function_name':     t.job.function_name if t.job else None,
-                'province':          t.job.province if t.job else None,
-                'city_name':         t.job.city_name if t.job else None,
-                'latest_message':    latest_msg.content[:60] if latest_msg else None,
+                'job_id': t.job_id,
+                'job_title': t.job.title if t.job else '—',
+                'company_name': (t.job.company.company_name if t.job and t.job.company else '—'),
+                'candidate_id': t.candidate_id,
+                'candidate_name': t.candidate.full_name if t.candidate else '—',
+                'employer_id': t.employer_id,
+                'function_code': t.job.function_code if t.job else None,
+                'function_name': t.job.function_name if t.job else None,
+                'province': t.job.province if t.job else None,
+                'city_name': t.job.city_name if t.job else None,
+                'latest_message': latest_msg.content[:60] if latest_msg else None,
                 'latest_message_at': latest_msg.created_at.isoformat() if latest_msg else None,
-                'updated_at':        t.updated_at.isoformat() if t.updated_at else None,
-                'unread_count':      unread_map.get(t.id, 0),
+                'updated_at': t.updated_at.isoformat() if t.updated_at else None,
+                'unread_count': unread_map.get(t.id, 0),
             })
 
         total_unread = sum(s['unread_count'] for s in summaries)
         return jsonify({
-            'success':       True,
+            'success': True,
             'conversations': summaries,
-            'total_unread':  total_unread,
+            'total_unread': total_unread,
         }), 200
 
     except Exception as e:
@@ -180,7 +180,7 @@ def get_my_conversations():
         payload = {
             'success': False,
             'message': '加载会话失败',
-            'error':   'Failed to load conversations',
+            'error': 'Failed to load conversations',
         }
         if current_app.debug:
             payload['detail'] = str(e)
@@ -247,10 +247,10 @@ def get_messages(thread_id):
     next_before = rows[0].id if (rows and has_more) else None
 
     return jsonify({
-        'success':     True,
-        'thread':      _thread_summary_single(thread, user.id),
-        'messages':    [m.to_dict() for m in rows],
-        'has_more':    has_more,
+        'success': True,
+        'thread': _thread_summary_single(thread, user.id),
+        'messages': [m.to_dict() for m in rows],
+        'has_more': has_more,
         'next_before': next_before,
     }), 200
 
@@ -269,7 +269,7 @@ def send_message(thread_id):
     if err:
         return err
 
-    data    = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or {}
     content = (data.get('content') or '').strip()
     if not content:
         return _err('消息内容不能为空')
@@ -277,10 +277,10 @@ def send_message(thread_id):
         return _err('消息过长，最多 2000 字')
 
     msg = Message(
-        thread_id      = thread_id,
-        sender_user_id = user.id,
-        sender_role    = user.role,
-        content        = content,
+        thread_id=thread_id,
+        sender_user_id=user.id,
+        sender_role=user.role,
+        content=content,
     )
     db.session.add(msg)
     thread.updated_at = datetime.now(timezone.utc)
@@ -291,11 +291,11 @@ def send_message(thread_id):
     socketio.emit('new_message', msg_dict, room=f'thread_{thread_id}')
 
     conversation_update = {
-        'thread_id':         thread_id,
-        'latest_message':    content[:60],
+        'thread_id': thread_id,
+        'latest_message': content[:60],
         'latest_message_at': msg.created_at.isoformat(),
-        'updated_at':        thread.updated_at.isoformat(),
-        'sender_user_id':    user.id,
+        'updated_at': thread.updated_at.isoformat(),
+        'sender_user_id': user.id,
     }
     socketio.emit('conversation_updated', conversation_update,
                   room=f'user_{thread.employer_id}')
@@ -351,7 +351,7 @@ def open_conversation():
             return sub_err
 
     data = request.get_json(silent=True) or {}
-    job_id       = data.get('job_id')
+    job_id = data.get('job_id')
     candidate_id = data.get('candidate_id')
     if not job_id or not candidate_id:
         return _err('job_id 和 candidate_id 为必填项')

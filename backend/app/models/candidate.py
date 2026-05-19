@@ -23,9 +23,9 @@ class Candidate(db.Model):
     expected_salary_label = db.Column(db.String(40), nullable=True)  # auto-computed, e.g. "18K-25K/月"
 
     experience_years = db.Column(db.Integer, nullable=True)
-    age              = db.Column(db.Integer, nullable=True)
-    birth_year       = db.Column(db.Integer, nullable=True)
-    birth_month      = db.Column(db.Integer, nullable=True)
+    age = db.Column(db.Integer, nullable=True)
+    birth_year = db.Column(db.Integer, nullable=True)
+    birth_month = db.Column(db.Integer, nullable=True)
     gender = db.Column(
         db.Enum("male", "female", name="candidate_gender"), nullable=True
     )
@@ -37,9 +37,9 @@ class Candidate(db.Model):
     # 多条结构化经历（JSON 数组）
     # 每条 work_experience: {"period": "2020-2024", "title": "...", "company": "..."}
     # 每条 education_experience: {"period": "2014-2018", "school": "...", "major": "...", "degree": "..."}
-    work_experiences      = db.Column(db.JSON, nullable=True)
+    work_experiences = db.Column(db.JSON, nullable=True)
     education_experiences = db.Column(db.JSON, nullable=True)
-    certificates          = db.Column(db.JSON, nullable=True)   # ["国际货代证","报关员"]
+    certificates = db.Column(db.JSON, nullable=True)   # ["国际货代证","报关员"]
 
     # 货代行业分类
     business_type = db.Column(db.String(50), nullable=True)   # "海运" / "空运"
@@ -64,38 +64,38 @@ class Candidate(db.Model):
     contact_visible = db.Column(db.Boolean, nullable=False, default=False)
 
     # ── Phase C: Standard location + business area ──
-    location_code      = db.Column(db.String(50), nullable=True, index=True)
-    location_name      = db.Column(db.String(100), nullable=True)
-    location_path      = db.Column(db.String(255), nullable=True)
-    location_type      = db.Column(db.String(50), nullable=True)
+    location_code = db.Column(db.String(50), nullable=True, index=True)
+    location_name = db.Column(db.String(100), nullable=True)
+    location_path = db.Column(db.String(255), nullable=True)
+    location_type = db.Column(db.String(50), nullable=True)
     business_area_code = db.Column(db.String(50), nullable=True, index=True)
     business_area_name = db.Column(db.String(100), nullable=True)
 
     # ── CAND-2A: Profile builder fields ──
-    current_responsibilities      = db.Column(db.Text, nullable=True)
-    function_code                 = db.Column(db.String(50), nullable=True, index=True)
-    function_name                 = db.Column(db.String(100), nullable=True)
-    is_management_role            = db.Column(db.Boolean, nullable=True)
-    management_headcount          = db.Column(db.Integer, nullable=True)
+    current_responsibilities = db.Column(db.Text, nullable=True)
+    function_code = db.Column(db.String(50), nullable=True, index=True)
+    function_name = db.Column(db.String(100), nullable=True)
+    is_management_role = db.Column(db.Boolean, nullable=True)
+    management_headcount = db.Column(db.Integer, nullable=True)
 
     # 能力画像（独立于 legacy skill_tags / route_tags）
-    knowledge_tags                = db.Column(db.JSON, nullable=True)
-    hard_skill_tags               = db.Column(db.JSON, nullable=True)
-    soft_skill_tags               = db.Column(db.JSON, nullable=True)
+    knowledge_tags = db.Column(db.JSON, nullable=True)
+    hard_skill_tags = db.Column(db.JSON, nullable=True)
+    soft_skill_tags = db.Column(db.JSON, nullable=True)
 
     # 当前薪酬结构（与 expected_salary_* 分离）
-    current_salary_min               = db.Column(db.Integer, nullable=True)
-    current_salary_max               = db.Column(db.Integer, nullable=True)
-    current_salary_months            = db.Column(db.Integer, nullable=True)
-    current_average_bonus_percent    = db.Column(db.Float, nullable=True)   # legacy, kept for compat
-    current_commission_bonus_period  = db.Column(db.String(20), nullable=True)  # not_applicable / monthly / quarterly / semi_annual
-    current_commission_bonus_amount  = db.Column(db.Float, nullable=True)
-    current_has_year_end_bonus       = db.Column(db.Boolean, nullable=True)
-    current_year_end_bonus_months    = db.Column(db.Float, nullable=True)
+    current_salary_min = db.Column(db.Integer, nullable=True)
+    current_salary_max = db.Column(db.Integer, nullable=True)
+    current_salary_months = db.Column(db.Integer, nullable=True)
+    current_average_bonus_percent = db.Column(db.Float, nullable=True)   # legacy, kept for compat
+    current_commission_bonus_period = db.Column(db.String(20), nullable=True)  # not_applicable / monthly / quarterly / semi_annual
+    current_commission_bonus_amount = db.Column(db.Float, nullable=True)
+    current_has_year_end_bonus = db.Column(db.Boolean, nullable=True)
+    current_year_end_bonus_months = db.Column(db.Float, nullable=True)
 
     # 服务端计算的档案完整度状态
-    profile_status                = db.Column(db.String(30), nullable=True, index=True)
-    profile_completed_at          = db.Column(db.DateTime, nullable=True)
+    profile_status = db.Column(db.String(30), nullable=True, index=True)
+    profile_completed_at = db.Column(db.DateTime, nullable=True)
 
     # 简历文件
     resume_file_path = db.Column(db.String(300), nullable=True)
@@ -114,7 +114,7 @@ class Candidate(db.Model):
 
     __table_args__ = (
         db.Index('ix_candidate_avail_func_area', 'availability_status', 'function_code', 'business_area_code'),
-        db.Index('ix_candidates_created_at',     'created_at'),
+        db.Index('ix_candidates_created_at', 'created_at'),
     )
 
     user = db.relationship("User", backref=db.backref("candidate_profile", uselist=False))
@@ -165,14 +165,14 @@ class Candidate(db.Model):
             "business_area_code": self.business_area_code,
             "business_area_name": self.business_area_name,
             # ── CAND-2A: capability profile (always public) ──
-            "function_code":      self.function_code,
-            "function_name":      self.function_name,
+            "function_code": self.function_code,
+            "function_name": self.function_name,
             "is_management_role": self.is_management_role,
             "management_headcount": self.management_headcount,
-            "knowledge_tags":     self.knowledge_tags or [],
-            "hard_skill_tags":    self.hard_skill_tags or [],
-            "soft_skill_tags":    self.soft_skill_tags or [],
-            "profile_status":     self.profile_status,
+            "knowledge_tags": self.knowledge_tags or [],
+            "hard_skill_tags": self.hard_skill_tags or [],
+            "soft_skill_tags": self.soft_skill_tags or [],
+            "profile_status": self.profile_status,
             "profile_completed_at": (
                 self.profile_completed_at.isoformat() if self.profile_completed_at else None
             ),
@@ -193,52 +193,52 @@ class Candidate(db.Model):
 
         if include_private:
             data.update({
-                "full_name":            self.full_name,
-                "age":                  self.age,
-                "birth_year":          self.birth_year,
-                "birth_month":         self.birth_month,
-                "experience_years":     self.experience_years,
-                "education":            self.education,
-                "availability_status":  self.availability_status,
-                "work_experiences":     self.work_experiences or [],
+                "full_name": self.full_name,
+                "age": self.age,
+                "birth_year": self.birth_year,
+                "birth_month": self.birth_month,
+                "experience_years": self.experience_years,
+                "education": self.education,
+                "availability_status": self.availability_status,
+                "work_experiences": self.work_experiences or [],
                 "education_experiences": self.education_experiences or [],
-                "certificates":         self.certificates or [],
+                "certificates": self.certificates or [],
                 # ── CAND-2A: current-company sensitive fields ──
-                "current_responsibilities":      self.current_responsibilities,
-                "current_salary_min":               self.current_salary_min,
-                "current_salary_max":               self.current_salary_max,
-                "current_salary_months":            self.current_salary_months,
-                "current_commission_bonus_period":  self.current_commission_bonus_period,
-                "current_commission_bonus_amount":  self.current_commission_bonus_amount,
-                "current_has_year_end_bonus":       self.current_has_year_end_bonus,
-                "current_year_end_bonus_months":    self.current_year_end_bonus_months,
-                "private_visible":      True,
+                "current_responsibilities": self.current_responsibilities,
+                "current_salary_min": self.current_salary_min,
+                "current_salary_max": self.current_salary_max,
+                "current_salary_months": self.current_salary_months,
+                "current_commission_bonus_period": self.current_commission_bonus_period,
+                "current_commission_bonus_amount": self.current_commission_bonus_amount,
+                "current_has_year_end_bonus": self.current_has_year_end_bonus,
+                "current_year_end_bonus_months": self.current_year_end_bonus_months,
+                "private_visible": True,
             })
         else:
             # 隐私模式：脱敏的占位
             data.update({
-                "full_name":            (
+                "full_name": (
                     (self.full_name[0] + ("先生" if self.gender == "male" else "女士" if self.gender == "female" else "先生"))
                     if self.full_name else f"候选人 #{self.id}"
                 ),
-                "age":                  None,
-                "birth_year":          None,
-                "birth_month":         None,
-                "experience_years":     None,
-                "education":            None,
-                "availability_status":  None,
-                "work_experiences":     [],
+                "age": None,
+                "birth_year": None,
+                "birth_month": None,
+                "experience_years": None,
+                "education": None,
+                "availability_status": None,
+                "work_experiences": [],
                 "education_experiences": [],
-                "certificates":         [],
-                "current_responsibilities":      None,
-                "current_salary_min":            None,
-                "current_salary_max":            None,
-                "current_salary_months":         None,
+                "certificates": [],
+                "current_responsibilities": None,
+                "current_salary_min": None,
+                "current_salary_max": None,
+                "current_salary_months": None,
                 "current_commission_bonus_period": None,
                 "current_commission_bonus_amount": None,
-                "current_has_year_end_bonus":    None,
+                "current_has_year_end_bonus": None,
                 "current_year_end_bonus_months": None,
-                "private_visible":      False,
+                "private_visible": False,
             })
 
         if include_contact and include_private:

@@ -116,6 +116,7 @@ def register_socket_events(socketio):
             join_room(f'user_{user_id}')
 
         emit('reauthenticated', {'status': 'ok', 'user_id': user_id})
+
     @socketio.on('join_thread')
     def handle_join_thread(data):
         """

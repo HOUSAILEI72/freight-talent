@@ -14,18 +14,18 @@ from urllib.parse import urlparse
 _log = logging.getLogger(__name__)
 
 _MIME = {
-    "pdf":  "application/pdf",
-    "doc":  "application/msword",
+    "pdf": "application/pdf",
+    "doc": "application/msword",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
 
 def _client_and_settings():
     """返回 (CosS3Client, bucket, region, cdn_domain) 或 (None, ...) 若未配置。"""
-    secret_id  = os.getenv("COS_SECRET_ID", "")
+    secret_id = os.getenv("COS_SECRET_ID", "")
     secret_key = os.getenv("COS_SECRET_KEY", "")
-    bucket     = os.getenv("COS_BUCKET", "")
-    region     = os.getenv("COS_REGION", "ap-guangzhou")
+    bucket = os.getenv("COS_BUCKET", "")
+    region = os.getenv("COS_REGION", "ap-guangzhou")
     cdn_domain = os.getenv("COS_CDN_DOMAIN", "")
 
     if not secret_id or not secret_key or not bucket:

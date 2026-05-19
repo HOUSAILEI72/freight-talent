@@ -245,19 +245,19 @@ def my_applications():
         j = r.job
         if j is not None:
             d["job"] = {
-                "id":              j.id,
-                "title":           j.title,
+                "id": j.id,
+                "title": j.title,
                 # Job has no company_name column; it's derived from the
                 # relationship to User. Mirror Job.to_dict()'s convention.
-                "company_name":    j.company.company_name if j.company else None,
-                "city":            j.city,
-                "city_name":       getattr(j, "city_name", None),
-                "salary_label":    getattr(j, "salary_label", None),
-                "location_name":   getattr(j, "location_name", None),
-                "location_path":   getattr(j, "location_path", None),
-                "function_code":   getattr(j, "function_code", None),
-                "function_name":   getattr(j, "function_name", None),
-                "status":          j.status,
+                "company_name": j.company.company_name if j.company else None,
+                "city": j.city,
+                "city_name": getattr(j, "city_name", None),
+                "salary_label": getattr(j, "salary_label", None),
+                "location_name": getattr(j, "location_name", None),
+                "location_path": getattr(j, "location_path", None),
+                "function_code": getattr(j, "function_code", None),
+                "function_name": getattr(j, "function_name", None),
+                "status": j.status,
             }
         out.append(d)
     return jsonify({"success": True, "applications": out})
@@ -295,9 +295,9 @@ def received_applications():
         j = r.job
         if j is not None:
             d["job"] = {
-                "id":           j.id,
-                "title":        j.title,
-                "city":         j.city,
+                "id": j.id,
+                "title": j.title,
+                "city": j.city,
                 "function_code": getattr(j, "function_code", None),
                 "function_name": getattr(j, "function_name", None),
             }
@@ -306,16 +306,16 @@ def received_applications():
         c = r.candidate
         if c is not None:
             d["candidate"] = {
-                "id":              c.id,
-                "anonymous_name":  (c.full_name or "")[0] + "**" if c.full_name else f"候选人 #{c.id}",
-                "current_title":   c.current_title,
-                "function_code":   getattr(c, "function_code", None),
-                "function_name":   getattr(c, "function_name", None),
+                "id": c.id,
+                "anonymous_name": (c.full_name or "")[0] + "**" if c.full_name else f"候选人 #{c.id}",
+                "current_title": c.current_title,
+                "function_code": getattr(c, "function_code", None),
+                "function_name": getattr(c, "function_name", None),
                 "business_area_code": getattr(c, "business_area_code", None),
                 "business_area_name": getattr(c, "business_area_name", None),
                 "expected_salary_label": c.expected_salary_label,
                 "experience_years": c.experience_years,
-                "freshness_days":   c.freshness_days(),
+                "freshness_days": c.freshness_days(),
             }
         out.append(d)
     return jsonify({"success": True, "applications": out})
@@ -378,12 +378,12 @@ def update_application_status(application_id):
 
     # ── State machine validation ─────────────────────────────────────────────
     ALLOWED_TRANSITIONS = {
-        "saved":       {"withdrawn"},
-        "submitted":   {"viewed", "shortlisted", "rejected", "withdrawn"},
-        "viewed":      {"shortlisted", "rejected", "withdrawn"},
+        "saved": {"withdrawn"},
+        "submitted": {"viewed", "shortlisted", "rejected", "withdrawn"},
+        "viewed": {"shortlisted", "rejected", "withdrawn"},
         "shortlisted": {"rejected", "withdrawn"},
-        "rejected":    set(),  # terminal (admin can override via permission check above)
-        "withdrawn":   set(),  # terminal (admin can override via permission check above)
+        "rejected": set(),  # terminal (admin can override via permission check above)
+        "withdrawn": set(),  # terminal (admin can override via permission check above)
     }
 
     if user.role != "admin":
@@ -400,9 +400,9 @@ def update_application_status(application_id):
     db.session.commit()
 
     STATUS_LABELS = {
-        'viewed':      '已查看您的投递',
+        'viewed': '已查看您的投递',
         'shortlisted': '已将您加入候选名单',
-        'rejected':    '暂不匹配您的投递',
+        'rejected': '暂不匹配您的投递',
     }
     label = STATUS_LABELS.get(new_status)
     if label and user.role == 'employer':

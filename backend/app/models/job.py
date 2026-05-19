@@ -14,9 +14,9 @@ class Job(db.Model):
     title = db.Column(db.String(100), nullable=False)
     city = db.Column(db.String(50), nullable=False)
     # 三级行政区（来自 "省市区" 字段，用 - 分隔上传）。city 字段保留兼容用，等同于 city_name。
-    province  = db.Column(db.String(50), nullable=True, index=True)
+    province = db.Column(db.String(50), nullable=True, index=True)
     city_name = db.Column(db.String(50), nullable=True, index=True)
-    district  = db.Column(db.String(50), nullable=True, index=True)
+    district = db.Column(db.String(50), nullable=True, index=True)
     salary_min = db.Column(db.Integer, nullable=True)   # 单位：元/月
     salary_max = db.Column(db.Integer, nullable=True)
     salary_label = db.Column(db.String(30), nullable=True)   # 原始薪资文字，如 "20k-30k" / "面议"
@@ -39,33 +39,33 @@ class Job(db.Model):
     urgency_level = db.Column(db.Integer, nullable=True, default=2)   # 1紧急 2正常 3不急
 
     # ── Phase C: Standard location + business area ──
-    location_code      = db.Column(db.String(50), nullable=True, index=True)
-    location_name      = db.Column(db.String(100), nullable=True)
-    location_path      = db.Column(db.String(255), nullable=True)
-    location_type      = db.Column(db.String(50), nullable=True)
-    address            = db.Column(db.String(200), nullable=True)
+    location_code = db.Column(db.String(50), nullable=True, index=True)
+    location_name = db.Column(db.String(100), nullable=True)
+    location_path = db.Column(db.String(255), nullable=True)
+    location_type = db.Column(db.String(50), nullable=True)
+    address = db.Column(db.String(200), nullable=True)
     business_area_code = db.Column(db.String(50), nullable=True, index=True)
     business_area_name = db.Column(db.String(100), nullable=True)
 
     # ── Phase C: Function (sector) ──
-    function_code      = db.Column(db.String(50), nullable=True, index=True)
-    function_name      = db.Column(db.String(100), nullable=True)
+    function_code = db.Column(db.String(50), nullable=True, index=True)
+    function_name = db.Column(db.String(100), nullable=True)
 
     # ── Phase C: Management flag ──
     is_management_role = db.Column(db.Boolean, nullable=True)
     management_headcount = db.Column(db.Integer, nullable=True)
 
     # ── Phase C: Knowledge / skill arrays ──
-    knowledge_requirements  = db.Column(db.JSON, nullable=True)
+    knowledge_requirements = db.Column(db.JSON, nullable=True)
     hard_skill_requirements = db.Column(db.JSON, nullable=True)
     soft_skill_requirements = db.Column(db.JSON, nullable=True)
 
     # ── Phase C: Salary structure ──
-    salary_months         = db.Column(db.Integer, nullable=True)
+    salary_months = db.Column(db.Integer, nullable=True)
     average_bonus_percent = db.Column(db.Float, nullable=True)
     commission_bonus_period = db.Column(db.String(20), nullable=True)   # not_applicable / monthly / quarterly / semi_annual
     commission_bonus_amount = db.Column(db.Float, nullable=True)
-    has_year_end_bonus    = db.Column(db.Boolean, nullable=True)
+    has_year_end_bonus = db.Column(db.Boolean, nullable=True)
     year_end_bonus_months = db.Column(db.Float, nullable=True)
 
     employment_type = db.Column(db.String(20), nullable=True)  # 全职 / 兼职 / 实习生

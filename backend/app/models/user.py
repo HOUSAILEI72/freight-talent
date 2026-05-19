@@ -18,7 +18,7 @@ class User(db.Model):
     last_login = db.Column(db.DateTime, nullable=True)
 
     __table_args__ = (
-        db.Index('ix_users_role',       'role'),
+        db.Index('ix_users_role', 'role'),
         db.Index('ix_users_created_at', 'created_at'),
     )
 

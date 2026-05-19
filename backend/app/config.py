@@ -35,7 +35,7 @@ class Config:
             "Add it to backend/.env (at least 32 random characters)."
         )
     _access_minutes = os.getenv("JWT_ACCESS_TOKEN_EXPIRES_MINUTES")
-    _access_hours   = os.getenv("JWT_ACCESS_TOKEN_EXPIRES_HOURS")
+    _access_hours = os.getenv("JWT_ACCESS_TOKEN_EXPIRES_HOURS")
     if _access_minutes is not None:
         JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=int(_access_minutes))
     elif _access_hours is not None:
@@ -125,8 +125,8 @@ def _validate_production_env():
     missing = []
     for var, desc in [
         ("RATELIMIT_STORAGE_URI", "redis://127.0.0.1:6379/0"),
-        ("REDIS_URL",              "redis://127.0.0.1:6379/0"),
-        ("CORS_ORIGINS",           "https://yourdomain.com"),
+        ("REDIS_URL", "redis://127.0.0.1:6379/0"),
+        ("CORS_ORIGINS", "https://yourdomain.com"),
     ]:
         if not os.getenv(var):
             missing.append(f"  {var}  (例: {desc})")

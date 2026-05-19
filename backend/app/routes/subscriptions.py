@@ -24,11 +24,11 @@ VALID_FUNCTIONS = [
 ]
 
 AVAILABLE_REGIONS = [
-    {"code": "GREAT_CHINA",   "label": "中国大区",   "hint": "华东·华北·华南·华西·华中·港澳台"},
-    {"code": "SOUTHEAST_ASIA","label": "东南亚",     "hint": "Southeast Asia"},
-    {"code": "MIDDLE_EAST",   "label": "中东",       "hint": "Middle East"},
-    {"code": "EUROPE",        "label": "欧洲",       "hint": "Europe"},
-    {"code": "AMERICAS",      "label": "美洲",       "hint": "Americas"},
+    {"code": "GREAT_CHINA", "label": "中国大区", "hint": "华东·华北·华南·华西·华中·港澳台"},
+    {"code": "SOUTHEAST_ASIA", "label": "东南亚", "hint": "Southeast Asia"},
+    {"code": "MIDDLE_EAST", "label": "中东", "hint": "Middle East"},
+    {"code": "EUROPE", "label": "欧洲", "hint": "Europe"},
+    {"code": "AMERICAS", "label": "美洲", "hint": "Americas"},
 ]
 VALID_AREA_CODES = {r["code"] for r in AVAILABLE_REGIONS}
 
@@ -141,7 +141,7 @@ def get_quota():
             "success": True,
             "has_active": False,
             "resume_views": {"used": 0, "limit": Subscription.RESUME_VIEW_LIMIT},
-            "contacts":     {"used": 0, "limit": Subscription.CONTACT_LIMIT},
+            "contacts": {"used": 0, "limit": Subscription.CONTACT_LIMIT},
         })
 
     from app.models.invitation import Invitation

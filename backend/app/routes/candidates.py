@@ -39,6 +39,7 @@ def _build_salary_label(salary_min, salary_max, period):
     if not salary_min and not salary_max:
         return None
     period_label = "/年" if period == "year" else "/月"
+
     def fmt(n):
         k = round(n / 1000)
         return f"{k}K"
@@ -196,18 +197,21 @@ def update_me():
     # Only overwrite when the client actually sent a key — otherwise we
     # preserve the existing column value (UploadResume legacy path never
     # sends these).
-    knowledge_tags_val   = None
-    hard_skill_tags_val  = None
-    soft_skill_tags_val  = None
+    knowledge_tags_val = None
+    hard_skill_tags_val = None
+    soft_skill_tags_val = None
     if "knowledge_tags" in data:
         knowledge_tags_val, err = _validate_tags(data.get("knowledge_tags"), "knowledge_tags")
-        if err: return _err(err)
+        if err:
+            return _err(err)
     if "hard_skill_tags" in data:
         hard_skill_tags_val, err = _validate_tags(data.get("hard_skill_tags"), "hard_skill_tags")
-        if err: return _err(err)
+        if err:
+            return _err(err)
     if "soft_skill_tags" in data:
         soft_skill_tags_val, err = _validate_tags(data.get("soft_skill_tags"), "soft_skill_tags")
-        if err: return _err(err)
+        if err:
+            return _err(err)
 
     VALID_AVAIL = {'open', 'passive_now', 'passive', 'closed'}
     avail = data.get("availability_status") or "open"
@@ -256,29 +260,36 @@ def update_me():
         is_management_val = bool(v) if v is not None else None
 
     def _opt_int(name):
-        if name not in data: return sentinel, None
+        if name not in data:
+            return sentinel, None
         v = data.get(name)
-        if v is None or v == "": return None, None
+        if v is None or v == "":
+            return None, None
         try:
             return int(v), None
         except (ValueError, TypeError):
             return None, f"{name} 必须为整数"
 
     def _opt_float(name):
-        if name not in data: return sentinel, None
+        if name not in data:
+            return sentinel, None
         v = data.get(name)
-        if v is None or v == "": return None, None
+        if v is None or v == "":
+            return None, None
         try:
             return float(v), None
         except (ValueError, TypeError):
             return None, f"{name} 必须为数字"
 
     csm_val, e = _opt_int("current_salary_min")
-    if e: return _err(e)
+    if e:
+        return _err(e)
     csx_val, e = _opt_int("current_salary_max")
-    if e: return _err(e)
+    if e:
+        return _err(e)
     cs_months_val, e = _opt_int("current_salary_months")
-    if e: return _err(e)
+    if e:
+        return _err(e)
     if cs_months_val is not sentinel and cs_months_val is not None and cs_months_val not in (12, 13, 14):
         return _err("current_salary_months 只能是 12 / 13 / 14")
     VALID_COMMISSION_PERIODS = {'not_applicable', 'monthly', 'quarterly', 'semi_annual'}
@@ -289,9 +300,11 @@ def update_me():
             return _err("current_commission_bonus_period 只能是 not_applicable / monthly / quarterly / semi_annual")
         cbp_val = v
     cba_val, e = _opt_float("current_commission_bonus_amount")
-    if e: return _err(e)
+    if e:
+        return _err(e)
     yebm_val, e = _opt_float("current_year_end_bonus_months")
-    if e: return _err(e)
+    if e:
+        return _err(e)
     if yebm_val is not sentinel and yebm_val is not None and not (0 <= yebm_val <= 24):
         return _err("current_year_end_bonus_months 必须在 0-24 之间")
 
@@ -310,7 +323,8 @@ def update_me():
 
     # ── CAND-2A: structured array shapes ────────────────────────────────────
     def _validate_object_array(val, name, required_keys=()):
-        if val is None: return [], None
+        if val is None:
+            return [], None
         if not isinstance(val, list):
             return None, f"{name} 必须为数组"
         out = []
@@ -330,7 +344,8 @@ def update_me():
             data.get("work_experiences"), "work_experiences",
             required_keys=("company_name", "title")
         )
-        if err: return _err(err)
+        if err:
+            return _err(err)
         work_exp_val = we
 
     edu_exp_val = sentinel
@@ -338,7 +353,8 @@ def update_me():
         ee, err = _validate_object_array(
             data.get("education_experiences"), "education_experiences"
         )
-        if err: return _err(err)
+        if err:
+            return _err(err)
         edu_exp_val = ee
 
     certificates_val = sentinel
@@ -399,10 +415,10 @@ def update_me():
 
     # Phase C: persist standard location + computed business_area
     if location_dict:
-        profile.location_code      = location_dict["location_code"]
-        profile.location_name      = location_dict["location_name"]
-        profile.location_path      = location_dict["location_path"]
-        profile.location_type      = location_dict["location_type"]
+        profile.location_code = location_dict["location_code"]
+        profile.location_name = location_dict["location_name"]
+        profile.location_path = location_dict["location_path"]
+        profile.location_type = location_dict["location_type"]
         profile.business_area_code = location_dict["business_area_code"]
         profile.business_area_name = location_dict["business_area_name"]
 
@@ -445,24 +461,25 @@ def update_me():
     # ── CAND-2A: server-computed profile_status (mirrors front-end gate) ───
     def _is_nonempty_str(v):
         return isinstance(v, str) and v.strip() != ""
+
     def _is_nonempty_arr(v):
         return isinstance(v, list) and len(v) > 0
 
     is_complete = (
-        _is_nonempty_str(profile.full_name) and
-        _is_nonempty_str(profile.phone) and
-        _is_nonempty_str(profile.email) and
-        _is_nonempty_str(profile.location_code) and
-        _is_nonempty_str(profile.location_name) and
-        _is_nonempty_str(profile.location_path) and
-        _is_nonempty_str(profile.location_type) and
-        _is_nonempty_str(profile.current_company) and
-        _is_nonempty_str(profile.current_title) and
-        _is_nonempty_str(profile.current_responsibilities) and
-        _is_nonempty_arr(profile.work_experiences) and
-        _is_nonempty_arr(profile.knowledge_tags) and
-        _is_nonempty_arr(profile.hard_skill_tags) and
-        _is_nonempty_arr(profile.soft_skill_tags)
+        _is_nonempty_str(profile.full_name)
+        and _is_nonempty_str(profile.phone)
+        and _is_nonempty_str(profile.email)
+        and _is_nonempty_str(profile.location_code)
+        and _is_nonempty_str(profile.location_name)
+        and _is_nonempty_str(profile.location_path)
+        and _is_nonempty_str(profile.location_type)
+        and _is_nonempty_str(profile.current_company)
+        and _is_nonempty_str(profile.current_title)
+        and _is_nonempty_str(profile.current_responsibilities)
+        and _is_nonempty_arr(profile.work_experiences)
+        and _is_nonempty_arr(profile.knowledge_tags)
+        and _is_nonempty_arr(profile.hard_skill_tags)
+        and _is_nonempty_arr(profile.soft_skill_tags)
     )
     profile.profile_status = "complete" if is_complete else "incomplete"
     if is_complete and not profile.profile_completed_at:
@@ -533,12 +550,12 @@ def list_candidates():
         return _err("仅企业或管理员账号可查看候选人列表", 403)
 
     try:
-        page      = max(1, int(request.args.get("page", 1)))
+        page = max(1, int(request.args.get("page", 1)))
         page_size = max(1, min(int(request.args.get("page_size", 20)), 100))
     except (ValueError, TypeError):
         page, page_size = 1, 20
 
-    pool_type   = request.args.get("pool_type", "all").strip()
+    pool_type = request.args.get("pool_type", "all").strip()
     employer_id = user.id if user.role == "employer" else None
 
     job_id_raw = request.args.get("job_id", "").strip()
@@ -738,7 +755,6 @@ def _employer_has_accepted_invite(employer_id: int, candidate_id: int) -> bool:
     return employer_can_view_private_profile(employer_id, candidate_id)
 
 
-
 @candidates_bp.post("/upload-resume")
 @jwt_required()
 def upload_resume():
@@ -856,8 +872,8 @@ def view_candidate_resume(candidate_id):
 
     ext = profile.resume_file_name.rsplit(".", 1)[-1].lower() if "." in profile.resume_file_name else ""
     mimetype_map = {
-        "pdf":  "application/pdf",
-        "doc":  "application/msword",
+        "pdf": "application/pdf",
+        "doc": "application/msword",
         "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     }
     return _send_file(

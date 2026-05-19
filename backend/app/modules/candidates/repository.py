@@ -151,9 +151,9 @@ def list_candidates_with_filters(
             existing = application_map.get(app.candidate_id)
             if existing is None or app.id > existing["application_id"]:
                 application_map[app.candidate_id] = {
-                    "application_id":      app.id,
-                    "application_status":  app.status,
-                    "application_job_id":  app.job_id,
+                    "application_id": app.id,
+                    "application_status": app.status,
+                    "application_job_id": app.job_id,
                     "application_message": app.message,
                 }
 

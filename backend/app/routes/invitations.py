@@ -33,9 +33,9 @@ def create_invitation():
             return sub_err
 
     data = request.get_json(silent=True) or {}
-    job_id       = data.get('job_id')
+    job_id = data.get('job_id')
     candidate_id = data.get('candidate_id')
-    message      = data.get('message', '').strip()
+    message = data.get('message', '').strip()
 
     if not job_id or not candidate_id:
         return jsonify({'message': 'job_id 和 candidate_id 为必填项'}), 400
@@ -251,10 +251,10 @@ def get_my_invitations():
     result = []
     for inv in invs:
         item = inv.to_dict()
-        item['job_title']    = inv.job.title if inv.job else '—'
+        item['job_title'] = inv.job.title if inv.job else '—'
         item['company_name'] = inv.job.company.company_name if inv.job and inv.job.company else '—'
-        item['job_city']     = inv.job.city if inv.job else '—'
-        item['thread_id']    = inv.thread.id if inv.thread else None
+        item['job_city'] = inv.job.city if inv.job else '—'
+        item['thread_id'] = inv.thread.id if inv.thread else None
         result.append(item)
 
     return jsonify({'invitations': result}), 200
@@ -288,15 +288,15 @@ def company_summary():
             )
             .first()
         )
-    total    = int(row.total    or 0)
+    total = int(row.total or 0)
     accepted = int(row.accepted or 0)
     declined = int(row.declined or 0)
 
     replied = accepted + declined
 
     return jsonify({
-        'total':    total,
-        'replied':  replied,
+        'total': total,
+        'replied': replied,
         'accepted': accepted,
         'declined': declined,
     }), 200

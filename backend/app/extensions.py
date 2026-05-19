@@ -106,4 +106,3 @@ def send_mail(to, subject, html_body):
     except Exception as e:
         logging.getLogger(__name__).error(f"Failed to send email to {to}: {e}")
         raise   # 让调用方感知 SMTP 失败
-

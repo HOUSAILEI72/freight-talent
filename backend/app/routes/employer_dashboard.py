@@ -4,7 +4,6 @@
 X 轴是时间，Function/Area 是筛选条件。
 统计候选人数量随时间变化。
 """
-from collections import defaultdict
 from datetime import date, datetime, timezone, timedelta
 
 from flask import Blueprint, jsonify, request
@@ -12,7 +11,6 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func as sa_func, or_
 
 from app.extensions import db
-from app.models.candidate import Candidate
 from app.models.employer_candidate_favorite import EmployerCandidateFavorite
 from app.models.invitation import Invitation
 from app.models.job import Job
@@ -458,7 +456,7 @@ def _count_platform_teams_total():
     try:
         return int(db.session.query(sa_func.count(User.id)).filter(
             User.role == 'employer',
-            User.is_active == True,
+            User.is_active.is_(True),
         ).scalar() or 0)
     except Exception:
         return 0
@@ -666,12 +664,12 @@ def dashboard_trend_summary():
     week_start = _start_of_week_utc_naive()
 
     # platform_totals 和 growth 始终是全平台口径，不受 function/region 筛选影响
-    jobs_total_now  = _count_platform_jobs_total(ALL_VALUE, ALL_VALUE)
+    jobs_total_now = _count_platform_jobs_total(ALL_VALUE, ALL_VALUE)
     cands_total_now = _count_platform_candidates_total(ALL_VALUE, ALL_VALUE)
 
-    jobs_ytd   = _count_platform_jobs_since(ALL_VALUE, ALL_VALUE, year_start, now)
-    jobs_week  = _count_platform_jobs_since(ALL_VALUE, ALL_VALUE, week_start, now)
-    cands_ytd  = _count_platform_candidates_since(ALL_VALUE, ALL_VALUE, year_start, now)
+    jobs_ytd = _count_platform_jobs_since(ALL_VALUE, ALL_VALUE, year_start, now)
+    jobs_week = _count_platform_jobs_since(ALL_VALUE, ALL_VALUE, week_start, now)
+    cands_ytd = _count_platform_candidates_since(ALL_VALUE, ALL_VALUE, year_start, now)
     cands_week = _count_platform_candidates_since(ALL_VALUE, ALL_VALUE, week_start, now)
 
     def _growth_pct(delta, base):
@@ -680,14 +678,14 @@ def dashboard_trend_summary():
             return round(delta / base * 100, 1)
         return 100.0 if delta > 0 else 0.0
 
-    jobs_year_start_total  = jobs_total_now  - jobs_ytd
-    jobs_week_start_total  = jobs_total_now  - jobs_week
+    jobs_year_start_total = jobs_total_now - jobs_ytd
+    jobs_week_start_total = jobs_total_now - jobs_week
     cands_year_start_total = cands_total_now - cands_ytd
     cands_week_start_total = cands_total_now - cands_week
 
-    jobs_ytd_pct   = _growth_pct(jobs_ytd,   jobs_year_start_total)
-    jobs_week_pct  = _growth_pct(jobs_week,  jobs_week_start_total)
-    cands_ytd_pct  = _growth_pct(cands_ytd,  cands_year_start_total)
+    jobs_ytd_pct = _growth_pct(jobs_ytd, jobs_year_start_total)
+    jobs_week_pct = _growth_pct(jobs_week, jobs_week_start_total)
+    cands_ytd_pct = _growth_pct(cands_ytd, cands_year_start_total)
     cands_week_pct = _growth_pct(cands_week, cands_week_start_total)
 
     return jsonify({

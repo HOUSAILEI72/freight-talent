@@ -15,14 +15,14 @@ public_market_bp = Blueprint("public_market", __name__, url_prefix="/api/public"
 
 # Canonical function codes — must match VALID_FUNCTIONS in subscriptions.py and DEFAULT_FUNCTIONS in FunctionRail.jsx
 _FUNCTIONS = [
-    {"code": "Sea",               "name": "海运板块"},
-    {"code": "Air",               "name": "空运板块"},
-    {"code": "CrossBorder",       "name": "跨境电商物流"},
-    {"code": "Railway",           "name": "铁路 / 中欧班列"},
-    {"code": "Road",              "name": "陆路运输"},
+    {"code": "Sea", "name": "海运板块"},
+    {"code": "Air", "name": "空运板块"},
+    {"code": "CrossBorder", "name": "跨境电商物流"},
+    {"code": "Railway", "name": "铁路 / 中欧班列"},
+    {"code": "Road", "name": "陆路运输"},
     {"code": "ContractLogistics", "name": "合同物流 / 3PL"},
-    {"code": "Warehousing",       "name": "仓储 / 海外仓"},
-    {"code": "Customs",           "name": "关务 / 合规"},
+    {"code": "Warehousing", "name": "仓储 / 海外仓"},
+    {"code": "Customs", "name": "关务 / 合规"},
 ]
 
 # 排除 GLOBAL / REMOTE / OVERSEAS 等不实际展示的 area
@@ -91,10 +91,10 @@ def market_snapshot():
             ticker.append({
                 "function_code": fn_code,
                 "function_name": fn_code,
-                "area_code":     area_code,
-                "area_name":     area_info.get("name", area_code),
-                "candidates":    counts["candidates"],
-                "jobs":          counts["jobs"],
+                "area_code": area_code,
+                "area_name": area_info.get("name", area_code),
+                "candidates": counts["candidates"],
+                "jobs": counts["jobs"],
             })
 
         # 无数据时给 fallback ticker，避免首页跑马灯空白
@@ -119,30 +119,30 @@ def market_snapshot():
             ).scalar() or 0
 
             trend.append({
-                "date":       cutoff.strftime("%Y-%m-%d"),
+                "date": cutoff.strftime("%Y-%m-%d"),
                 "candidates": c_cnt,
-                "jobs":       j_cnt,
+                "jobs": j_cnt,
             })
 
         return jsonify({
             "success": True,
             "totals": {
                 "candidates": total_candidates,
-                "jobs":       total_jobs,
+                "jobs": total_jobs,
             },
             "ticker": ticker,
-            "trend":  trend,
+            "trend": trend,
         }), 200
 
-    except Exception as exc:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("Failed to fetch market snapshot")
         return jsonify({
             "success": False,
             "message": "Failed to fetch market snapshot",
-            "totals":  {"candidates": 0, "jobs": 0},
-            "ticker":  _build_fallback_ticker(),
-            "trend":   [],
+            "totals": {"candidates": 0, "jobs": 0},
+            "ticker": _build_fallback_ticker(),
+            "trend": [],
         }), 500
 
 
@@ -154,9 +154,9 @@ def _build_fallback_ticker():
             items.append({
                 "function_code": fn["code"],
                 "function_name": fn["name"],
-                "area_code":     area_code,
-                "area_name":     area_info.get("name", area_code),
-                "candidates":    0,
-                "jobs":          0,
+                "area_code": area_code,
+                "area_name": area_info.get("name", area_code),
+                "candidates": 0,
+                "jobs": 0,
             })
     return items

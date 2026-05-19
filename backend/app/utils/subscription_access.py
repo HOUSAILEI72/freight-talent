@@ -75,7 +75,7 @@ def employer_unlocked_candidate_ids(
         q = q.filter(Candidate.id.in_(id_list))
 
     func_codes = sub.function_codes or []
-    area_codes  = sub.business_area_codes or []
+    area_codes = sub.business_area_codes or []
 
     # Pre-compute: does the subscription have China scope expansion?
     sub_has_china_scope = any(c in CHINA_SCOPE_KEYS for c in area_codes)

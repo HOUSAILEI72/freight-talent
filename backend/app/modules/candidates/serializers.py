@@ -50,13 +50,13 @@ def build_public_dict(profile: Candidate, include_contact: bool = False,
         "business_area_code": profile.business_area_code,
         "business_area_name": profile.business_area_name,
         # CAND-2A: capability profile (always public; used by matching)
-        "function_code":      profile.function_code,
-        "function_name":      profile.function_name,
+        "function_code": profile.function_code,
+        "function_name": profile.function_name,
         "is_management_role": profile.is_management_role,
-        "knowledge_tags":     profile.knowledge_tags or [],
-        "hard_skill_tags":    profile.hard_skill_tags or [],
-        "soft_skill_tags":    profile.soft_skill_tags or [],
-        "profile_status":     profile.profile_status,
+        "knowledge_tags": profile.knowledge_tags or [],
+        "hard_skill_tags": profile.hard_skill_tags or [],
+        "soft_skill_tags": profile.soft_skill_tags or [],
+        "profile_status": profile.profile_status,
         "profile_completed_at": (
             profile.profile_completed_at.isoformat()
             if profile.profile_completed_at else None
@@ -74,56 +74,56 @@ def build_public_dict(profile: Candidate, include_contact: bool = False,
 
     if include_private:
         data.update({
-            "full_name":             profile.full_name,
-            "age":                   profile.age,
-            "experience_years":      profile.experience_years,
-            "education":             profile.education,
-            "availability_status":   profile.availability_status,
-            "work_experiences":      profile.work_experiences or [],
+            "full_name": profile.full_name,
+            "age": profile.age,
+            "experience_years": profile.experience_years,
+            "education": profile.education,
+            "availability_status": profile.availability_status,
+            "work_experiences": profile.work_experiences or [],
             "education_experiences": profile.education_experiences or [],
-            "certificates":          profile.certificates or [],
+            "certificates": profile.certificates or [],
             # CAND-5: 当前任职敏感字段
-            "current_company":               profile.current_company,
-            "current_responsibilities":      profile.current_responsibilities,
-            "current_salary_min":            profile.current_salary_min,
-            "current_salary_max":            profile.current_salary_max,
-            "current_salary_months":         profile.current_salary_months,
+            "current_company": profile.current_company,
+            "current_responsibilities": profile.current_responsibilities,
+            "current_salary_min": profile.current_salary_min,
+            "current_salary_max": profile.current_salary_max,
+            "current_salary_months": profile.current_salary_months,
             "current_average_bonus_percent": profile.current_average_bonus_percent,
-            "current_has_year_end_bonus":    profile.current_has_year_end_bonus,
+            "current_has_year_end_bonus": profile.current_has_year_end_bonus,
             "current_year_end_bonus_months": profile.current_year_end_bonus_months,
-            "private_visible":       True,
+            "private_visible": True,
         })
     else:
         data.update({
-            "full_name":             (
+            "full_name": (
                 (profile.full_name[0] + ("先生" if profile.gender == "male" else "女士" if profile.gender == "female" else "先生"))
                 if profile.full_name else f"候选人 #{profile.id}"
             ),
-            "age":                   None,
-            "experience_years":      None,
-            "education":             None,
-            "availability_status":   None,
-            "work_experiences":      [],
+            "age": None,
+            "experience_years": None,
+            "education": None,
+            "availability_status": None,
+            "work_experiences": [],
             "education_experiences": [],
-            "certificates":          [],
-            "current_company":               None,
-            "current_responsibilities":      None,
-            "current_salary_min":            None,
-            "current_salary_max":            None,
-            "current_salary_months":         None,
+            "certificates": [],
+            "current_company": None,
+            "current_responsibilities": None,
+            "current_salary_min": None,
+            "current_salary_max": None,
+            "current_salary_months": None,
             "current_average_bonus_percent": None,
-            "current_has_year_end_bonus":    None,
+            "current_has_year_end_bonus": None,
             "current_year_end_bonus_months": None,
-            "private_visible":       False,
+            "private_visible": False,
         })
 
     if include_contact and include_private:
-        data["email"]   = profile.email
-        data["phone"]   = profile.phone
+        data["email"] = profile.email
+        data["phone"] = profile.phone
         data["address"] = profile.address
     else:
-        data["email"]   = None
-        data["phone"]   = None
+        data["email"] = None
+        data["phone"] = None
         data["address"] = None
 
     # 注入按分类聚合的标签（含 pending）— 供前端按分类展示

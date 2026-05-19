@@ -43,32 +43,32 @@ from openpyxl import load_workbook
 # ── 常量 ──────────────────────────────────────────────────────────────────────
 
 LONG_TEXT_LIMIT = 60        # 单元格超过此长度不当 tag
-MAX_ROWS        = 5000
-MAX_FILE_BYTES  = 20 * 1024 * 1024   # 20 MB
-TAG_SPLIT_RE    = re.compile(r"[,，、;；/]")     # 单元格内多值分隔符
+MAX_ROWS = 5000
+MAX_FILE_BYTES = 20 * 1024 * 1024   # 20 MB
+TAG_SPLIT_RE = re.compile(r"[,，、;；/]")     # 单元格内多值分隔符
 
 
 # 固定字段定义 — 列头别名 → 标准 field_key
 JOB_FIELD_ALIASES: dict[str, str] = {
     "岗位名称": "title", "职位名称": "title", "职位": "title", "岗位": "title", "title": "title",
-    "省市区":   "location", "工作地点": "location", "地点": "location", "location": "location",
+    "省市区": "location", "工作地点": "location", "地点": "location", "location": "location",
     "工作城市": "location",
     "经验要求": "experience_required", "工作经验": "experience_required",
     "工作年限": "experience_required", "experience_required": "experience_required",
     "最低学历要求": "degree_required",
-    "学历":     "degree_required", "学历要求": "degree_required", "degree_required": "degree_required",
-    "薪资":     "salary_label", "薪资范围": "salary_label", "薪酬": "salary_label",
-    "工资":     "salary_label", "salary": "salary_label", "salary_label": "salary_label",
-    "职位详情": "description",  "岗位描述": "description", "职位描述": "description",
-    "岗位职责": "description",  "工作内容": "description", "description": "description",
+    "学历": "degree_required", "学历要求": "degree_required", "degree_required": "degree_required",
+    "薪资": "salary_label", "薪资范围": "salary_label", "薪酬": "salary_label",
+    "工资": "salary_label", "salary": "salary_label", "salary_label": "salary_label",
+    "职位详情": "description", "岗位描述": "description", "职位描述": "description",
+    "岗位职责": "description", "工作内容": "description", "description": "description",
     "岗位要求": "requirements", "任职要求": "requirements", "职位要求": "requirements",
     "requirements": "requirements",
     "企业邮箱": "company_email", "company_email": "company_email",
     # ── Phase C / PostJob 新增字段 ──────────────────────────────────────────
     "岗位板块": "function_code", "板块": "function_code", "function_code": "function_code",
-    "知识":     "knowledge_requirements", "知识要求": "knowledge_requirements",
-    "硬技能":   "hard_skill_requirements", "硬技能要求": "hard_skill_requirements",
-    "软技能":   "soft_skill_requirements", "软技能要求": "soft_skill_requirements",
+    "知识": "knowledge_requirements", "知识要求": "knowledge_requirements",
+    "硬技能": "hard_skill_requirements", "硬技能要求": "hard_skill_requirements",
+    "软技能": "soft_skill_requirements", "软技能要求": "soft_skill_requirements",
     "是否带团队": "is_management_role", "带团队": "is_management_role",
     "预计团队人数": "management_headcount", "团队人数": "management_headcount",
     "应聘类型": "employment_type", "雇佣类型": "employment_type",
@@ -83,19 +83,19 @@ JOB_FIELD_ALIASES: dict[str, str] = {
 }
 
 CANDIDATE_FIELD_ALIASES: dict[str, str] = {
-    "姓名":     "full_name",  "全名": "full_name", "候选人姓名": "full_name", "full_name": "full_name",
-    "年龄":     "age", "age": "age",
+    "姓名": "full_name", "全名": "full_name", "候选人姓名": "full_name", "full_name": "full_name",
+    "年龄": "age", "age": "age",
     "工作年限": "experience_years", "工作经验": "experience_years",
     "经验年限": "experience_years", "experience_years": "experience_years",
-    "学历":     "education", "最高学历": "education", "education": "education",
+    "学历": "education", "最高学历": "education", "education": "education",
     "电话号码": "phone", "电话": "phone", "手机": "phone", "联系电话": "phone", "phone": "phone",
     "求职状态": "availability_status", "在职状态": "availability_status",
     "availability_status": "availability_status",
-    "工作经历": "work_experiences",      "work_experiences": "work_experiences",
+    "工作经历": "work_experiences", "work_experiences": "work_experiences",
     "教育经历": "education_experiences", "education_experiences": "education_experiences",
-    "资格证书": "certificates",          "certificates": "certificates",
-    "邮箱":     "email", "联系邮箱": "email", "email": "email",
-    "性别":     "gender", "gender": "gender",
+    "资格证书": "certificates", "certificates": "certificates",
+    "邮箱": "email", "联系邮箱": "email", "email": "email",
+    "性别": "gender", "gender": "gender",
     # ── Phase C / CandidateDetailPanel 新增字段 ──────────────────────────────
     "岗位板块": "function_code", "板块": "function_code",
     "是否管理岗": "is_management_role", "带团队": "is_management_role",
@@ -124,44 +124,44 @@ DOUBLE_AS_TAG_CANDIDATE = {"education", "availability_status"}
 # 提成奖金周期：中文 → DB enum 值
 COMMISSION_PERIOD_MAP: dict[str, str] = {
     "不适用": "not_applicable",
-    "无":     "not_applicable",
-    "月度":   "monthly",
-    "每月":   "monthly",
-    "季度":   "quarterly",
-    "每季":   "quarterly",
+    "无": "not_applicable",
+    "月度": "monthly",
+    "每月": "monthly",
+    "季度": "quarterly",
+    "每季": "quarterly",
     "半年度": "semi_annual",
-    "半年":   "semi_annual",
+    "半年": "semi_annual",
     # 英文直通（兼容旧模板）
     "not_applicable": "not_applicable",
-    "monthly":        "monthly",
-    "quarterly":      "quarterly",
-    "semi_annual":    "semi_annual",
+    "monthly": "monthly",
+    "quarterly": "quarterly",
+    "semi_annual": "semi_annual",
 }
 
 # 岗位板块：中/英文 → function_code key（对应 FunctionRail.DEFAULT_FUNCTIONS）
 FUNCTION_CODE_MAP: dict[str, str] = {
     # 海运板块
-    "海运": "Sea",          "Sea": "Sea",          "海运板块": "Sea",
+    "海运": "Sea", "Sea": "Sea", "海运板块": "Sea",
     # 空运板块
-    "空运": "Air",          "Air": "Air",          "空运板块": "Air",
+    "空运": "Air", "Air": "Air", "空运板块": "Air",
     # 跨境电商物流
     "跨境电商": "CrossBorder", "CrossBorder": "CrossBorder", "ECOMS": "CrossBorder",
     "综合物流": "CrossBorder", "跨境电商物流": "CrossBorder",
     # 铁路 / 中欧班列
-    "铁路": "Railway",      "Railway": "Railway",  "中欧班列": "Railway",
-    "多式联运": "Railway",  "MultiModal": "Railway",
+    "铁路": "Railway", "Railway": "Railway", "中欧班列": "Railway",
+    "多式联运": "Railway", "MultiModal": "Railway",
     # 陆路运输
-    "陆运": "Road",         "Road": "Road",        "陆路运输": "Road",
+    "陆运": "Road", "Road": "Road", "陆路运输": "Road",
     "Land": "Road",
     # 合同物流 / 3PL
     "合同物流": "ContractLogistics", "ContractLogistics": "ContractLogistics",
     "Contract Logistics": "ContractLogistics", "CL": "ContractLogistics",
     "3PL": "ContractLogistics", "供应链": "ContractLogistics", "Supply": "ContractLogistics",
     # 仓储 / 海外仓
-    "仓储": "Warehousing",  "Warehousing": "Warehousing", "海外仓": "Warehousing",
+    "仓储": "Warehousing", "Warehousing": "Warehousing", "海外仓": "Warehousing",
     # 关务 / 合规
-    "报关": "Customs",      "Customs": "Customs",  "关务": "Customs",
-    "合规": "Customs",      "Custom": "Customs",   "通关": "Customs",
+    "报关": "Customs", "Customs": "Customs", "关务": "Customs",
+    "合规": "Customs", "Custom": "Customs", "通关": "Customs",
 }
 
 
@@ -189,7 +189,7 @@ class CategoryStat:
 class TaxonomyPreview:
     headers: list[str]
     fixed_field_map: dict[str, str]   # column_header → field_key（已命中固定字段的列）
-    free_columns:    list[str]        # 未命中固定字段的列名（即 category）
+    free_columns: list[str]        # 未命中固定字段的列名（即 category）
     rows: list[ParsedRow] = field(default_factory=list)
     categories: list[CategoryStat] = field(default_factory=list)
     summary: dict = field(default_factory=dict)
@@ -250,8 +250,8 @@ def _parse_work_exp(cell: str) -> list[dict]:
             continue
         parts = [p.strip() for p in line.split("|")]
         out.append({
-            "period":  parts[0] if len(parts) > 0 else "",
-            "title":   parts[1] if len(parts) > 1 else "",
+            "period": parts[0] if len(parts) > 0 else "",
+            "title": parts[1] if len(parts) > 1 else "",
             "company": parts[2] if len(parts) > 2 else "",
         })
     return out
@@ -268,7 +268,7 @@ def _parse_edu_exp(cell: str) -> list[dict]:
         out.append({
             "period": parts[0] if len(parts) > 0 else "",
             "school": parts[1] if len(parts) > 1 else "",
-            "major":  parts[2] if len(parts) > 2 else "",
+            "major": parts[2] if len(parts) > 2 else "",
             "degree": parts[3] if len(parts) > 3 else "",
         })
     return out
@@ -292,7 +292,7 @@ def parse_excel(
     file_bytes: bytes,
     import_type: str,
     known_categories: set[str] | None = None,
-    known_tags:       set[tuple[str, str]] | None = None,
+    known_tags: set[tuple[str, str]] | None = None,
 ) -> TaxonomyPreview:
     """
     解析 Excel，返回 TaxonomyPreview。
@@ -303,7 +303,7 @@ def parse_excel(
       known_tags:         已存在的 (category, name) 集合
     """
     known_categories = known_categories or set()
-    known_tags       = known_tags       or set()
+    known_tags = known_tags or set()
 
     aliases = JOB_FIELD_ALIASES if import_type == "job" else CANDIDATE_FIELD_ALIASES
     double_as_tag = DOUBLE_AS_TAG_JOB if import_type == "job" else DOUBLE_AS_TAG_CANDIDATE
@@ -378,10 +378,14 @@ def parse_excel(
                 continue
             if fk == "location":
                 p, c, d = _parse_location(v)
-                if p:  parsed.data_fields["province"]  = p
-                if c:  parsed.data_fields["city_name"] = c
-                if d:  parsed.data_fields["district"]  = d
-                if c:  parsed.data_fields["city"]      = c     # 兼容旧字段
+                if p:
+                    parsed.data_fields["province"] = p
+                if c:
+                    parsed.data_fields["city_name"] = c
+                if d:
+                    parsed.data_fields["district"] = d
+                if c:
+                    parsed.data_fields["city"] = c     # 兼容旧字段
                 # 三级分别变 tag（同分类 OR）
                 for level, val in [("省份", p), ("城市", c), ("区县", d)]:
                     if val:
@@ -405,9 +409,9 @@ def parse_excel(
                       "current_salary_min", "current_salary_max", "current_salary_months",
                       "current_year_end_bonus_months", "current_average_bonus_percent"):
                 iv = _safe_int(v) if fk not in ("commission_bonus_amount",
-                                                 "year_end_bonus_months",
-                                                 "current_year_end_bonus_months",
-                                                 "current_average_bonus_percent") else _safe_float(v)
+                                                "year_end_bonus_months",
+                                                "current_year_end_bonus_months",
+                                                "current_average_bonus_percent") else _safe_float(v)
                 if iv is not None:
                     parsed.data_fields[fk] = iv
                 else:
@@ -481,8 +485,8 @@ def parse_excel(
         tags_stat = []
         for name, cnt in sorted(tag_counts.items(), key=lambda x: -x[1]):
             tags_stat.append({
-                "name":   name,
-                "count":  cnt,
+                "name": name,
+                "count": cnt,
                 "is_new": (cat, name) not in known_tags,
             })
         preview.categories.append(CategoryStat(
@@ -496,20 +500,20 @@ def parse_excel(
     total_rows = len(preview.rows)
     error_rows = sum(1 for p in preview.rows if any(
         i.get("issue_type") in ("missing_required", "type_mismatch") for i in p.issues))
-    dup_rows   = sum(1 for p in preview.rows if any(
+    dup_rows = sum(1 for p in preview.rows if any(
         i.get("issue_type") == "duplicate_row" for i in p.issues))
-    ok_rows    = total_rows - error_rows - dup_rows
+    ok_rows = total_rows - error_rows - dup_rows
 
     preview.summary = {
-        "total_rows":   total_rows,
-        "ok_rows":      ok_rows,
-        "error_rows":   error_rows,
+        "total_rows": total_rows,
+        "ok_rows": ok_rows,
+        "error_rows": error_rows,
         "warning_rows": 0,
-        "dup_rows":     dup_rows,
-        "fixed_columns_hit":  len(preview.fixed_field_map),
-        "free_categories":    len(preview.free_columns),
-        "new_categories":     sum(1 for c in preview.categories if c.is_new),
-        "new_tags":           sum(
+        "dup_rows": dup_rows,
+        "fixed_columns_hit": len(preview.fixed_field_map),
+        "free_categories": len(preview.free_columns),
+        "new_categories": sum(1 for c in preview.categories if c.is_new),
+        "new_tags": sum(
             sum(1 for t in c.tags if t["is_new"]) for c in preview.categories
         ),
     }

@@ -40,18 +40,18 @@ def list_requests():
     def _row(r):
         job_payload = r.job_payload or {}
         return {
-            "id":           r.id,
+            "id": r.id,
             "service_type": r.service_type,
-            "status":       r.status,
-            "job_payload":  job_payload,
-            "terms_payload":  r.terms_payload,
+            "status": r.status,
+            "job_payload": job_payload,
+            "terms_payload": r.terms_payload,
             "add_ons_payload": r.add_ons_payload,
             "fee_snapshot": r.fee_snapshot,
-            "contact_name":  r.contact_name,
+            "contact_name": r.contact_name,
             "contact_phone": r.contact_phone,
             "contact_email": r.contact_email,
             "contact_wechat": r.contact_wechat,
-            "created_at":   r.created_at.isoformat() if r.created_at else None,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
         }
 
     return jsonify({"success": True, "requests": [_row(r) for r in items]}), 200
@@ -75,10 +75,10 @@ def create_request():
 
     # ── contact ───────────────────────────────────────────────────────────────
     contact = data.get("contact") or {}
-    contact_name  = (contact.get("name")   or "").strip()
-    contact_phone = (contact.get("phone")  or "").strip()
-    contact_email = (contact.get("email")  or "").strip()
-    contact_wechat= (contact.get("wechat") or "").strip() or None
+    contact_name = (contact.get("name") or "").strip()
+    contact_phone = (contact.get("phone") or "").strip()
+    contact_email = (contact.get("email") or "").strip()
+    contact_wechat = (contact.get("wechat") or "").strip() or None
 
     if not contact_name:
         return _err("联系人姓名不能为空")
@@ -132,15 +132,15 @@ def create_request():
             return _err("希望到岗时间不能为空")
 
         fee_snapshot = data.get("fee_snapshot") or {}
-        valid_base_totals   = {180000, 210000}
-        valid_monthly_fees  = {15000, 17500}
+        valid_base_totals = {180000, 210000}
+        valid_monthly_fees = {15000, 17500}
         try:
-            base_total  = int(fee_snapshot.get("baseTotal",  0))
+            base_total = int(fee_snapshot.get("baseTotal", 0))
             monthly_fee = int(fee_snapshot.get("monthlyFee", 0))
-            months      = int(fee_snapshot.get("months",     0))
+            months = int(fee_snapshot.get("months", 0))
         except (TypeError, ValueError):
             return _err("fee_snapshot 数值格式不正确")
-        if base_total  not in valid_base_totals:
+        if base_total not in valid_base_totals:
             return _err("baseTotal 必须为 180000 或 210000")
         if monthly_fee not in valid_monthly_fees:
             return _err("monthlyFee 必须为 15000 或 17500")
@@ -155,19 +155,19 @@ def create_request():
     # ── persist ────────────────────────────────────────────────────────────────
     now = datetime.now(timezone.utc)
     req = HeadhuntingRequest(
-        employer_id    = user.id,
-        service_type   = service_type,
-        status         = "submitted",
-        job_payload    = payload_for_storage,
-        terms_payload  = terms,
-        add_ons_payload= data.get("add_ons"),
-        fee_snapshot   = data.get("fee_snapshot"),
-        contact_name   = contact_name,
-        contact_phone  = contact_phone,
-        contact_email  = contact_email,
-        contact_wechat = contact_wechat,
-        created_at     = now,
-        updated_at     = now,
+        employer_id=user.id,
+        service_type=service_type,
+        status="submitted",
+        job_payload=payload_for_storage,
+        terms_payload=terms,
+        add_ons_payload=data.get("add_ons"),
+        fee_snapshot=data.get("fee_snapshot"),
+        contact_name=contact_name,
+        contact_phone=contact_phone,
+        contact_email=contact_email,
+        contact_wechat=contact_wechat,
+        created_at=now,
+        updated_at=now,
     )
     db.session.add(req)
     db.session.commit()

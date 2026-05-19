@@ -11,8 +11,6 @@ The old invitation/application-based unlock has been removed (Phase 8).
 `contact_visible` is no longer consulted on the employer-facing path.
 """
 
-from typing import Iterable, Optional, Set
-
 # Re-export from subscription_access so existing callers keep working
 # without changing their import paths.
 from app.utils.subscription_access import (
