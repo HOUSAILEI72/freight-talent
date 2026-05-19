@@ -16,10 +16,15 @@ _SENSITIVE = {
 def _strip_sensitive(d):
     if not isinstance(d, dict):
         return d
-    return {
-        k: "[FILTERED]" if k.lower() in _SENSITIVE else v
-        for k, v in d.items()
-    }
+    result = {}
+    for k, v in d.items():
+        if k.lower() in _SENSITIVE:
+            result[k] = "[FILTERED]"
+        elif isinstance(v, dict):
+            result[k] = _strip_sensitive(v)
+        else:
+            result[k] = v
+    return result
 
 
 def _before_send(event, hint):

@@ -74,3 +74,17 @@ def test_strips_chinese_pii_keys_in_extra():
     assert result["extra"]["手机号"] == "[FILTERED]"
     assert result["extra"]["邮箱"] == "[FILTERED]"
     assert result["extra"]["身份证"] == "[FILTERED]"
+
+
+def test_strips_nested_pii_in_extra():
+    event = {
+        "request": {"headers": {}},
+        "extra": {
+            "user": {"email": "x@y.com", "name": "Alice"},
+            "safe_top": "value",
+        },
+    }
+    result = _before_send(event, {})
+    assert result["extra"]["user"]["email"] == "[FILTERED]"
+    assert result["extra"]["user"]["name"] == "Alice"
+    assert result["extra"]["safe_top"] == "value"
