@@ -31,17 +31,16 @@ export function MessageBubble({ msg, isMine, onRetry, terminal = false }) {
   const isRead      = msg.is_read
 
   if (terminal) {
-    const avatarBg    = isMine ? (isFailed ? 'var(--t-danger-muted)' : 'var(--t-primary)') : 'var(--t-bg-active)'
-    const avatarColor = isMine && isFailed ? 'var(--t-danger)' : '#fff'
+    // My bubble: primary-muted bg with primary border, dark text — clearly "mine" but not BOSS blue
+    // Their bubble: bg-elevated with subtle border
     let bubbleStyle
     if (isMine) {
       bubbleStyle = isFailed
         ? { background: 'var(--t-danger-muted)', color: 'var(--t-danger)', border: '1px solid var(--t-danger)' }
         : {
-            background: 'var(--t-primary)',
-            color: '#fff',
-            border: '1px solid rgba(37,99,235,0.7)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)',
+            background: 'var(--t-primary-muted)',
+            color: 'var(--t-text)',
+            border: '1px solid var(--t-primary)',
           }
     } else {
       bubbleStyle = {
@@ -50,31 +49,64 @@ export function MessageBubble({ msg, isMine, onRetry, terminal = false }) {
         border: '1px solid var(--t-border)',
       }
     }
-    const metaColor = isFailed ? 'var(--t-danger)' : isMine ? 'rgba(255,255,255,0.7)' : 'var(--t-text-muted)'
+
+    const avatarBg    = isMine
+      ? (isFailed ? 'var(--t-danger-muted)' : 'var(--t-primary-muted)')
+      : 'var(--t-bg-active)'
+    const avatarColor = isMine && isFailed ? 'var(--t-danger)' : isMine ? 'var(--t-primary)' : 'var(--t-text-secondary)'
+    const metaColor   = isFailed ? 'var(--t-danger)' : 'var(--t-text-muted)'
 
     return (
-      <div className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : ''}`}>
-        <div title={senderLabel} className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: avatarBg, color: avatarColor }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexDirection: isMine ? 'row-reverse' : 'row' }}>
+        {/* Avatar */}
+        <div
+          title={senderLabel}
+          style={{
+            width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+            background: avatarBg, color: avatarColor,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 11, fontWeight: 700,
+          }}
+        >
           {senderLabel[0].toUpperCase()}
         </div>
-        <div className="flex flex-col gap-0.5" style={{ maxWidth: 'clamp(260px, 62%, 720px)' }}>
-          {!isMine && <span className="text-[10px] ml-1" style={{ color: 'var(--t-text-muted)' }}>{senderLabel}</span>}
+
+        {/* Bubble column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 'clamp(200px, 60%, 600px)', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
+          {!isMine && (
+            <span style={{ fontSize: 11, color: 'var(--t-text-muted)', marginLeft: 4 }}>{senderLabel}</span>
+          )}
           <div
-            className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed transition-opacity ${isMine ? 'rounded-br-sm' : 'rounded-bl-sm'} ${(isSending || isRetrying) ? 'opacity-60' : ''}`}
-            style={bubbleStyle}
+            style={{
+              padding: '9px 14px',
+              borderRadius: isMine ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+              fontSize: 14, lineHeight: 1.6,
+              opacity: (isSending || isRetrying) ? 0.6 : 1,
+              transition: 'opacity 200ms',
+              wordBreak: 'break-word',
+              ...bubbleStyle,
+            }}
           >
             {msg.content}
-            <p className="text-[10px] mt-1" style={{ color: metaColor }}>
-              {isSending ? '发送中…' : isRetrying ? `重试中${msg._retryLabel ?? ''}…` : msg.created_at?.slice(11, 16)}
+            <div style={{ fontSize: 11, marginTop: 4, color: metaColor, display: 'flex', alignItems: 'center', gap: 4, justifyContent: isMine ? 'flex-end' : 'flex-start' }}>
+              <span>
+                {isSending ? '发送中…' : isRetrying ? `重试中${msg._retryLabel ?? ''}…` : msg.created_at?.slice(11, 16)}
+              </span>
               {isMine && !isSending && !isRetrying && !isFailed && (
-                <span className="ml-1 select-none">{isRead ? '✓✓' : '✓'}</span>
+                <span style={{ color: 'var(--t-primary)', fontWeight: 600 }}>{isRead ? '✓✓' : '✓'}</span>
               )}
-            </p>
+            </div>
           </div>
           {isFailed && (
-            <div className={`flex items-center gap-1.5 mt-0.5 ${isMine ? 'justify-end' : ''}`}>
-              <span className="text-[10px]" style={{ color: 'var(--t-danger)' }}>{msg._errorMsg ?? '发送失败'}</span>
-              <button onClick={() => onRetry?.(msg._tempId, msg.content)} className="text-[10px] font-medium underline underline-offset-2" style={{ color: 'var(--t-chart-blue)' }}>重试</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, justifyContent: isMine ? 'flex-end' : 'flex-start' }}>
+              <span style={{ fontSize: 11, color: 'var(--t-danger)' }}>{msg._errorMsg ?? '发送失败'}</span>
+              <button
+                onClick={() => onRetry?.(msg._tempId, msg.content)}
+                className="t-retry-btn"
+                style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-chart-blue)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                重试
+              </button>
             </div>
           )}
         </div>
@@ -82,6 +114,7 @@ export function MessageBubble({ msg, isMine, onRetry, terminal = false }) {
     )
   }
 
+  // ── public light branch (unchanged) ──────────────────────────────────────
   return (
     <div className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : ''}`}>
       <div title={senderLabel} className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${isMine ? (isFailed ? 'bg-red-400' : 'bg-blue-500') : 'bg-slate-400'}`}>

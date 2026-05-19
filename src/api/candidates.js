@@ -47,6 +47,14 @@ export const candidatesApi = {
   },
 
   /**
+   * 获取候选人附件简历文件（返回 Blob，供预览或下载）
+   * @param {number} candidateId
+   */
+  getCandidateResume(candidateId) {
+    return client.get(`/candidates/${candidateId}/resume`, { responseType: 'blob' })
+  },
+
+  /**
    * 获取候选人列表（employer / admin）
    * @param {{ city?, business_type?, job_type?, function_code?, business_area_code?, location_code?, availability_status?, q?, tagGroups? }} filters
    *   tagGroups: Record<string, number[]>  同组 OR、跨组 AND

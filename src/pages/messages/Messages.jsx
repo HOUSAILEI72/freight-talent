@@ -1133,7 +1133,7 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
         <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}
-            rows={2}
+            rows={1}
             placeholder="输入消息... (Enter 发送，Shift+Enter 换行)"
             value={input}
             onChange={handleInputChange}

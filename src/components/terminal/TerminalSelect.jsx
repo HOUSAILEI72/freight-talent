@@ -158,7 +158,7 @@ export function TerminalSelect({
       </button>
 
       {open && (
-        <div ref={panelRef} style={panelStyle}>
+        <div ref={panelRef} style={panelStyle} className="t-dropdown-enter">
           {searchable && (
             <div style={{
               padding: '6px 8px',

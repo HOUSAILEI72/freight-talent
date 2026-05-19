@@ -20,6 +20,7 @@ export function CandidateConversationDock({
   onSelect,
   onCollapsedChange,
   refreshKey = 0,
+  onDockRef,
 }) {
   const [collapsed,     setCollapsed]     = useState(true)
   const [conversations, setConversations] = useState([])
@@ -73,6 +74,7 @@ export function CandidateConversationDock({
 
   return (
     <aside
+      ref={onDockRef}
       className="terminal-mode"
       style={{
         flexShrink: 0,
@@ -186,7 +188,7 @@ export function CandidateConversationDock({
 
       {/* 列表区 */}
       {!collapsed && (
-        <div style={{ flex: 1, overflowY: 'auto' }} className="terminal-scrollbar">
+        <div style={{ flex: 1, overflowY: 'auto' }} className="terminal-scrollbar t-dock-content-enter">
           {loading && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0', gap: 7 }}>
               <Loader2 size={13} className="animate-spin" style={{ color: 'var(--t-chart-blue)', opacity: 0.7 }} />
@@ -240,8 +242,8 @@ function DockConvItem({ conv, isActive, onClick }) {
   const [hovered, setHovered] = useState(false)
 
   const bg = isActive
-    ? 'rgba(37,99,235,0.13)'
-    : hovered ? 'rgba(255,255,255,0.035)' : 'transparent'
+    ? 'var(--t-bg-active)'
+    : hovered ? 'var(--t-bg-hover)' : 'transparent'
 
   return (
     <div

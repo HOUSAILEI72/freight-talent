@@ -171,7 +171,7 @@ function TokenTextArea({ label, value, onChange, placeholder, required }) {
       </div>
       <textarea
         ref={taRef}
-        rows={2}
+        rows={1}
         style={{ ...T.textarea, overflow: 'hidden' }}
         placeholder={placeholder}
         value={value}
@@ -526,9 +526,20 @@ function SuccessModal({ onClose }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function TeamHeadhunting() {
+export default function TeamHeadhunting({ terminal = false }) {
   const navigate = useNavigate()
   const { user } = useAuth()
+
+  // ── Subscription gate (terminal only) ───────────────────────────────────
+  const [hasSubscription, setHasSubscription] = useState(false)
+  useEffect(() => {
+    if (!terminal) return
+    import('../../api/subscriptions').then(({ subscriptionsApi }) => {
+      subscriptionsApi.getMySubscription()
+        .then(r => setHasSubscription(!!(r.data?.has_active)))
+        .catch(() => {})
+    })
+  }, [terminal])
 
   // ── Add-ons ───────────────────────────────────────────────────────────────
   const [accelerated,                  setAccelerated]                  = useState(false)
@@ -695,12 +706,32 @@ export default function TeamHeadhunting() {
           </button>
           <button
             onClick={handleConfirmSubmit}
-            style={{ height: 30, display: 'flex', alignItems: 'center', gap: 5, padding: '0 14px', borderRadius: 4, border: 'none', background: 'var(--t-primary)', color: '#fff', fontFamily: 'var(--t-font-sans)', fontSize: 11, cursor: 'pointer', letterSpacing: '0.08em', fontWeight: 600 }}
+            disabled={!hasSubscription}
+            title={!hasSubscription ? '需要订阅才能提交猎头委托' : undefined}
+            style={{ height: 30, display: 'flex', alignItems: 'center', gap: 5, padding: '0 14px', borderRadius: 4, border: 'none', background: hasSubscription ? 'var(--t-primary)' : 'var(--t-primary-muted)', color: '#fff', fontFamily: 'var(--t-font-sans)', fontSize: 11, cursor: hasSubscription ? 'pointer' : 'not-allowed', letterSpacing: '0.08em', fontWeight: 600, opacity: hasSubscription ? 1 : 0.6 }}
           >
             确认提交 <ChevronRight size={12} />
           </button>
         </div>
       </div>
+
+      {/* ── Subscription gate banner ────────────────────────────────────────── */}
+      {!hasSubscription && (
+        <div
+          className="flex-shrink-0 flex items-center gap-2 mx-6 mt-2"
+          style={{ padding: '7px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 4, color: 'var(--t-text-secondary)', fontSize: 12, fontFamily: 'var(--t-font-sans)' }}
+        >
+          <AlertCircle size={13} style={{ color: '#f59e0b', flexShrink: 0 }} />
+          <span>您尚未订阅，无法提交猎头委托。</span>
+          <button
+            type="button"
+            onClick={() => navigate('/employer/pricing')}
+            style={{ color: '#f59e0b', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 12, marginLeft: 4 }}
+          >
+            查看订阅方案 →
+          </button>
+        </div>
+      )}
 
       {/* ── Error banner ─────────────────────────────────────────────────── */}
       {pageError && (
@@ -726,8 +757,14 @@ export default function TeamHeadhunting() {
             {/* Terms list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
               {TEAM_REQUIRED_TERMS.map((term, idx) => (
-                <div key={term.key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '6px 8px', borderRadius: 4, border: '1px solid var(--t-border-subtle)' }}>
-                  <span style={{ fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0, marginTop: 2, lineHeight: 1, fontFamily: 'var(--t-font-sans)', fontVariantNumeric: 'tabular-nums' }}>{idx + 1}</span>
+                <div key={term.key} style={{ display: 'flex', gap: 9, alignItems: 'center', padding: '7px 9px', borderRadius: 4, border: '1px solid var(--t-border-subtle)' }}>
+                  <span style={{
+                    flexShrink: 0, width: 18, height: 18, borderRadius: '50%',
+                    background: 'var(--t-bg-elevated)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 9, fontWeight: 700, color: 'var(--t-text-muted)',
+                    fontFamily: 'var(--t-font-sans)', fontVariantNumeric: 'tabular-nums',
+                  }}>{idx + 1}</span>
                   <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', lineHeight: 1.65 }}>{term.text}</span>
                 </div>
               ))}
@@ -890,7 +927,7 @@ export default function TeamHeadhunting() {
             {/* 需求简述 */}
             <div>
               <label style={T.label}>需求简述 *</label>
-              <textarea ref={summaryRef} rows={4} style={{ ...T.textarea, overflow: 'hidden' }}
+              <textarea ref={summaryRef} rows={1} style={{ ...T.textarea, overflow: 'hidden' }}
                 placeholder="描述您的团队组建需求，包括团队规模、核心职能、期望经验背景等..."
                 value={summary} onChange={e => setSummary(e.target.value)} />
             </div>

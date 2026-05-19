@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Search, X, Loader2, FolderOpen, AlertCircle,
-  MapPin, Briefcase, ChevronLeft,
+  Search, X, Loader2, FolderOpen,
+  MapPin, Briefcase, ChevronLeft, FileText, DollarSign,
 } from 'lucide-react'
 import TerminalLayout from '../../components/terminal/TerminalLayout'
 import TerminalPageSurface from '../../components/terminal/TerminalPageSurface'
@@ -11,101 +11,22 @@ import RegionSelector from '../../components/RegionSelector'
 import Pagination from '../../components/ui/Pagination'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 import { TerminalSelect } from '../../components/terminal/TerminalSelect'
+import { useToast } from '../../components/ui/Toast'
 import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
+import {
+  COMMISSION_BONUS_PERIODS, formatThousand,
+  ReadField, ReadChips, ReadTextarea,
+} from '../../features/jobs/jobDisplayUtils'
 
-// ── shared helpers (copied from JobMarketplace to avoid prop-drilling) ────────
-const COMMISSION_BONUS_PERIODS = [
-  { value: 'not_applicable', label: '不适用' },
-  { value: 'monthly',        label: '月度' },
-  { value: 'quarterly',      label: '季度' },
-  { value: 'semi_annual',    label: '半年度' },
-]
 const FUNCTION_OPTIONS = DEFAULT_FUNCTIONS.filter(f => f.key !== 'ALL')
 
-function splitTokens(str) {
-  if (!str) return []
-  if (Array.isArray(str)) return str.map(s => String(s).trim()).filter(Boolean)
-  return String(str).split(/[,，、\n\r;；]+/).map(s => s.trim()).filter(Boolean)
-}
-function formatThousand(val) {
-  if (!val) return ''
-  const n = parseInt(String(val).replace(/,/g, ''), 10)
-  return Number.isNaN(n) ? String(val) : n.toLocaleString('en-US')
-}
-
-// ── read-only display sub-components (terminal-only) ──────────────────────────
-const LABEL_STYLE = { color: 'var(--t-text-secondary)', fontSize: 11, fontWeight: 500, display: 'block', marginBottom: 3 }
-const BOX_STYLE = {
-  background: 'var(--t-bg-input)',
-  border: '1px solid var(--t-border)',
-  color: 'var(--t-text)',
-  borderRadius: 'var(--t-radius)',
-  padding: '6px 10px',
-  fontSize: 13,
-  lineHeight: 1.45,
-  minHeight: 30,
-}
-
-function ReadField({ label, value, empty = '—' }) {
-  const display = (value === null || value === undefined || value === '') ? empty : value
-  return (
-    <div>
-      <span style={LABEL_STYLE}>{label}</span>
-      <div style={{ ...BOX_STYLE, color: display === empty ? 'var(--t-text-muted)' : 'var(--t-text)' }}>
-        {display}
-      </div>
-    </div>
-  )
-}
-
-function ReadChips({ label, value }) {
-  const tokens = Array.isArray(value)
-    ? value.map(s => String(s).trim()).filter(Boolean)
-    : splitTokens(value)
-  return (
-    <div>
-      <span style={LABEL_STYLE}>{label}</span>
-      {tokens.length === 0 ? (
-        <div style={{ ...BOX_STYLE, color: 'var(--t-text-muted)' }}>—</div>
-      ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, paddingTop: 2 }}>
-          {tokens.map((t, i) => (
-            <span
-              key={i}
-              style={{
-                padding: '3px 9px', fontSize: 11, borderRadius: 'var(--t-radius-sm)',
-                background: 'var(--t-bg-elevated)',
-                border: '1px solid var(--t-border)',
-                color: 'var(--t-text-secondary)',
-              }}
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ReadTextarea({ label, value }) {
-  const display = (value === null || value === undefined || value === '') ? '—' : value
-  return (
-    <div>
-      <span style={LABEL_STYLE}>{label}</span>
-      <div style={{ ...BOX_STYLE, whiteSpace: 'pre-line', minHeight: 120, color: display === '—' ? 'var(--t-text-muted)' : 'var(--t-text)' }}>
-        {display}
-      </div>
-    </div>
-  )
-}
-
-// ── JobDetailPanel (terminal-only, 3-column) ──────────────────────────────────
+// ── JobDetailPanel ────────────────────────────────────────────────────────────
 function JobDetailPanel({ job }) {
-  const commissionLabel = COMMISSION_BONUS_PERIODS.find(p => p.value === job.commission_bonus_period)?.label ?? job.commission_bonus_period ?? '—'
+  const commissionLabel =
+    COMMISSION_BONUS_PERIODS.find(p => p.value === job.commission_bonus_period)?.label
+    ?? job.commission_bonus_period ?? '—'
   const allTags = Object.values(job.tags_by_category || {}).flat()
-  const isClosed = job.status === 'closed'
 
   const cardClass = 'p-4 space-y-3 rounded-[var(--t-radius-lg)] border flex flex-col min-h-0'
   const cardStyle = { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' }
@@ -118,11 +39,13 @@ function JobDetailPanel({ job }) {
       style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-3 flex-shrink-0">
+      <div className="flex items-start mb-4 flex-shrink-0">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-base font-semibold truncate" style={{ color: 'var(--t-text)' }}>{job.title}</h1>
-            {isClosed && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-base font-semibold" style={{ color: 'var(--t-text)', lineHeight: 'var(--t-line-tight)' }}>
+              {job.title}
+            </h1>
+            {job.status === 'closed' && (
               <span style={{
                 flexShrink: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
                 padding: '2px 7px', borderRadius: 'var(--t-radius-sm)',
@@ -136,7 +59,7 @@ function JobDetailPanel({ job }) {
             {job.created_at ? ` · 发布于 ${job.created_at.slice(0, 10)}` : ''}
           </p>
           {(job.salary_min || job.salary_max) && (
-            <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--t-primary)' }}>
+            <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--t-primary)', fontVariantNumeric: 'tabular-nums' }}>
               ¥ {formatThousand(job.salary_min) || '?'} – {formatThousand(job.salary_max) || '?'} / 月
               {job.salary_months ? `  ·  ${job.salary_months} 个月` : ''}
             </p>
@@ -153,13 +76,13 @@ function JobDetailPanel({ job }) {
             <ReadField label="岗位名称" value={job.title} />
             <ReadField label="岗位板块" value={job.function_name ?? job.business_type} />
             <ReadField label="经验要求" value={job.experience_required} />
-            <ReadField label="最低学历要求" value={job.degree_required} />
+            <ReadField label="最低学历" value={job.degree_required} />
             <ReadField label="是否带团队" value={job.is_management_role == null ? null : job.is_management_role ? '是' : '否'} />
             {job.is_management_role && (
               <ReadField label="预计团队人数" value={job.management_headcount ? String(job.management_headcount) : null} />
             )}
             <ReadField label="应聘类型" value={job.employment_type} />
-            <ReadField label="岗位工作城市" value={
+            <ReadField label="工作城市" value={
               job.location_path ||
               [job.province, job.city_name, job.district].filter(Boolean).join(' · ') ||
               job.location_name || job.city
@@ -171,18 +94,17 @@ function JobDetailPanel({ job }) {
 
         {/* Col 2: 岗位描述 */}
         <div className={cardClass} style={cardStyle}>
-          <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 岗位描述</div>
+          <div className={secTitleClass} style={secTitleStyle}><FileText size={11} /> 岗位描述</div>
           <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-y-auto terminal-scrollbar pr-1">
             <ReadTextarea label="岗位职责" value={job.description} />
-            <ReadChips label="知识" value={job.knowledge_requirements} />
-            <ReadChips label="硬技能" value={job.hard_skill_requirements} />
+            <ReadChips label="岗位标签" value={job.knowledge_requirements} />
             <ReadChips label="软技能" value={job.soft_skill_requirements} />
           </div>
         </div>
 
         {/* Col 3: 薪酬福利 */}
         <div className={cardClass} style={cardStyle}>
-          <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 薪酬福利</div>
+          <div className={secTitleClass} style={secTitleStyle}><DollarSign size={11} /> 薪酬福利</div>
           <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
             <div className="grid grid-cols-3 gap-3">
               <ReadField label="最低月薪" value={formatThousand(job.salary_min)} />
@@ -190,15 +112,18 @@ function JobDetailPanel({ job }) {
               <ReadField label="薪资月数" value={job.salary_months ? `${job.salary_months} 个月` : null} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <ReadField label="提成/计件奖金" value={commissionLabel} />
+              <ReadField label="提成/计件" value={commissionLabel} />
               <ReadField label="预估平均额" value={
                 job.commission_bonus_period === 'not_applicable' ? '—'
-                : job.commission_bonus_amount ? `${formatThousand(job.commission_bonus_amount)}` : null
+                  : job.commission_bonus_amount ? `${formatThousand(job.commission_bonus_amount)}` : null
               } />
             </div>
-            <ReadField label="是否有年终奖" value={job.has_year_end_bonus == null ? null : job.has_year_end_bonus ? '是' : '否'} />
+            <ReadField
+              label="年终奖"
+              value={job.has_year_end_bonus == null ? null : job.has_year_end_bonus ? '有' : '无'}
+            />
             {job.has_year_end_bonus && (
-              <ReadField label="年终奖预估平均额" value={job.year_end_bonus_months ? `${job.year_end_bonus_months} 个月` : null} />
+              <ReadField label="年终奖预估" value={job.year_end_bonus_months ? `${job.year_end_bonus_months} 个月` : null} />
             )}
           </div>
         </div>
@@ -207,21 +132,28 @@ function JobDetailPanel({ job }) {
   )
 }
 
-// ── JobCard (left two columns list item) ─────────────────────────────────────
+// ── JobCard ───────────────────────────────────────────────────────────────────
 function JobCard({ job, isSelected, isApplied, isSaved, applyingJobId, savingJobId, onSelect, onApply, onSave }) {
   const isUrgent = job.urgency_level === 1
   const cityShort = job.city_name || job.city || '—'
+  const salaryDisplay =
+    job.salary_label
+    || (job.salary_min && job.salary_max
+      ? `¥${formatThousand(job.salary_min)}–${formatThousand(job.salary_max)}/月`
+      : null)
+    || (job.salary_min ? `¥${formatThousand(job.salary_min)}+` : null)
 
   return (
     <div
       onClick={() => onSelect(job)}
-      className="cursor-pointer transition-all border-l-4"
+      className="cursor-pointer border-l-4 t-card-pressable"
       style={{
-        padding: '12px 16px',
+        padding: '12px 14px',
         borderBottom: '1px solid var(--t-border-subtle)',
         borderLeftColor: isSelected ? 'var(--t-primary)' : 'transparent',
         background: isSelected ? 'var(--t-bg-active)' : 'transparent',
         position: 'relative',
+        transition: 'background 120ms, border-color 120ms, transform var(--t-dur-fast) var(--t-ease-std)',
       }}
       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--t-bg-hover)' }}
       onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
@@ -236,40 +168,57 @@ function JobCard({ job, isSelected, isApplied, isSaved, applyingJobId, savingJob
           pointerEvents: 'none', lineHeight: 1.4,
         }}>CLOSED</span>
       )}
-      <div className="flex items-center gap-3">
-        {/* 公司头像 */}
+      <div className="flex items-start gap-2.5">
+        {/* Company avatar */}
         <div
-          className="w-9 h-9 rounded flex items-center justify-center font-bold text-sm flex-shrink-0"
-          style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+          className="w-8 h-8 rounded flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5"
+          style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)' }}
         >
-          {(job.company_name ?? job.title ?? '?')[0]}
+          {(job.company_name ?? job.title ?? '?')[0].toUpperCase()}
         </div>
 
-        {/* 信息区 */}
+        {/* Info area */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <p className="font-medium text-sm truncate" style={{ color: 'var(--t-text)' }}>{job.title}</p>
+          <div className="flex items-center gap-1 flex-wrap">
+            <p className="font-semibold text-sm truncate" style={{ color: 'var(--t-text)', lineHeight: 'var(--t-line-tight)' }}>
+              {job.title}
+            </p>
             {isUrgent && (
               <span
-                className="flex-shrink-0 text-[10px] px-1 py-0.5 border rounded font-medium"
-                style={{ background: 'var(--t-danger-muted)', color: 'var(--t-danger)', borderColor: 'var(--t-danger)' }}
+                className="flex-shrink-0 border rounded font-bold"
+                style={{
+                  fontSize: 9, padding: '1px 4px',
+                  background: 'var(--t-danger-muted)', color: 'var(--t-danger)', borderColor: 'var(--t-danger)',
+                }}
               >急</span>
             )}
           </div>
           <p className="text-xs truncate mt-0.5" style={{ color: 'var(--t-text-secondary)' }}>
             {job.company_name ?? '—'}
           </p>
-          <div className="flex items-center gap-2 text-xs mt-0.5 flex-wrap" style={{ color: 'var(--t-text-muted)' }}>
+          <div
+            className="flex items-center gap-1.5 mt-1"
+            style={{ fontSize: 11, overflow: 'hidden', flexWrap: 'nowrap' }}
+          >
             {cityShort !== '—' && (
-              <span className="flex items-center gap-0.5"><MapPin size={9} />{cityShort}</span>
+              <span className="flex items-center gap-0.5 flex-shrink-0" style={{ color: 'var(--t-text-muted)' }}>
+                <MapPin size={9} />{cityShort}
+              </span>
             )}
-            {job.salary_label && (
-              <span className="font-semibold" style={{ color: 'var(--t-chart-blue)' }}>{job.salary_label}</span>
+            {(job.function_name || job.business_type) && (
+              <span className="flex-shrink-0" style={{
+                padding: '1px 5px', borderRadius: 'var(--t-radius-sm)', fontSize: 10,
+                background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)',
+                color: 'var(--t-text-secondary)',
+              }}>{job.function_name ?? job.business_type}</span>
+            )}
+            {salaryDisplay && (
+              <span className="font-semibold truncate" style={{ color: 'var(--t-chart-blue)' }}>{salaryDisplay}</span>
             )}
           </div>
         </div>
 
-        {/* 操作按钮 */}
+        {/* Action buttons */}
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0" style={{ width: '3.5rem' }}>
           <button
             type="button"
@@ -281,7 +230,7 @@ function JobCard({ job, isSelected, isApplied, isSaved, applyingJobId, savingJob
               color: isSaved ? 'var(--t-success)' : 'var(--t-text-secondary)',
               background: isSaved ? 'var(--t-success-muted)' : 'transparent',
               opacity: savingJobId === job.id ? 0.5 : 1,
-              cursor: savingJobId === job.id ? 'default' : 'pointer',
+              cursor: savingJobId === job.id ? 'not-allowed' : 'pointer',
               width: '100%', textAlign: 'center',
             }}
             onMouseEnter={e => {
@@ -302,19 +251,21 @@ function JobCard({ job, isSelected, isApplied, isSaved, applyingJobId, savingJob
               e.currentTarget.style.background = isSaved ? 'var(--t-success-muted)' : 'transparent'
             }}
           >
-            {savingJobId === job.id ? '…' : isSaved ? '已收藏' : '收藏'}
+            {savingJobId === job.id
+              ? <Loader2 size={10} className="animate-spin" style={{ display: 'inline-block' }} />
+              : isSaved ? '已收藏' : '收藏'}
           </button>
           <button
             type="button"
             onClick={e => { e.stopPropagation(); if (applyingJobId !== job.id) onApply(job) }}
             disabled={applyingJobId === job.id}
             style={{
-              fontSize: 11, padding: '2px 0', borderRadius: 'var(--t-radius-sm)',
+              fontSize: 11, padding: '2px 0',
               border: isApplied ? '1px solid var(--t-primary)' : '1px solid var(--t-text-muted)',
               color: isApplied ? 'var(--t-primary)' : 'var(--t-text-secondary)',
               background: isApplied ? 'var(--t-primary-muted)' : 'transparent',
               opacity: applyingJobId === job.id ? 0.5 : 1,
-              cursor: applyingJobId === job.id ? 'default' : 'pointer',
+              cursor: applyingJobId === job.id ? 'not-allowed' : 'pointer',
               borderRadius: 'var(--t-radius-sm)',
               width: '100%', textAlign: 'center',
             }}
@@ -337,7 +288,9 @@ function JobCard({ job, isSelected, isApplied, isSaved, applyingJobId, savingJob
               e.currentTarget.style.background = isApplied ? 'var(--t-primary-muted)' : 'transparent'
             }}
           >
-            {applyingJobId === job.id ? '…' : isApplied ? '已投递' : '投递'}
+            {applyingJobId === job.id
+              ? <Loader2 size={10} className="animate-spin" style={{ display: 'inline-block' }} />
+              : isApplied ? '已投递' : '投递'}
           </button>
         </div>
       </div>
@@ -345,95 +298,196 @@ function JobCard({ job, isSelected, isApplied, isSaved, applyingJobId, savingJob
   )
 }
 
-// ── SavedJobCard (right column list item) ────────────────────────────────────
-function SavedJobCard({ job, isSelected, onSelect }) {
+// ── SavedJobCard ──────────────────────────────────────────────────────────────
+function SavedJobCard({ job, isSelected, isSaving, onSelect, onUnsave }) {
+  const [hovered, setHovered] = useState(false)
   const cityShort = job.city_name || job.city || '—'
+  const salaryDisplay =
+    job.salary_label
+    || (job.salary_min && job.salary_max
+      ? `¥${formatThousand(job.salary_min)}–${formatThousand(job.salary_max)}/月`
+      : null)
+    || (job.salary_min ? `¥${formatThousand(job.salary_min)}+` : null)
+  const fnLabel = job.function_name ?? job.business_type
+  const metaTags = [job.experience_required, job.employment_type].filter(Boolean)
+
   return (
     <div
       onClick={() => onSelect(job)}
-      className="cursor-pointer transition-all border-l-4"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="cursor-pointer border-l-4 t-card-pressable"
       style={{
         padding: '10px 14px',
         borderBottom: '1px solid var(--t-border-subtle)',
         borderLeftColor: isSelected ? 'var(--t-primary)' : 'transparent',
-        background: isSelected ? 'var(--t-bg-active)' : 'transparent',
+        background: isSelected ? 'var(--t-bg-active)' : hovered ? 'var(--t-bg-hover)' : 'transparent',
+        transition: 'background 120ms, border-color 120ms, transform var(--t-dur-fast) var(--t-ease-std)',
+        position: 'relative',
       }}
-      onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--t-bg-hover)' }}
-      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
     >
-      <p className="font-medium text-xs truncate" style={{ color: 'var(--t-text)' }}>{job.title}</p>
-      <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--t-text-secondary)' }}>{job.company_name ?? '—'}</p>
-      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap" style={{ color: 'var(--t-text-muted)', fontSize: 11 }}>
-        {cityShort !== '—' && <span className="flex items-center gap-0.5"><MapPin size={8} />{cityShort}</span>}
-        {job.salary_label && <span style={{ color: 'var(--t-chart-blue)' }}>{job.salary_label}</span>}
+      {/* Unsave button on hover */}
+      {hovered && !isSaving && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onUnsave(job) }}
+          style={{
+            position: 'absolute', top: 7, right: 8,
+            fontSize: 10, padding: '1px 5px', borderRadius: 'var(--t-radius-sm)',
+            border: '1px solid var(--t-border)',
+            color: 'var(--t-text-muted)', background: 'var(--t-bg-elevated)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2, lineHeight: 1.4,
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = 'var(--t-danger)'
+            e.currentTarget.style.color = 'var(--t-danger)'
+            e.currentTarget.style.background = 'var(--t-danger-muted)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = 'var(--t-border)'
+            e.currentTarget.style.color = 'var(--t-text-muted)'
+            e.currentTarget.style.background = 'var(--t-bg-elevated)'
+          }}
+        >
+          <X size={9} />取消
+        </button>
+      )}
+      {isSaving && (
+        <Loader2
+          size={10} className="animate-spin"
+          style={{ position: 'absolute', top: 9, right: 10, color: 'var(--t-text-muted)' }}
+        />
+      )}
+
+      {/* Title + salary on same row */}
+      <div className="flex items-baseline gap-1.5 overflow-hidden" style={{ paddingRight: hovered ? '3.5rem' : 0 }}>
+        <p className="font-semibold text-xs truncate flex-1 min-w-0" style={{ color: 'var(--t-text)' }}>
+          {job.title}
+        </p>
+        {salaryDisplay && (
+          <span className="flex-shrink-0 font-semibold" style={{ fontSize: 10, color: 'var(--t-chart-blue)' }}>
+            {salaryDisplay}
+          </span>
+        )}
+      </div>
+
+      {/* Company */}
+      <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--t-text-secondary)' }}>
+        {job.company_name ?? '—'}
+      </p>
+
+      {/* City + meta tags */}
+      <div className="flex items-center gap-1.5 mt-1 overflow-hidden" style={{ color: 'var(--t-text-muted)', fontSize: 10, flexWrap: 'nowrap' }}>
+        {cityShort !== '—' && (
+          <span className="flex items-center gap-0.5 flex-shrink-0">
+            <MapPin size={8} />{cityShort}
+          </span>
+        )}
+        {metaTags.map((t, i) => (
+          <span key={i} className="flex-shrink-0" style={{
+            padding: '0px 4px', borderRadius: 'var(--t-radius-sm)',
+            background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)',
+            color: 'var(--t-text-secondary)', lineHeight: '14px',
+          }}>{t}</span>
+        ))}
+        {fnLabel && (
+          <span className="flex-shrink-0 truncate" style={{
+            padding: '0px 4px', borderRadius: 'var(--t-radius-sm)',
+            background: 'var(--t-primary-muted)', border: '1px solid rgba(59,130,246,0.25)',
+            color: 'var(--t-primary)', lineHeight: '14px',
+          }}>{fnLabel}</span>
+        )}
       </div>
     </div>
+  )
+}
+
+// ── DetailActionBtn — reusable inline action button ───────────────────────────
+function DetailActionBtn({ label, loadingLabel, isLoading, isActive, activeStyle, inactiveStyle, activeHoverStyle, inactiveHoverStyle, disabled, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || isLoading}
+      style={{
+        fontSize: 11, padding: '3px 11px', borderRadius: 'var(--t-radius-sm)',
+        cursor: (disabled || isLoading) ? 'not-allowed' : 'pointer',
+        opacity: (disabled || isLoading) ? 0.5 : 1,
+        transition: 'none',
+        ...(isActive ? activeStyle : inactiveStyle),
+      }}
+      onMouseEnter={e => {
+        if (disabled || isLoading) return
+        Object.assign(e.currentTarget.style, isActive ? activeHoverStyle : inactiveHoverStyle)
+      }}
+      onMouseLeave={e => {
+        if (disabled || isLoading) return
+        Object.assign(e.currentTarget.style, isActive ? activeStyle : inactiveStyle)
+      }}
+    >
+      {isLoading
+        ? <Loader2 size={10} className="animate-spin" style={{ display: 'inline-block' }} />
+        : label}
+    </button>
   )
 }
 
 // ── 主页面 ────────────────────────────────────────────────────────────────────
 export default function TerminalCandidateJobs() {
   const navigate = useNavigate()
+  const toast    = useToast()
 
   // ── 左两列：岗位广场 ──────────────────────────────────────────────────────
   const [jobs, setJobs]         = useState([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState('')
-  const [selected, setSelected] = useState(null)  // 选中后展开详情
+  const [selected, setSelected] = useState(null)
 
-  const [q, setQ]                       = useState('')
-  const [location, setLocation]         = useState(null)
-  const [functionCode, setFunctionCode] = useState('')
+  const [q, setQ]                           = useState('')
+  const [location, setLocation]             = useState(null)
+  const [functionCode, setFunctionCode]     = useState('')
   const [employmentType, setEmploymentType] = useState('')
-  const [page, setPage]                 = useState(1)
-  const [totalPages, setTotalPages]     = useState(1)
-  const [total, setTotal]               = useState(0)
-  const lastFiltersRef                  = useRef({})
+  const [page, setPage]                     = useState(1)
+  const [totalPages, setTotalPages]         = useState(1)
+  const [total, setTotal]                   = useState(0)
+  const lastFiltersRef                      = useRef({})
 
   // ── 右列：收藏岗位 ────────────────────────────────────────────────────────
-  const [savedJobs, setSavedJobs]           = useState([])   // 收藏的完整岗位对象列表
-  const [savedLoading, setSavedLoading]     = useState(false)
-  const [savedSelected, setSavedSelected]   = useState(null) // 收藏区选中的岗位（进详情）
-  const [savedPage, setSavedPage]           = useState(1)
+  const [savedJobs, setSavedJobs]         = useState([])
+  const [savedLoading, setSavedLoading]   = useState(false)
+  const [savedSelected, setSavedSelected] = useState(null)
+  const [savedPage, setSavedPage]         = useState(1)
   const SAVED_PAGE_SIZE = 8
 
-  // 右列筛选
-  const [savedQ, setSavedQ]                     = useState('')
+  const [savedQ, setSavedQ]                       = useState('')
   const [savedFunctionCode, setSavedFunctionCode] = useState('')
-  const [savedLocation, setSavedLocation]       = useState(null)
+  const [savedLocation, setSavedLocation]         = useState(null)
 
-  // ── 应用/收藏状态 Maps ───────────────────────────────────────────────────
+  // ── 应用/收藏状态 Maps ────────────────────────────────────────────────────
   const [appliedJobMap, setAppliedJobMap] = useState(new Map())
   const [savedJobMap,   setSavedJobMap]   = useState(new Map())
   const [applyingJobId, setApplyingJobId] = useState(null)
   const [savingJobId,   setSavingJobId]   = useState(null)
-  const [applyError,    setApplyError]    = useState('')
 
   const appliedJobIds = useMemo(() => new Set(appliedJobMap.keys()), [appliedJobMap])
   const savedJobIds   = useMemo(() => new Set(savedJobMap.keys()),   [savedJobMap])
 
-  // ── 右列：详情视图状态 ───────────────────────────────────────────────────
-  // null = 显示列表；非 null = 显示 JobDetailPanel
+  // Stable key for saved-IDs useEffect — fixes size-only dep bug
+  const savedJobIdKey = useMemo(() => [...savedJobIds].sort().join(','), [savedJobIds])
+
+  // null = list; non-null = detail panel
   const detailJob = selected ?? savedSelected
 
-  // 当 selected（左列选中）激活时，清空右列选中，反之亦然
-  function selectMainJob(job) {
-    setSavedSelected(null)
-    setSelected(job)
-  }
-  function selectSavedJob(job) {
-    setSelected(null)
-    setSavedSelected(job)
-  }
+  function selectMainJob(job) { setSavedSelected(null); setSelected(job) }
+  function selectSavedJob(job) { setSelected(null); setSavedSelected(job) }
 
-  // ── 初始化：加载应用记录 ─────────────────────────────────────────────────
+  // ── 初始化：加载已投递 / 已收藏记录 ─────────────────────────────────────
   useEffect(() => {
     let cancelled = false
     applicationsApi.getMyApplications()
       .then(res => {
         if (cancelled) return
-        const applied = new Map()
-        const saved   = new Map()
+        const applied = new Map(); const saved = new Map()
         for (const a of (res.data?.applications ?? [])) {
           if (!a) continue
           if (a.is_saved) {
@@ -449,12 +503,9 @@ export default function TerminalCandidateJobs() {
     return () => { cancelled = true }
   }, [])
 
-  // ── 加载收藏的岗位详情（每当 savedJobIds 变化时重新拉取） ────────────────
+  // ── 加载收藏岗位详情 ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (savedJobIds.size === 0) {
-      setSavedJobs([])
-      return
-    }
+    if (savedJobIds.size === 0) { setSavedJobs([]); return }
     setSavedLoading(true)
     const ids = [...savedJobIds]
     Promise.all(ids.map(id => jobsApi.getJobById(id).catch(() => null)))
@@ -463,16 +514,14 @@ export default function TerminalCandidateJobs() {
       })
       .catch(() => setSavedJobs([]))
       .finally(() => setSavedLoading(false))
-  }, [savedJobIds.size]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [savedJobIdKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── 左列：拉取岗位 ───────────────────────────────────────────────────────
+  // ── 左列：拉取岗位 ────────────────────────────────────────────────────────
   function fetchJobs(filters, targetPage = 1) {
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     jobsApi.getPublicJobs({ ...filters, page: targetPage, page_size: 20 })
       .then(res => {
-        const list = res.data.jobs
-        setJobs(list)
+        setJobs(res.data.jobs)
         setPage(res.data.page ?? targetPage)
         setTotalPages(res.data.total_pages ?? 1)
         setTotal(res.data.total ?? 0)
@@ -494,49 +543,37 @@ export default function TerminalCandidateJobs() {
 
   function handleSearch(e) {
     e.preventDefault()
-    const f = buildFilters()
-    lastFiltersRef.current = f
-    fetchJobs(f, 1)
+    const f = buildFilters(); lastFiltersRef.current = f; fetchJobs(f, 1)
   }
   function handleReset() {
     setQ(''); setLocation(null); setFunctionCode(''); setEmploymentType('')
-    lastFiltersRef.current = {}
-    fetchJobs({}, 1)
+    lastFiltersRef.current = {}; fetchJobs({}, 1)
   }
   function handleLocationChange(loc) {
     setLocation(loc)
-    const f = buildFilters(loc)
-    lastFiltersRef.current = f
-    fetchJobs(f, 1)
+    const f = buildFilters(loc); lastFiltersRef.current = f; fetchJobs(f, 1)
   }
   function handleFunctionChange(code) {
     setFunctionCode(code)
-    const f = buildFilters(location, q, code, employmentType)
-    lastFiltersRef.current = f
-    fetchJobs(f, 1)
+    const f = buildFilters(location, q, code, employmentType); lastFiltersRef.current = f; fetchJobs(f, 1)
   }
   function handleEmploymentTypeChange(et) {
     setEmploymentType(et)
-    const f = buildFilters(location, q, functionCode, et)
-    lastFiltersRef.current = f
-    fetchJobs(f, 1)
+    const f = buildFilters(location, q, functionCode, et); lastFiltersRef.current = f; fetchJobs(f, 1)
   }
-  function handlePageChange(p) {
-    fetchJobs(lastFiltersRef.current, p)
-  }
+  function handlePageChange(p) { fetchJobs(lastFiltersRef.current, p) }
 
-  // ── 收藏/投递操作 ────────────────────────────────────────────────────────
+  // ── 投递 ──────────────────────────────────────────────────────────────────
   const handleApply = useCallback(async (job) => {
-    setApplyError('')
     if (appliedJobIds.has(job.id)) {
       const appId = appliedJobMap.get(job.id)
       if (!appId || applyingJobId === job.id) return
       setApplyingJobId(job.id)
       try {
         await applicationsApi.updateApplicationStatus(appId, 'withdrawn')
-        setAppliedJobMap(prev => { const next = new Map(prev); next.delete(job.id); return next })
+        setAppliedJobMap(prev => { const m = new Map(prev); m.delete(job.id); return m })
       } catch (err) {
-        setApplyError(err.response?.data?.message ?? '撤回失败，请重试')
+        toast.show(err.response?.data?.message ?? '撤回失败，请重试', 'error')
       } finally { setApplyingJobId(null) }
       return
     }
@@ -546,30 +583,29 @@ export default function TerminalCandidateJobs() {
       const res = await applicationsApi.applyToJob(job.id)
       const a = res.data?.application
       if (a && a.status !== 'withdrawn') {
-        setAppliedJobMap(prev => { const next = new Map(prev); next.set(job.id, a.id); return next })
-        setSavedJobMap(prev => { const next = new Map(prev); next.delete(job.id); return next })
+        setAppliedJobMap(prev => { const m = new Map(prev); m.set(job.id, a.id); return m })
+        setSavedJobMap(prev => { const m = new Map(prev); m.delete(job.id); return m })
       }
     } catch (err) {
-      const code = err.response?.data?.error_code
-      const status = err.response?.status
-      if (status === 422 && code === 'profile_incomplete') {
+      const { error_code } = err.response?.data ?? {}
+      if (err.response?.status === 422 && error_code === 'profile_incomplete') {
         navigate('/candidate/tags'); return
       }
-      setApplyError(err.response?.data?.message ?? '投递失败，请重试')
+      toast.show(err.response?.data?.message ?? '投递失败，请重试', 'error')
     } finally { setApplyingJobId(null) }
-  }, [appliedJobIds, appliedJobMap, applyingJobId, navigate])
+  }, [appliedJobIds, appliedJobMap, applyingJobId, navigate, toast])
 
+  // ── 收藏 ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async (job) => {
-    setApplyError('')
     if (savedJobIds.has(job.id)) {
       const appId = savedJobMap.get(job.id)
       if (!appId || savingJobId === job.id) return
       setSavingJobId(job.id)
       try {
         await applicationsApi.unsaveJob(job.id)
-        setSavedJobMap(prev => { const next = new Map(prev); next.delete(job.id); return next })
+        setSavedJobMap(prev => { const m = new Map(prev); m.delete(job.id); return m })
       } catch (err) {
-        setApplyError(err.response?.data?.message ?? '取消收藏失败，请重试')
+        toast.show(err.response?.data?.message ?? '取消收藏失败，请重试', 'error')
       } finally { setSavingJobId(null) }
       return
     }
@@ -579,23 +615,22 @@ export default function TerminalCandidateJobs() {
       const res = await applicationsApi.saveJob(job.id)
       const a = res.data?.application
       if (a?.is_saved) {
-        setSavedJobMap(prev => { const next = new Map(prev); next.set(job.id, a.id); return next })
+        setSavedJobMap(prev => { const m = new Map(prev); m.set(job.id, a.id); return m })
       }
       if (a && !['saved', 'withdrawn'].includes(a.status)) {
-        setAppliedJobMap(prev => { const next = new Map(prev); next.set(job.id, a.id); return next })
+        setAppliedJobMap(prev => { const m = new Map(prev); m.set(job.id, a.id); return m })
       }
     } catch (err) {
-      const code = err.response?.data?.error_code
-      const status = err.response?.status
-      if (status === 422 && code === 'profile_incomplete') {
-        navigate(err.response?.data?.missing?.includes('profile') ? '/candidate/profile/builder' : '/candidate/tags')
+      const { error_code, missing } = err.response?.data ?? {}
+      if (err.response?.status === 422 && error_code === 'profile_incomplete') {
+        navigate(missing?.includes('profile') ? '/candidate/profile/builder' : '/candidate/tags')
         return
       }
-      setApplyError(err.response?.data?.message ?? '收藏失败，请重试')
+      toast.show(err.response?.data?.message ?? '收藏失败，请重试', 'error')
     } finally { setSavingJobId(null) }
-  }, [savedJobIds, savedJobMap, savingJobId, navigate])
+  }, [savedJobIds, savedJobMap, savingJobId, navigate, toast])
 
-  // ── 右列：收藏岗位过滤 + 分页 ───────────────────────────────────────────
+  // ── 右列收藏过滤 + 分页 ───────────────────────────────────────────────────
   const filteredSavedJobs = useMemo(() => {
     return savedJobs.filter(job => {
       if (savedQ) {
@@ -613,56 +648,89 @@ export default function TerminalCandidateJobs() {
 
   const savedTotalPages = Math.ceil(filteredSavedJobs.length / SAVED_PAGE_SIZE) || 1
   const pagedSavedJobs  = filteredSavedJobs.slice((savedPage - 1) * SAVED_PAGE_SIZE, savedPage * SAVED_PAGE_SIZE)
+  const hasFilter       = q || !!location?.location_code || !!functionCode || !!employmentType
 
-  const hasFilter = q || !!location?.location_code || !!functionCode || !!employmentType
-
-  // ── 渲染 ─────────────────────────────────────────────────────────────────
+  // ── 渲染 ──────────────────────────────────────────────────────────────────
   return (
     <TerminalLayout title="JOBS" activeIconId="jobs" navItems={CANDIDATE_ICON_NAV}>
       <TerminalPageSurface split>
 
-        {/* 当有详情选中时，整个3列区域展示 JobDetailPanel */}
         {detailJob ? (
+          /* ── 详情视图 ── */
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ background: 'var(--t-bg)' }}>
-            {/* 顶部面包屑返回 */}
+            {/* 顶部面包屑 + 操作 */}
             <div
-              className="flex-shrink-0 flex items-center gap-2 px-6 py-2"
+              className="flex-shrink-0 flex items-center gap-2 px-4 py-2"
               style={{ borderBottom: '1px solid var(--t-border-subtle)', background: 'var(--t-bg-panel)' }}
             >
               <button
                 type="button"
                 onClick={() => { setSelected(null); setSavedSelected(null) }}
-                className="flex items-center gap-1 text-xs"
+                className="flex items-center gap-1 text-xs flex-shrink-0"
                 style={{ color: 'var(--t-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0' }}
                 onMouseEnter={e => e.currentTarget.style.color = 'var(--t-text)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'var(--t-text-muted)'}
               >
-                <ChevronLeft size={13} />
-                返回岗位列表
+                <ChevronLeft size={13} />返回
               </button>
-              <span style={{ color: 'var(--t-border)', fontSize: 12 }}>|</span>
-              <span className="text-xs truncate" style={{ color: 'var(--t-text-secondary)' }}>
+              <span style={{ color: 'var(--t-border)', fontSize: 14 }}>|</span>
+              <span className="text-xs truncate flex-1 min-w-0" style={{ color: 'var(--t-text-secondary)' }}>
                 {detailJob.title}
+                {detailJob.company_name && (
+                  <span style={{ color: 'var(--t-text-muted)' }}> · {detailJob.company_name}</span>
+                )}
               </span>
-              {applyError && (
-                <span className="ml-auto text-xs flex items-center gap-1" style={{ color: 'var(--t-danger)' }}>
-                  <AlertCircle size={12} />{applyError}
-                </span>
-              )}
+
+              {/* Save + Apply */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <DetailActionBtn
+                  label={savedJobIds.has(detailJob.id) ? '已收藏' : '收藏'}
+                  isLoading={savingJobId === detailJob.id}
+                  isActive={savedJobIds.has(detailJob.id)}
+                  activeStyle={{
+                    border: '1px solid var(--t-success)', color: 'var(--t-success)', background: 'var(--t-success-muted)',
+                  }}
+                  inactiveStyle={{
+                    border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)', background: 'transparent',
+                  }}
+                  activeHoverStyle={{
+                    border: '1px solid var(--t-danger)', color: 'var(--t-danger)', background: 'var(--t-danger-muted)',
+                  }}
+                  inactiveHoverStyle={{
+                    border: '1px solid var(--t-success)', color: 'var(--t-success)', background: 'transparent',
+                  }}
+                  onClick={() => handleSave(detailJob)}
+                />
+                <DetailActionBtn
+                  label={appliedJobIds.has(detailJob.id) ? '已投递' : '立即投递'}
+                  isLoading={applyingJobId === detailJob.id}
+                  disabled={detailJob.status === 'closed'}
+                  isActive={appliedJobIds.has(detailJob.id)}
+                  activeStyle={{
+                    border: '1px solid var(--t-primary)', color: 'var(--t-primary-fg)', background: 'var(--t-primary)',
+                  }}
+                  inactiveStyle={{
+                    border: '1px solid var(--t-primary)', color: 'var(--t-primary)', background: 'var(--t-primary-muted)',
+                  }}
+                  activeHoverStyle={{
+                    border: '1px solid var(--t-danger)', color: 'var(--t-danger)', background: 'var(--t-danger-muted)',
+                  }}
+                  inactiveHoverStyle={{
+                    border: '1px solid var(--t-primary)', color: 'var(--t-primary-fg)', background: 'var(--t-primary)',
+                  }}
+                  onClick={() => handleApply(detailJob)}
+                />
+              </div>
             </div>
             <JobDetailPanel job={detailJob} />
           </div>
         ) : (
-          /* 未选中详情时：筛选栏 + 岗位列表栏 + 收藏栏 */
+          /* ── 列表视图 ── */
           <>
-            {/* ── 筛选栏（固定宽度，独立一列） ── */}
+            {/* 筛选栏 */}
             <div
               className="flex-shrink-0 flex flex-col overflow-hidden"
-              style={{
-                width: 220,
-                background: 'var(--t-bg-panel)',
-                borderRight: '1px solid var(--t-border)',
-              }}
+              style={{ width: 'var(--t-filter-sidebar-width)', background: 'var(--t-bg-panel)', borderRight: '1px solid var(--t-border)' }}
             >
               <div className="flex-1 overflow-y-auto terminal-scrollbar p-4">
                 <h1 className="text-base font-semibold mb-3" style={{ color: 'var(--t-text)' }}>岗位广场</h1>
@@ -672,24 +740,16 @@ export default function TerminalCandidateJobs() {
                     <input
                       value={q}
                       onChange={e => setQ(e.target.value)}
-                      placeholder="搜索职位或城市..."
+                      placeholder="搜索职位或公司..."
                       className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg focus:outline-none"
                       style={{ background: 'var(--t-bg-input)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
                     />
                   </div>
-                  <RegionSelector
-                    value={location}
-                    onChange={handleLocationChange}
-                    terminal
-                    placeholder="按地区筛选"
-                  />
+                  <RegionSelector value={location} onChange={handleLocationChange} terminal placeholder="按地区筛选" />
                   <TerminalSelect
                     value={functionCode}
                     onChange={handleFunctionChange}
-                    options={[
-                      { value: '', label: '业务方向（全部）' },
-                      ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label })),
-                    ]}
+                    options={[{ value: '', label: '业务方向（全部）' }, ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label }))]}
                     placeholder="业务方向（全部）"
                     hasValue={!!functionCode}
                   />
@@ -708,7 +768,7 @@ export default function TerminalCandidateJobs() {
                   <div className="flex gap-2">
                     <button
                       type="submit"
-                      className="flex-1 py-1.5 text-xs text-white rounded-lg transition-colors"
+                      className="flex-1 py-1.5 text-xs text-white rounded-lg"
                       style={{ background: 'var(--t-primary)' }}
                     >
                       搜索
@@ -717,7 +777,7 @@ export default function TerminalCandidateJobs() {
                       <button
                         type="button"
                         onClick={handleReset}
-                        className="px-2 py-1.5 text-xs rounded-lg border transition-colors"
+                        className="px-2 py-1.5 text-xs rounded-lg border"
                         style={{ background: 'var(--t-bg-elevated)', borderColor: 'var(--t-border)', color: 'var(--t-text-secondary)' }}
                       >
                         <X size={12} />
@@ -733,26 +793,19 @@ export default function TerminalCandidateJobs() {
               </div>
             </div>
 
-            {/* ── 岗位列表栏（flex:1，可滚动，底部分页） ── */}
+            {/* 岗位列表 */}
             <div
               className="flex flex-col overflow-hidden"
-              style={{
-                flex: '1 1 0',
-                minWidth: 0,
-                background: 'var(--t-bg)',
-                borderRight: '1px solid var(--t-border)',
-              }}
+              style={{ flex: '1 1 0', minWidth: 0, background: 'var(--t-bg)', borderRight: '1px solid var(--t-border)' }}
             >
               <div className="flex-1 overflow-y-auto terminal-scrollbar">
                 {loading && (
                   <div className="flex items-center justify-center gap-2 py-16" style={{ color: 'var(--t-text-muted)' }}>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span className="text-sm">加载中...</span>
+                    <Loader2 size={16} className="animate-spin" /><span className="text-sm">加载中...</span>
                   </div>
                 )}
                 {!loading && error && (
                   <div className="flex flex-col items-center justify-center py-16 px-4">
-                    <AlertCircle size={24} className="mb-2" style={{ color: 'var(--t-danger)' }} />
                     <p className="text-xs text-center" style={{ color: 'var(--t-danger)' }}>{error}</p>
                   </div>
                 )}
@@ -763,35 +816,33 @@ export default function TerminalCandidateJobs() {
                   </div>
                 )}
                 {!loading && !error && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                  {jobs.map(job => (
-                    <JobCard
-                      key={job.id}
-                      job={job}
-                      isSelected={selected?.id === job.id}
-                      isApplied={appliedJobIds.has(job.id)}
-                      isSaved={savedJobIds.has(job.id)}
-                      applyingJobId={applyingJobId}
-                      savingJobId={savingJobId}
-                      onSelect={selectMainJob}
-                      onApply={handleApply}
-                      onSave={handleSave}
-                    />
-                  ))}
-                </div>
-              )}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                    {jobs.map(job => (
+                      <JobCard
+                        key={job.id}
+                        job={job}
+                        isSelected={selected?.id === job.id}
+                        isApplied={appliedJobIds.has(job.id)}
+                        isSaved={savedJobIds.has(job.id)}
+                        applyingJobId={applyingJobId}
+                        savingJobId={savingJobId}
+                        onSelect={selectMainJob}
+                        onApply={handleApply}
+                        onSave={handleSave}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {/* 岗位列表分页 */}
               <Pagination page={page} totalPages={totalPages} onPageChange={handlePageChange} terminal />
             </div>
 
-            {/* ── 右一列：筛选 + 收藏岗位列表 ── */}
+            {/* 收藏列 — fixed width so the job list gets more room */}
             <div
-              className="flex flex-col overflow-hidden"
-              style={{ flex: '1 1 0', minWidth: 0, background: 'var(--t-bg)' }}
+              className="flex flex-col overflow-hidden flex-shrink-0"
+              style={{ width: 'clamp(240px, 22vw, 310px)', background: 'var(--t-bg)' }}
             >
-              {/* 上半：筛选条件 */}
+              {/* 收藏筛选头 */}
               <div
                 className="flex-shrink-0 p-4"
                 style={{ borderBottom: '1px solid var(--t-border-subtle)', background: 'var(--t-bg-panel)' }}
@@ -813,16 +864,12 @@ export default function TerminalCandidateJobs() {
                   <RegionSelector
                     value={savedLocation}
                     onChange={loc => { setSavedLocation(loc); setSavedPage(1) }}
-                    terminal
-                    placeholder="按地区筛选"
+                    terminal placeholder="按地区筛选"
                   />
                   <TerminalSelect
                     value={savedFunctionCode}
                     onChange={val => { setSavedFunctionCode(val); setSavedPage(1) }}
-                    options={[
-                      { value: '', label: '业务方向（全部）' },
-                      ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label })),
-                    ]}
+                    options={[{ value: '', label: '业务方向（全部）' }, ...FUNCTION_OPTIONS.map(f => ({ value: f.key, label: f.label }))]}
                     placeholder="业务方向（全部）"
                     hasValue={!!savedFunctionCode}
                   />
@@ -834,12 +881,11 @@ export default function TerminalCandidateJobs() {
                 )}
               </div>
 
-              {/* 下半：收藏岗位列表 */}
+              {/* 收藏列表 */}
               <div className="flex-1 overflow-y-auto terminal-scrollbar">
                 {savedLoading && (
                   <div className="flex items-center justify-center gap-2 py-12" style={{ color: 'var(--t-text-muted)' }}>
-                    <Loader2 size={14} className="animate-spin" />
-                    <span className="text-xs">加载中...</span>
+                    <Loader2 size={14} className="animate-spin" /><span className="text-xs">加载中...</span>
                   </div>
                 )}
                 {!savedLoading && filteredSavedJobs.length === 0 && (
@@ -855,12 +901,12 @@ export default function TerminalCandidateJobs() {
                     key={job.id}
                     job={job}
                     isSelected={savedSelected?.id === job.id}
+                    isSaving={savingJobId === job.id}
                     onSelect={selectSavedJob}
+                    onUnsave={handleSave}
                   />
                 ))}
               </div>
-
-              {/* 右列独立分页 */}
               <Pagination page={savedPage} totalPages={savedTotalPages} onPageChange={setSavedPage} terminal />
             </div>
           </>

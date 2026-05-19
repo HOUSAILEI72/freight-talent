@@ -44,8 +44,6 @@ import TerminalCandidateJobs from '../pages/candidate/TerminalCandidateJobs'
 import TerminalCandidateMessages from '../pages/candidate/TerminalCandidateMessages'
 import TerminalCandidateTags from '../pages/candidate/TerminalCandidateTags'
 import TerminalCandidateUpload from '../pages/candidate/TerminalCandidateUpload'
-import TerminalCandidateInvitations from '../pages/candidate/TerminalCandidateInvitations'
-import TerminalCandidateApplications from '../pages/candidate/TerminalCandidateApplications'
 import TerminalCandidateProfile from '../pages/candidate/TerminalCandidateProfile'
 import TerminalCandidateProfileBuilder from '../pages/candidate/TerminalCandidateProfileBuilder'
 import TerminalSettings from '../pages/employer/TerminalSettings'
@@ -194,14 +192,6 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'candidate/invitations',
-        element: (
-          <RequireAuth roles={['candidate']}>
-            <TerminalCandidateInvitations />
-          </RequireAuth>
-        ),
-      },
-      {
         path: 'candidate/settings',
         element: (
           <RequireAuth roles={['candidate']}>
@@ -209,15 +199,6 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      {
-        path: 'candidate/applications',
-        element: (
-          <RequireAuth roles={['candidate']}>
-            <TerminalCandidateApplications />
-          </RequireAuth>
-        ),
-      },
-
       // 企业路由
       {
         path: 'candidates',

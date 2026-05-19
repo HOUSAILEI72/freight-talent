@@ -98,7 +98,7 @@ export function TagNoteModal({ tag, onClose }) {
                 ref={noteRef}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                rows={4}
+                rows={1}
                 maxLength={200}
                 placeholder={`描述你在「${tag?.name}」方面的具体经验或使用场景...`}
                 disabled={status === 'loading' || status === 'submitting'}

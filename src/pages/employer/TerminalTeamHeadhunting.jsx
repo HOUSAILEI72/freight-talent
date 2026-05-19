@@ -4,7 +4,7 @@ import TeamHeadhunting from './TeamHeadhunting'
 export default function TerminalTeamHeadhunting() {
   return (
     <TerminalLayout title="HEADHUNTING" activeIconId="">
-      <TeamHeadhunting />
+      <TeamHeadhunting terminal />
     </TerminalLayout>
   )
 }

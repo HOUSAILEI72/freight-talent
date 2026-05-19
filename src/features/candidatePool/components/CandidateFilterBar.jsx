@@ -1,4 +1,5 @@
-import { Search, X, SlidersHorizontal } from 'lucide-react'
+import { Search, X, SlidersHorizontal, ChevronLeft } from 'lucide-react'
+import { useState } from 'react'
 import RegionSelector from '../../../components/RegionSelector'
 import { TerminalSelect } from '../../../components/terminal/TerminalSelect'
 import { FUNCTION_OPTIONS, AVAIL_OPTIONS } from '../constants'
@@ -20,7 +21,9 @@ export function CandidateFilterBar({
   loading, candidates, total,
   activePoolLabel,
   terminal,
+  onCollapse,
 }) {
+  const [collapseHovered, setCollapseHovered] = useState(false)
   const inputStyle = terminal
     ? { background: 'var(--t-bg-input)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }
     : undefined
@@ -56,7 +59,7 @@ export function CandidateFilterBar({
           {terminal && activePoolLabel && (
             <span
               style={{
-                marginLeft: 'auto',
+                flex: 1,
                 fontFamily: 'var(--t-font-ui)',
                 fontSize: 9,
                 color: 'var(--t-primary)',
@@ -66,11 +69,36 @@ export function CandidateFilterBar({
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                maxWidth: 90,
               }}
             >
               {activePoolLabel}
             </span>
+          )}
+          {terminal && onCollapse && (
+            <button
+              type="button"
+              title="折叠筛选栏"
+              onClick={onCollapse}
+              onMouseEnter={() => setCollapseHovered(true)}
+              onMouseLeave={() => setCollapseHovered(false)}
+              style={{
+                marginLeft: activePoolLabel ? 0 : 'auto',
+                flexShrink: 0,
+                width: 20,
+                height: 20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 4,
+                border: 'none',
+                cursor: 'pointer',
+                background: collapseHovered ? 'var(--t-bg-hover)' : 'transparent',
+                color: collapseHovered ? 'var(--t-text)' : 'var(--t-text-muted)',
+                transition: 'background 130ms, color 130ms',
+              }}
+            >
+              <ChevronLeft size={11} />
+            </button>
           )}
         </div>
 

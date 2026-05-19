@@ -217,8 +217,7 @@ function PersonalHdDetail({ req }) {
           <div className={secTitleClass} style={secTitleStyle}><FileText size={11} /> 职责 &amp; 技能</div>
           <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
             <ReadTextarea label="岗位职责" value={job.description} />
-            <ReadChips label="知识要求" value={splitTokens(job.knowledge_requirements)} />
-            <ReadChips label="硬技能要求" value={splitTokens(job.hard_skill_requirements)} />
+            <ReadChips label="岗位标签" value={splitTokens(job.knowledge_requirements)} />
             <ReadChips label="软技能要求" value={splitTokens(job.soft_skill_requirements)} />
             {job.target_companies && job.target_companies.length > 0 && (
               <ReadChips label="目标公司" value={Array.isArray(job.target_companies) ? job.target_companies : splitTokens(job.target_companies)} />
@@ -452,8 +451,8 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
       padding: 4,
       borderRadius: 'var(--t-radius)',
       border: '1px solid var(--t-border-subtle)',
-      background: 'rgba(15, 23, 42, 0.22)',
-      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.025)',
+      background: 'var(--t-bg-elevated)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
     }
     const actionButtonBase = {
       height: 28,
@@ -637,8 +636,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
             <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 岗位描述</div>
             <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-y-auto terminal-scrollbar pr-1">
               <ReadTextarea label="岗位职责" value={job.description} />
-              <ReadChips label="知识" value={job.knowledge_requirements} />
-              <ReadChips label="硬技能" value={job.hard_skill_requirements} />
+              <ReadChips label="岗位标签" value={job.knowledge_requirements} />
               <ReadChips label="软技能" value={job.soft_skill_requirements} />
             </div>
           </div>
@@ -1451,6 +1449,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                   borderBottom: '1px solid var(--t-border-subtle)',
                   background: isSelected ? 'var(--t-bg-active)' : 'transparent',
                   borderLeftColor: isSelected ? 'var(--t-primary)' : 'transparent',
+                  transition: 'background 120ms, transform var(--t-dur-fast) var(--t-ease-std)',
                 }
               : undefined
 
@@ -1458,7 +1457,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
               <div
                 key={job.id}
                 onClick={() => setSelected(job)}
-                className={rowClass}
+                className={terminal ? `${rowClass} t-card-pressable` : rowClass}
                 style={{ ...rowStyle, position: 'relative' }}
                 onMouseEnter={(e) => {
                   if (terminal && !isSelected) e.currentTarget.style.background = 'var(--t-bg-hover)'
@@ -1558,7 +1557,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                           background: isSaved ? 'var(--t-success-muted)' : 'transparent',
                           borderRadius: 'var(--t-radius-sm)',
                           opacity: savingJobId === job.id ? 0.5 : 1,
-                          cursor: savingJobId === job.id ? 'default' : 'pointer',
+                          cursor: savingJobId === job.id ? 'not-allowed' : 'pointer',
                           width: '100%',
                           textAlign: 'center',
                         } : undefined}
@@ -1580,7 +1579,9 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                           e.currentTarget.style.background = isSaved ? 'var(--t-success-muted)' : 'transparent'
                         }}
                       >
-                        {savingJobId === job.id ? '…' : isSaved ? '已收藏' : '收藏'}
+                        {savingJobId === job.id
+                          ? <Loader2 size={10} className="animate-spin" style={{ display: 'inline-block' }} />
+                          : isSaved ? '已收藏' : '收藏'}
                       </button>
                       {/* 投递 / 撤回投递 toggle */}
                       <button
@@ -1600,7 +1601,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                           color: isApplied ? 'var(--t-primary)' : 'var(--t-text-secondary)',
                           background: isApplied ? 'var(--t-primary-muted)' : 'transparent',
                           opacity: applyingJobId === job.id ? 0.5 : 1,
-                          cursor: applyingJobId === job.id ? 'default' : 'pointer',
+                          cursor: applyingJobId === job.id ? 'not-allowed' : 'pointer',
                           borderRadius: 'var(--t-radius-sm)',
                           width: '100%',
                           textAlign: 'center',
@@ -1624,7 +1625,9 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                           e.currentTarget.style.background = isApplied ? 'var(--t-primary-muted)' : 'transparent'
                         }}
                       >
-                        {applyingJobId === job.id ? '…' : isApplied ? '已投递' : '投递'}
+                        {applyingJobId === job.id
+                          ? <Loader2 size={10} className="animate-spin" style={{ display: 'inline-block' }} />
+                          : isApplied ? '已投递' : '投递'}
                       </button>
                     </div>
                   )}

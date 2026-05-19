@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { candidatesApi } from '../../../api/candidates'
 
 const ACTIONS = [
-  { key: 'interview',         label: '约面试' },
-  { key: 'not_fit',           label: '不合适' },
-  { key: 'resume_update',     label: '简历需更新' },
-  { key: 'interview_address', label: '发送面试地址' },
+  { key: 'interview',         label: '约面试',     tone: 'positive' },
+  { key: 'not_fit',           label: '不合适',     tone: 'negative' },
+  { key: 'resume_update',     label: '简历需更新', tone: 'neutral' },
+  { key: 'interview_address', label: '发送面试地址', tone: 'neutral' },
 ]
 
 function getStatusLabel(status) {
@@ -63,20 +63,37 @@ export function CandidateEmailActionBar({ candidateId, jobId, threadId, terminal
   }
 
   const btnBase = {
-    height: 22,
-    padding: '0 8px',
+    height: 27,
+    padding: '0 11px',
     borderRadius: 999,
     fontFamily: 'var(--t-font-sans)',
-    fontSize: 10,
-    fontWeight: 600,
-    letterSpacing: '0.04em',
+    fontSize: 12,
+    fontWeight: 500,
     whiteSpace: 'nowrap',
     cursor: 'pointer',
-    transition: 'background 120ms, border-color 120ms, color 120ms',
+    transition: 'background 120ms, border-color 120ms, color 120ms, transform 80ms, opacity 80ms',
     border: '1px solid',
+    lineHeight: 1,
   }
 
-  function getBtnStyle(actionKey) {
+  function getIdleStyle(tone) {
+    if (!terminal) return { ...btnBase, borderColor: '#e2e8f0', color: '#475569', background: 'transparent' }
+    if (tone === 'positive') return {
+      ...btnBase,
+      borderColor: 'var(--t-primary)',
+      color: 'var(--t-primary)',
+      background: 'var(--t-primary-muted)',
+    }
+    if (tone === 'negative') return {
+      ...btnBase,
+      borderColor: 'var(--t-border)',
+      color: 'var(--t-text-muted)',
+      background: 'transparent',
+    }
+    return { ...btnBase, borderColor: 'var(--t-border)', color: 'var(--t-text-secondary)', background: 'transparent' }
+  }
+
+  function getBtnStyle(actionKey, tone) {
     const st = actionStates[actionKey]?.status ?? 'idle'
     const isSending = !!sending[actionKey]
     if (isSending || st === 'pending') return {
@@ -85,7 +102,7 @@ export function CandidateEmailActionBar({ candidateId, jobId, threadId, terminal
       color: terminal ? 'var(--t-text-muted)' : '#94a3b8',
       background: 'transparent',
       cursor: 'not-allowed',
-      opacity: 0.6,
+      opacity: 0.55,
     }
     if (st === 'sent') return {
       ...btnBase,
@@ -96,21 +113,16 @@ export function CandidateEmailActionBar({ candidateId, jobId, threadId, terminal
     }
     if (st === 'failed') return {
       ...btnBase,
-      borderColor: terminal ? 'var(--t-danger, #ef4444)' : '#fca5a5',
-      color: terminal ? 'var(--t-danger, #ef4444)' : '#dc2626',
-      background: terminal ? 'rgba(239,68,68,0.1)' : '#fef2f2',
+      borderColor: terminal ? 'var(--t-danger)' : '#fca5a5',
+      color: terminal ? 'var(--t-danger)' : '#dc2626',
+      background: terminal ? 'rgba(239,68,68,0.08)' : '#fef2f2',
     }
-    return {
-      ...btnBase,
-      borderColor: terminal ? 'var(--t-border)' : '#e2e8f0',
-      color: terminal ? 'var(--t-text-muted)' : '#64748b',
-      background: 'transparent',
-    }
+    return getIdleStyle(tone)
   }
 
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
         {ACTIONS.map(action => {
           const st = actionStates[action.key]?.status ?? 'idle'
           const isSending = !!sending[action.key]
@@ -123,13 +135,13 @@ export function CandidateEmailActionBar({ candidateId, jobId, threadId, terminal
               type="button"
               disabled={disabled}
               onClick={() => !disabled && handleSend(action.key)}
-              style={getBtnStyle(action.key)}
+              style={getBtnStyle(action.key, action.tone)}
               onMouseEnter={(e) => {
                 if (disabled) return
                 if (terminal) {
-                  e.currentTarget.style.borderColor = 'var(--t-primary)'
-                  e.currentTarget.style.color = 'var(--t-primary)'
-                  e.currentTarget.style.background = 'var(--t-primary-muted)'
+                  e.currentTarget.style.borderColor = action.tone === 'negative' ? 'var(--t-danger)' : 'var(--t-primary)'
+                  e.currentTarget.style.color = action.tone === 'negative' ? 'var(--t-danger)' : 'var(--t-primary)'
+                  e.currentTarget.style.background = action.tone === 'negative' ? 'rgba(239,68,68,0.08)' : 'var(--t-primary-muted)'
                 } else {
                   e.currentTarget.style.borderColor = '#93c5fd'
                   e.currentTarget.style.color = '#2563eb'
@@ -138,11 +150,13 @@ export function CandidateEmailActionBar({ candidateId, jobId, threadId, terminal
               }}
               onMouseLeave={(e) => {
                 if (disabled) return
-                const style = getBtnStyle(action.key)
+                const style = getBtnStyle(action.key, action.tone)
                 e.currentTarget.style.borderColor = style.borderColor
                 e.currentTarget.style.color = style.color
                 e.currentTarget.style.background = style.background
               }}
+              onMouseDown={e => { if (!disabled && terminal) { e.currentTarget.style.transform = 'scale(0.95)'; e.currentTarget.style.opacity = '0.82' } }}
+              onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.opacity = '' }}
             >
               {label}
             </button>
@@ -152,6 +166,7 @@ export function CandidateEmailActionBar({ candidateId, jobId, threadId, terminal
 
       {toast && (
         <div
+          className={terminal ? 't-toast-enter terminal-mode' : undefined}
           style={{
             position: 'fixed',
             bottom: 24,
@@ -160,12 +175,14 @@ export function CandidateEmailActionBar({ candidateId, jobId, threadId, terminal
             zIndex: 9999,
             padding: '8px 18px',
             borderRadius: 10,
-            background: '#1e293b',
-            color: '#fff',
+            background: terminal ? 'var(--t-bg-elevated)' : '#1e293b',
+            border: terminal ? '1px solid var(--t-border)' : 'none',
+            color: terminal ? 'var(--t-text)' : '#fff',
             fontSize: 13,
             fontWeight: 500,
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
+            boxShadow: terminal ? 'var(--t-shadow-elevated)' : '0 4px 16px rgba(0,0,0,0.4)',
           }}
         >
           {toast}

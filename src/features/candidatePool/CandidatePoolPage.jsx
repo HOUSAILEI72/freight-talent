@@ -1,4 +1,4 @@
-import { User, MessageSquare, X } from 'lucide-react'
+import { User, MessageSquare, X, ChevronRight } from 'lucide-react'
 import { useRef, useState, useEffect } from 'react'
 import TerminalPageSurface from '../../components/terminal/TerminalPageSurface'
 import Pagination from '../../components/ui/Pagination'
@@ -15,6 +15,22 @@ import { CandidateMiniChatWindow } from './components/CandidateMiniChatWindow'
 import { CANDIDATE_POOL_TABS } from './constants'
 import { conversationsApi } from '../../api/conversations'
 
+function QuotaBar({ used, limit }) {
+  const pct = Math.min(100, (used / limit) * 100)
+  const color = pct >= 90 ? 'var(--t-danger)' : pct >= 70 ? 'var(--t-warning)' : 'var(--t-primary)'
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 10, color: 'var(--t-text-muted)', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+        主动沟通
+      </span>
+      <div style={{ width: 72, height: 4, background: 'var(--t-border)', borderRadius: 9999, flexShrink: 0 }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 9999, transition: 'width 300ms' }} />
+      </div>
+      <span style={{ fontSize: 10, color: 'var(--t-text-muted)', whiteSpace: 'nowrap' }}>{used}/{limit}</span>
+    </div>
+  )
+}
+
 export default function CandidatePoolPage({ terminal = false }) {
   const pool    = useCandidatePool()
   const filters = useCandidateFilters()
@@ -24,15 +40,37 @@ export default function CandidatePoolPage({ terminal = false }) {
   const [chatModal, setChatModal] = useState(null)    // { threadId, candidate, job } — public light only
   const [chatToast, setChatToast] = useState(null)
   const [activeDockConv,  setActiveDockConv]  = useState(null)  // terminal dock mini-chat
-  const [dockCollapsed,   setDockCollapsed]   = useState(false)
+  const [dockCollapsed,   setDockCollapsed]   = useState(true)
   const [dockRefreshKey,  setDockRefreshKey]  = useState(0)
   const [dockOpen,        setDockOpen]        = useState(false)  // responsive drawer
+  const [filterCollapsed, setFilterCollapsed] = useState(false)
+  const filterAutoRef  = useRef(false)
+  const dockElRef      = useRef(null)
   const lastFiltersRef = useRef({ availability_status: 'open' })
+  const [expandBtnHovered, setExpandBtnHovered] = useState(false)
 
   useEffect(() => {
     if (!terminal && pool.candidates.length > 0 && !selected) setSelected(pool.candidates[0])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pool.candidates])
+
+  // Auto-collapse filter sidebar when mini-chat opens or dock expands; auto-restore when both close
+  useEffect(() => {
+    if (!terminal) return
+    const shouldCollapse = activeDockConv !== null || !dockCollapsed
+    if (shouldCollapse) {
+      filterAutoRef.current = true
+      setFilterCollapsed(true)
+    } else if (filterAutoRef.current) {
+      filterAutoRef.current = false
+      setFilterCollapsed(false)
+    }
+  }, [activeDockConv, dockCollapsed, terminal])
+
+  function handleToggleFilter() {
+    filterAutoRef.current = false
+    setFilterCollapsed(v => !v)
+  }
 
   function showToast(msg) {
     setChatToast(msg)
@@ -196,7 +234,7 @@ export default function CandidatePoolPage({ terminal = false }) {
           <CandidateMiniChatWindow
             key={activeDockConv.threadId}
             activeDockConv={activeDockConv}
-            dockCollapsed={dockCollapsed}
+            dockElRef={dockElRef}
             onClose={() => {
               setActiveDockConv(null)
               setDockRefreshKey(k => k + 1)   // 关闭时刷新一次未读数
@@ -221,20 +259,38 @@ export default function CandidatePoolPage({ terminal = false }) {
           />
 
           <aside
-            className="terminal-filter-sidebar"
+            className={`terminal-filter-sidebar${filterCollapsed ? ' terminal-filter-sidebar--collapsed' : ''}`}
             style={{ background: 'var(--t-bg-panel)', borderRight: '1px solid var(--t-border)' }}
           >
-            <div className="flex-1 overflow-y-auto terminal-scrollbar">
-              <CandidateFilterBar
-                {...filterBarProps}
-                activePoolLabel={CANDIDATE_POOL_TABS.find(t => t.key === filters.poolType)?.label}
-              />
-            </div>
+            {filterCollapsed ? (
+              <button
+                type="button"
+                title="展开筛选"
+                className="terminal-filter-expand-btn"
+                onClick={handleToggleFilter}
+                onMouseEnter={() => setExpandBtnHovered(true)}
+                onMouseLeave={() => setExpandBtnHovered(false)}
+                style={{
+                  background: expandBtnHovered ? 'var(--t-bg-hover)' : 'transparent',
+                  color: expandBtnHovered ? 'var(--t-text)' : 'var(--t-text-muted)',
+                }}
+              >
+                <ChevronRight size={14} />
+              </button>
+            ) : (
+              <div className="flex-1 overflow-y-auto terminal-scrollbar">
+                <CandidateFilterBar
+                  {...filterBarProps}
+                  activePoolLabel={CANDIDATE_POOL_TABS.find(t => t.key === filters.poolType)?.label}
+                  onCollapse={handleToggleFilter}
+                />
+              </div>
+            )}
           </aside>
 
           <main className="terminal-candidate-list-container flex-1 min-w-0 flex flex-col overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(37,99,235,0.035) 0%, var(--t-bg) 200px), var(--t-bg)' }}>
-            {/* Dock trigger — document flow, only visible at ≤1535px */}
-            <div className="terminal-candidate-dock-trigger-row">
+            {/* Quota + dock trigger strip */}
+            <div className="terminal-candidate-dock-trigger-row" style={{ justifyContent: 'space-between', paddingRight: 12 }}>
               <button
                 type="button"
                 className="terminal-candidate-dock-trigger"
@@ -243,6 +299,12 @@ export default function CandidatePoolPage({ terminal = false }) {
                 <MessageSquare size={13} />
                 沟通列表
               </button>
+              {pool.quota?.has_active && (
+                <QuotaBar
+                  used={pool.quota.contacts.used}
+                  limit={pool.quota.contacts.limit}
+                />
+              )}
             </div>
             <div className="flex-1 overflow-y-auto terminal-scrollbar">
               <CandidateList
@@ -267,6 +329,7 @@ export default function CandidatePoolPage({ terminal = false }) {
               onSelect={setActiveDockConv}
               onCollapsedChange={setDockCollapsed}
               refreshKey={dockRefreshKey}
+              onDockRef={(el) => { dockElRef.current = el }}
             />
           </div>
         </TerminalPageSurface>

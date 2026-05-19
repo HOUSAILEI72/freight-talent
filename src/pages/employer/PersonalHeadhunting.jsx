@@ -1,14 +1,18 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
-  AlertCircle, Loader2, ChevronRight, UserSearch, CheckCircle,
-  FileText, Calculator, Zap, Shield, Brain, X,
+  AlertCircle, Loader2, ChevronRight, ChevronDown, Sparkles, UserSearch, CheckCircle,
+  FileText, Calculator, Zap, X,
 } from 'lucide-react'
 import { headhuntingApi } from '../../api/headhunting'
+import { analyzeJob } from '../../api/aiAnalyze'
 import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
 import { TerminalSelect } from '../../components/terminal/TerminalSelect'
 import RegionSelector from '../../components/RegionSelector'
 import { useAuth } from '../../context/AuthContext'
+import { ALL_SOFT_SKILLS, SOFT_SKILL_DESCRIPTIONS } from '../../data/softSkillsLookup'
+import { JOB_TAGS_DATA } from '../../data/jobTagsData'
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -251,6 +255,110 @@ function TagPill({ text }) {
   )
 }
 
+// ─── Portal helper ──────────────────────────────────────────────────────────────
+
+function getTerminalPortalTarget(_node) {
+  return document.body
+}
+
+// ─── SoftSkillOption ────────────────────────────────────────────────────────────
+
+function SoftSkillOption({ skill, description, checked, onToggle }) {
+  const [hovered, setHovered] = useState(false)
+  const [tooltipStyle, setTooltipStyle] = useState(null)
+  const rowRef = useRef(null)
+
+  function handleMouseEnter() {
+    setHovered(true)
+    if (!description || !rowRef.current) return
+    const rect = rowRef.current.getBoundingClientRect()
+    setTooltipStyle({ top: rect.top + rect.height / 2, left: rect.right + 10 })
+  }
+
+  return (
+    <div
+      ref={rowRef}
+      onMouseDown={(e) => { e.preventDefault(); onToggle(skill) }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => { setHovered(false); setTooltipStyle(null) }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '6px 12px', cursor: 'pointer', fontSize: 13,
+        background: checked ? 'var(--t-primary-muted)' : hovered ? 'var(--t-bg-elevated)' : 'transparent',
+        color: 'var(--t-text)',
+      }}
+    >
+      <div style={{
+        width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+        border: `1.5px solid ${checked ? 'var(--t-primary)' : 'var(--t-border)'}`,
+        background: checked ? 'var(--t-primary)' : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {checked && (
+          <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+            <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+      </div>
+      {skill}
+      {tooltipStyle && description && createPortal(
+        <div style={{
+          position: 'fixed', top: tooltipStyle.top, left: tooltipStyle.left,
+          transform: 'translateY(-50%)', zIndex: 10000, maxWidth: 220,
+          padding: '6px 10px', borderRadius: 6, fontSize: 12, lineHeight: 1.6,
+          background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)',
+          color: 'var(--t-text)', boxShadow: 'var(--t-shadow-elevated)', pointerEvents: 'none',
+        }}>
+          {description}
+        </div>,
+        getTerminalPortalTarget(rowRef.current)
+      )}
+    </div>
+  )
+}
+
+// ─── SelectedSkillTag ────────────────────────────────────────────────────────────
+
+function SelectedSkillTag({ skill, description, onMouseDown }) {
+  const [tooltipStyle, setTooltipStyle] = useState(null)
+  const tagRef = useRef(null)
+
+  function handleMouseEnter() {
+    if (!description || !tagRef.current) return
+    const rect = tagRef.current.getBoundingClientRect()
+    setTooltipStyle({ left: rect.left + rect.width / 2, bottom: window.innerHeight - rect.top + 8 })
+  }
+
+  return (
+    <span
+      ref={tagRef}
+      onMouseDown={onMouseDown}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setTooltipStyle(null)}
+      style={{
+        display: 'inline-flex', alignItems: 'center', fontSize: 11, lineHeight: '1.4',
+        padding: '2px 7px', borderRadius: 4,
+        background: 'var(--t-chip-selected-bg)', color: 'var(--t-text)',
+        border: '1px solid var(--t-chip-selected-border)', whiteSpace: 'nowrap', cursor: 'default',
+      }}
+    >
+      {skill}
+      {tooltipStyle && description && createPortal(
+        <div style={{
+          position: 'fixed', left: tooltipStyle.left, bottom: tooltipStyle.bottom,
+          transform: 'translateX(-50%)', zIndex: 10000, maxWidth: 240,
+          padding: '8px 12px', borderRadius: 6, border: '1px solid var(--t-border)',
+          background: 'var(--t-bg-elevated)', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', pointerEvents: 'none',
+        }}>
+          <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 3, whiteSpace: 'nowrap' }}>{skill}</p>
+          <p style={{ fontSize: 13, color: 'var(--t-text)', lineHeight: 1.5, whiteSpace: 'normal' }}>{description}</p>
+        </div>,
+        getTerminalPortalTarget(tagRef.current)
+      )}
+    </span>
+  )
+}
+
 // ─── Contact Modal ──────────────────────────────────────────────────────────────
 
 function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
@@ -262,9 +370,9 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
   const labelStyle = { display: 'block', fontSize: 11, fontFamily: 'var(--t-font-sans)', letterSpacing: '0.04em', color: 'var(--t-text-muted)', marginBottom: 4 }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)' }} onClick={onCancel} />
-      <div style={{
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'ai-enter 150ms ease both' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)' }} onClick={onCancel} />
+      <div className="t-modal-enter" style={{
         position: 'relative', zIndex: 10, width: '100%', maxWidth: 420,
         background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)',
         borderRadius: 'var(--t-radius-lg)', padding: '24px 24px 20px',
@@ -307,11 +415,18 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onCancel} disabled={submitting}
-            style={{ flex: 1, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: 'transparent', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.02em' }}>
+            style={{ flex: 1, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: 'transparent', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.02em', transition: 'background 120ms, border-color 120ms' }}
+            onMouseEnter={e => { if (!submitting) e.currentTarget.style.background = 'var(--t-bg-hover)' }}
+            onMouseLeave={e => { if (!submitting) e.currentTarget.style.background = 'transparent' }}
+          >
             返回修改
           </button>
           <button onClick={() => onConfirm({ name, phone, email, wechat })} disabled={submitting}
-            style={{ flex: 2, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: submitting ? 'var(--t-primary-muted)' : 'var(--t-primary)', border: 'none', color: '#fff', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            className={submitting ? '' : 't-card-pressable'}
+            style={{ flex: 2, height: 34, borderRadius: 4, fontSize: 12, cursor: submitting ? 'not-allowed' : 'pointer', background: submitting ? 'var(--t-primary-muted)' : 'var(--t-primary)', border: 'none', color: '#fff', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'background 120ms, opacity 120ms, transform var(--t-dur-fast) var(--t-ease-std)' }}
+            onMouseEnter={e => { if (!submitting) e.currentTarget.style.opacity = '0.9' }}
+            onMouseLeave={e => { if (!submitting) e.currentTarget.style.opacity = '1' }}
+          >
             {submitting && <Loader2 size={13} className="animate-spin" />}
             {submitting ? '提交中...' : '确认并提交'}
           </button>
@@ -325,9 +440,9 @@ function ContactModal({ user, onConfirm, onCancel, submitting, error }) {
 
 function SuccessModal({ onClose }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)' }} />
-      <div style={{
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'ai-enter 150ms ease both' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)' }} />
+      <div className="t-modal-enter" style={{
         position: 'relative', zIndex: 10, width: '100%', maxWidth: 380,
         background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)',
         borderRadius: 'var(--t-radius-lg)', padding: '36px 28px 28px',
@@ -347,12 +462,16 @@ function SuccessModal({ onClose }) {
         <p style={{ fontSize: 13, color: 'var(--t-text-secondary)', lineHeight: 1.7, marginBottom: 24 }}>
           专业顾问将于 <span style={{ color: 'var(--t-text)', fontWeight: 600 }}>24 小时</span>内与您取得联系，谢谢！
         </p>
-        <button onClick={onClose} style={{
+        <button onClick={onClose} className="t-card-pressable" style={{
           width: '100%', height: 36, borderRadius: 4,
           background: 'var(--t-primary)', border: 'none', color: '#fff',
           fontFamily: 'var(--t-font-sans)', fontSize: 12, letterSpacing: '0.04em',
           textTransform: 'uppercase', cursor: 'pointer',
-        }}>
+          transition: 'background 120ms, transform var(--t-dur-fast) var(--t-ease-std)',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.opacity = '0.9' }}
+        onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+        >
           返回 Dashboard
         </button>
       </div>
@@ -385,22 +504,66 @@ export default function PersonalHeadhunting({ terminal = false }) {
   const [experienceYears,         setExperienceYears]         = useState('')
   const [degreeRequired,          setDegreeRequired]          = useState('')
   const [description,             setDescription]             = useState('')
-  const [knowledgeText,           setKnowledgeText]           = useState('')
-  const [hardSkillText,           setHardSkillText]           = useState('')
-  const [softSkillText,           setSoftSkillText]           = useState('')
   const [targetCompaniesText,     setTargetCompaniesText]     = useState('')
 
+  // ── Tag / soft-skill picker state ───────────────────────────────────────
+  const [selectedJobTags,      setSelectedJobTags]      = useState([])
+  const [jobTagCategory,       setJobTagCategory]       = useState(null)
+  const [jobTagOpen,           setJobTagOpen]           = useState(false)
+  const [jobTagDropPos,        setJobTagDropPos]        = useState({ top: 0, left: 0, width: 0 })
+  const [jobTagScrollTarget,   setJobTagScrollTarget]   = useState(null)
+  const jobTagWrapRef          = useRef(null)
+  const jobTagTriggerRef       = useRef(null)
+  const jobTagPanelRef         = useRef(null)
+  const jobTagRightPanelRef    = useRef(null)
+
+  const [selectedSoftSkills,   setSelectedSoftSkills]   = useState([])
+  const [softSkillOpen,        setSoftSkillOpen]        = useState(false)
+  const [softSkillDropPos,     setSoftSkillDropPos]     = useState({ top: 0, left: 0, width: 0 })
+  const softSkillTriggerRef    = useRef(null)
+  const softSkillWrapRef       = useRef(null)
+  const softSkillPanelRef      = useRef(null)
+
+  // ── AI 分析状态 ────────────────────────────────────────────────────────
+  const [aiLoading,       setAiLoading]       = useState(false)
+  const [aiError,         setAiError]         = useState('')
+  const [aiFieldHint,     setAiFieldHint]     = useState(false)
+  const [aiButtonHovered, setAiButtonHovered] = useState(false)
+
   // ── Auto-resize refs ────────────────────────────────────────────────────
-  const descRef        = useRef(null)
-  const knowledgeRef   = useRef(null)
-  const hardSkillRef   = useRef(null)
-  const softSkillRef   = useRef(null)
-  const targetCoRef    = useRef(null)
-  useEffect(() => { const el = descRef.current;      if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [description])
-  useEffect(() => { const el = knowledgeRef.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [knowledgeText])
-  useEffect(() => { const el = hardSkillRef.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [hardSkillText])
-  useEffect(() => { const el = softSkillRef.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [softSkillText])
-  useEffect(() => { const el = targetCoRef.current;  if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [targetCompaniesText])
+  const descRef     = useRef(null)
+  const targetCoRef = useRef(null)
+  useEffect(() => { const el = descRef.current;     if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [description])
+  useEffect(() => { const el = targetCoRef.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [targetCompaniesText])
+
+  // ── Close dropdowns on outside click ───────────────────────────────────
+  useEffect(() => {
+    function onDown(e) {
+      const inWrap  = jobTagWrapRef.current?.contains(e.target)
+      const inPanel = jobTagPanelRef.current?.contains(e.target)
+      if (!inWrap && !inPanel) setJobTagOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  useEffect(() => {
+    if (!jobTagScrollTarget || !jobTagOpen || !jobTagRightPanelRef.current) return
+    const panel = jobTagRightPanelRef.current
+    const el = panel.querySelector(`[data-tag="${CSS.escape(jobTagScrollTarget)}"]`)
+    if (el) el.scrollIntoView({ block: 'nearest' })
+    setJobTagScrollTarget(null)
+  }, [jobTagScrollTarget, jobTagOpen, jobTagCategory])
+
+  useEffect(() => {
+    function onDown(e) {
+      const inWrap  = softSkillWrapRef.current?.contains(e.target)
+      const inPanel = softSkillPanelRef.current?.contains(e.target)
+      if (!inWrap && !inPanel) setSoftSkillOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
   const [salaryMin,               setSalaryMin]               = useState('')
   const [salaryMax,               setSalaryMax]               = useState('')
   const [salaryMonths,            setSalaryMonths]            = useState(13)
@@ -413,6 +576,17 @@ export default function PersonalHeadhunting({ terminal = false }) {
   const [yearEndBonusQuickSelect, setYearEndBonusQuickSelect] = useState(null)
   const [yearEndBonusCustom,      setYearEndBonusCustom]      = useState('')
 
+  // ── Subscription gate (terminal only) ───────────────────────────────────
+  const [hasSubscription, setHasSubscription] = useState(false)
+  useEffect(() => {
+    if (!terminal) return
+    import('../../api/subscriptions').then(({ subscriptionsApi }) => {
+      subscriptionsApi.getMySubscription()
+        .then(r => setHasSubscription(!!(r.data?.has_active)))
+        .catch(() => {})
+    })
+  }, [terminal])
+
   // ── Contact / submit state ────────────────────────────────────────────────
   const [showContactModal,  setShowContactModal]  = useState(false)
   const [showSuccess,       setShowSuccess]       = useState(false)
@@ -422,11 +596,47 @@ export default function PersonalHeadhunting({ terminal = false }) {
   const [showContractPreview, setShowContractPreview] = useState(false)
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const knowledgeArr     = useMemo(() => splitTokens(knowledgeText), [knowledgeText])
-  const hardSkillArr     = useMemo(() => splitTokens(hardSkillText), [hardSkillText])
-  const softSkillArr     = useMemo(() => splitTokens(softSkillText), [softSkillText])
   const targetCompaniesArr = useMemo(() => splitTokens(targetCompaniesText), [targetCompaniesText])
-  const selectedFunction = FUNCTION_OPTIONS.find(f => f.key === functionCode) || null
+  const selectedFunction   = FUNCTION_OPTIONS.find(f => f.key === functionCode) || null
+
+  // AI 分析触发条件：岗位名 + 板块 + 城市
+  const canAiAnalyze = !!(title.trim() && functionCode && location?.location_code)
+
+  async function handleAiAnalyze() {
+    if (!canAiAnalyze) {
+      setAiFieldHint(true)
+      setTimeout(() => setAiFieldHint(false), 3000)
+      return
+    }
+    setAiError('')
+    const hasExisting = description.trim() || selectedJobTags.length > 0 || selectedSoftSkills.length > 0
+    if (hasExisting) {
+      const ok = window.confirm('AI 将覆盖已填写的岗位职责、岗位标签和软技能，确认继续？')
+      if (!ok) return
+    }
+    setAiLoading(true)
+    try {
+      const result = await analyzeJob({
+        title: title.trim(),
+        function_code: functionCode,
+        location_name: location?.location_name || '',
+        experience_required: experienceYears || null,
+        degree_required: degreeRequired || null,
+        employment_type: employmentType || null,
+        is_management_role: isManagementRole === 'true' ? true : isManagementRole === 'false' ? false : null,
+        management_headcount: isManagementRole === 'true' && managementHeadcount ? Number(managementHeadcount) : null,
+        salary_min: salaryMin ? Number(salaryMin) : null,
+        salary_max: salaryMax ? Number(salaryMax) : null,
+      })
+      if (result.description) setDescription(result.description)
+      if (result.job_tags?.length)    setSelectedJobTags(result.job_tags)
+      if (result.soft_skills?.length) setSelectedSoftSkills(result.soft_skills)
+    } catch (e) {
+      setAiError(e?.response?.data?.detail || 'AI 分析失败，请稍后重试')
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   const effectiveBonusMonths = useMemo(() => {
     if (hasYearEndBonus !== 'true') return 0
@@ -464,12 +674,11 @@ export default function PersonalHeadhunting({ terminal = false }) {
     if (!location.location_name || !location.location_path || !location.location_type) return '地区数据不完整，请重新选择'
     if (!employmentType)           return '请选择应聘类型'
     if (addressDetail.trim().length > 200) return '详细地址不能超过 200 个字符'
-    if (!description.trim())       return '请填写岗位职责'
-    if (experienceYears === '')    return '请选择经验要求'
-    if (!degreeRequired.trim())    return '请填写最低学历要求'
-    if (knowledgeArr.length === 0) return '请填写知识要求'
-    if (hardSkillArr.length === 0) return '请填写硬技能要求'
-    if (softSkillArr.length === 0) return '请填写软技能要求'
+    if (!description.trim())          return '请填写岗位职责'
+    if (experienceYears === '')       return '请选择经验要求'
+    if (!degreeRequired.trim())       return '请填写最低学历要求'
+    if (selectedJobTags.length === 0) return '请选择至少一个岗位标签'
+    if (selectedSoftSkills.length === 0) return '请填写软技能要求'
     const sMin = Number(salaryMin); const sMax = Number(salaryMax)
     if (!Number.isFinite(sMin) || !Number.isFinite(sMax) || sMin <= 0 || sMax <= 0) return '请填写有效的薪资区间（数字）'
     if (sMin > sMax) return '最低月薪不能大于最高月薪'
@@ -542,9 +751,9 @@ export default function PersonalHeadhunting({ terminal = false }) {
         experience_required:     experienceYears,
         degree_required:         degreeRequired,
         description:             description.trim(),
-        knowledge_requirements:  knowledgeArr,
-        hard_skill_requirements: hardSkillArr,
-        soft_skill_requirements: softSkillArr,
+        knowledge_requirements:  selectedJobTags,
+        hard_skill_requirements: [],
+        soft_skill_requirements: selectedSoftSkills,
         target_companies:        targetCompaniesArr.length > 0 ? targetCompaniesArr : null,
         salary_min:              sMin,
         salary_max:              sMax,
@@ -609,6 +818,46 @@ export default function PersonalHeadhunting({ terminal = false }) {
             提交后 24h 内联系
           </span>
           <div style={{ width: 1, height: 16, background: 'var(--t-border)' }} />
+          {/* AI 分析按钮 */}
+          <button
+            type="button"
+            disabled={aiLoading}
+            onClick={handleAiAnalyze}
+            onMouseEnter={() => { if (!aiLoading) setAiButtonHovered(true) }}
+            onMouseLeave={() => setAiButtonHovered(false)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              height: 30, padding: '0 10px 0 8px',
+              borderRadius: 4,
+              border: canAiAnalyze ? '1px solid rgba(96,165,250,0.4)' : '1px solid var(--t-border)',
+              background: aiLoading ? 'var(--t-primary-muted)' : canAiAnalyze
+                ? (aiButtonHovered ? 'var(--t-bg-hover)' : 'var(--t-bg-elevated)')
+                : 'var(--t-bg-panel)',
+              color: canAiAnalyze ? 'var(--t-primary)' : 'var(--t-text-muted)',
+              fontSize: 11, fontWeight: 600, letterSpacing: '0.025em',
+              cursor: aiLoading ? 'not-allowed' : 'pointer',
+              opacity: aiLoading ? 0.78 : 1,
+              whiteSpace: 'nowrap',
+              fontFamily: 'var(--t-font-sans)',
+              transition: 'background 150ms, border-color 150ms, color 150ms',
+            }}
+          >
+            <span style={{
+              width: 16, height: 16, borderRadius: 3,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              border: canAiAnalyze ? '1px solid var(--t-border-focus)' : '1px solid var(--t-border)',
+              background: canAiAnalyze ? 'var(--t-primary-muted)' : 'var(--t-bg-elevated)',
+            }}>
+              {aiLoading ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+            </span>
+            {aiLoading ? 'AI 分析中…' : 'AI 智能分析'}
+          </button>
+          {aiFieldHint && (
+            <span style={{ fontSize: 10, color: '#f59e0b', fontFamily: 'var(--t-font-sans)', whiteSpace: 'nowrap' }}>
+              ← 需填写岗位名、板块、城市
+            </span>
+          )}
+          <div style={{ width: 1, height: 16, background: 'var(--t-border)' }} />
           <button
             onClick={() => navigate('/employer/dashboard')}
             style={{ height: 30, padding: '0 12px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontFamily: 'var(--t-font-sans)', fontSize: 11, cursor: 'pointer', letterSpacing: '0.06em' }}
@@ -617,8 +866,9 @@ export default function PersonalHeadhunting({ terminal = false }) {
           </button>
           <button
             onClick={handleConfirmPublish}
-            disabled={submitting}
-            style={{ height: 30, display: 'flex', alignItems: 'center', gap: 5, padding: '0 14px', borderRadius: 4, border: 'none', background: submitting ? 'var(--t-primary-muted)' : 'var(--t-primary)', color: '#fff', fontFamily: 'var(--t-font-sans)', fontSize: 11, cursor: submitting ? 'not-allowed' : 'pointer', letterSpacing: '0.08em', fontWeight: 600, opacity: submitting ? 0.75 : 1 }}
+            disabled={submitting || !hasSubscription}
+            title={!hasSubscription ? '需要订阅才能提交猎头委托' : undefined}
+            style={{ height: 30, display: 'flex', alignItems: 'center', gap: 5, padding: '0 14px', borderRadius: 4, border: 'none', background: (!hasSubscription || submitting) ? 'var(--t-primary-muted)' : 'var(--t-primary)', color: '#fff', fontFamily: 'var(--t-font-sans)', fontSize: 11, cursor: (!hasSubscription || submitting) ? 'not-allowed' : 'pointer', letterSpacing: '0.08em', fontWeight: 600, opacity: (!hasSubscription || submitting) ? 0.6 : 1 }}
           >
             {submitting && <Loader2 size={12} className="animate-spin" />}
             {submitting ? '提交中...' : '确认发布'}
@@ -626,6 +876,24 @@ export default function PersonalHeadhunting({ terminal = false }) {
           </button>
         </div>
       </div>
+
+      {/* ── Subscription gate banner ────────────────────────────────────────── */}
+      {!hasSubscription && (
+        <div
+          className="flex-shrink-0 flex items-center gap-2 mx-6 mt-2"
+          style={{ padding: '7px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 4, color: 'var(--t-text-secondary)', fontSize: 12, fontFamily: 'var(--t-font-sans)' }}
+        >
+          <AlertCircle size={13} style={{ color: '#f59e0b', flexShrink: 0 }} />
+          <span>您尚未订阅，无法提交猎头委托。</span>
+          <button
+            type="button"
+            onClick={() => navigate('/employer/pricing')}
+            style={{ color: '#f59e0b', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 12, marginLeft: 4 }}
+          >
+            查看订阅方案 →
+          </button>
+        </div>
+      )}
 
       {/* ── Error banner ───────────────────────────────────────────────────── */}
       {pageError && (
@@ -651,8 +919,14 @@ export default function PersonalHeadhunting({ terminal = false }) {
             {/* Terms list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
               {REQUIRED_TERMS.map((term, idx) => (
-                <div key={term.key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '6px 8px', borderRadius: 4, border: '1px solid var(--t-border-subtle)' }}>
-                  <span style={{ fontSize: 10, color: 'var(--t-text-muted)', flexShrink: 0, marginTop: 2, lineHeight: 1, fontFamily: 'var(--t-font-sans)', fontVariantNumeric: 'tabular-nums' }}>{idx + 1}</span>
+                <div key={term.key} style={{ display: 'flex', gap: 9, alignItems: 'center', padding: '7px 9px', borderRadius: 4, border: '1px solid var(--t-border-subtle)' }}>
+                  <span style={{
+                    flexShrink: 0, width: 18, height: 18, borderRadius: '50%',
+                    background: 'var(--t-bg-elevated)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 9, fontWeight: 700, color: 'var(--t-text-muted)',
+                    fontFamily: 'var(--t-font-sans)', fontVariantNumeric: 'tabular-nums',
+                  }}>{idx + 1}</span>
                   <span style={{ fontSize: 12, color: 'var(--t-text-secondary)', lineHeight: 1.65 }}>{term.text}</span>
                 </div>
               ))}
@@ -886,35 +1160,216 @@ export default function PersonalHeadhunting({ terminal = false }) {
             {/* 岗位职责 */}
             <div>
               <label style={T.label}>岗位职责 *</label>
-              <textarea ref={descRef} rows={4} style={{ ...T.textarea, overflow: 'hidden' }} placeholder="描述该岗位的主要工作职责..."
+              <textarea ref={descRef} rows={1} style={{ ...T.textarea, overflow: 'hidden' }} placeholder="描述该岗位的主要工作职责..."
                 value={description} onChange={e => setDescription(e.target.value)} />
             </div>
 
-            {/* 技能区 */}
-            {[
-              { label: '知识要求 *', val: knowledgeText, set: setKnowledgeText, arr: knowledgeArr, ph: '例：国际贸易, HS编码, 危险品分类', taRef: knowledgeRef },
-              { label: '硬技能要求 *', val: hardSkillText, set: setHardSkillText, arr: hardSkillArr, ph: 'Cargowise, Excel, SAP', taRef: hardSkillRef },
-              { label: '软技能要求 *', val: softSkillText, set: setSoftSkillText, arr: softSkillArr, ph: '英语沟通, 抗压能力, 团队协作', taRef: softSkillRef },
-            ].map(sk => (
-              <div key={sk.label}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <label style={{ ...T.label, marginBottom: 0 }}>{sk.label}</label>
-                  {sk.arr.length > 0 && (
-                    <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-sans)' }}>
-                      {sk.arr.length} 项
-                    </span>
-                  )}
-                </div>
-                <textarea ref={sk.taRef} rows={2} style={{ ...T.textarea, overflow: 'hidden' }} placeholder={sk.ph}
-                  value={sk.val} onChange={e => sk.set(e.target.value)} />
-                {sk.arr.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
-                    {sk.arr.slice(0, 8).map(p => <TagPill key={p} text={p} />)}
-                    {sk.arr.length > 8 && <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-sans)', alignSelf: 'center' }}>+{sk.arr.length - 8}</span>}
-                  </div>
+            {/* AI 错误提示 */}
+            {aiError && (
+              <div style={{ padding: '6px 10px', background: 'var(--t-danger-muted)', border: '1px solid var(--t-danger)', borderRadius: 4, color: 'var(--t-danger)', fontSize: 11, fontFamily: 'var(--t-font-sans)' }}>
+                {aiError}
+              </div>
+            )}
+
+            {/* 岗位标签 (知识 + 硬技能) */}
+            <div ref={jobTagWrapRef} style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <label style={{ ...T.label, marginBottom: 0 }}>岗位标签 *</label>
+                {selectedJobTags.length > 0 && (
+                  <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-sans)' }}>
+                    {selectedJobTags.length} 项
+                  </span>
                 )}
               </div>
-            ))}
+              <div style={{ position: 'relative' }} ref={jobTagTriggerRef}>
+                <div
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    if (!jobTagOpen) {
+                      const rect = jobTagTriggerRef.current?.getBoundingClientRect()
+                      if (rect) {
+                        const panelH = 340
+                        const spaceBelow = window.innerHeight - rect.bottom - 4
+                        const top = spaceBelow >= panelH ? rect.bottom + 4 : rect.top - panelH - 4
+                        setJobTagDropPos({ top, left: rect.left, width: rect.width })
+                      }
+                    }
+                    setJobTagOpen(o => !o)
+                  }}
+                  style={{
+                    background: 'var(--t-bg-input)', color: 'var(--t-text)',
+                    border: `1px solid ${jobTagOpen ? 'var(--t-border-focus)' : 'var(--t-border)'}`,
+                    borderRadius: 'var(--t-radius-sm)', minHeight: 30,
+                    paddingLeft: 8, paddingRight: 28,
+                    paddingTop: selectedJobTags.length > 0 ? 4 : 0,
+                    paddingBottom: selectedJobTags.length > 0 ? 4 : 0,
+                    display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
+                    cursor: 'pointer', userSelect: 'none', fontSize: 12,
+                  }}
+                >
+                  {selectedJobTags.length > 0
+                    ? selectedJobTags.map(tag => (
+                        <SelectedSkillTag
+                          key={tag} skill={tag} description={null}
+                          onMouseDown={(e) => {
+                            e.preventDefault(); e.stopPropagation()
+                            const cat = JOB_TAGS_DATA.find(d => d.tags.includes(tag))?.category ?? null
+                            if (cat) setJobTagCategory(cat)
+                            setJobTagScrollTarget(tag)
+                            if (!jobTagOpen) {
+                              const rect = jobTagTriggerRef.current?.getBoundingClientRect()
+                              if (rect) {
+                                const panelH = 340
+                                const spaceBelow = window.innerHeight - rect.bottom - 4
+                                const top = spaceBelow >= panelH ? rect.bottom + 4 : rect.top - panelH - 4
+                                setJobTagDropPos({ top, left: rect.left, width: rect.width })
+                              }
+                            }
+                            setJobTagOpen(true)
+                          }}
+                        />
+                      ))
+                    : <span style={{ color: 'var(--t-text-muted)', fontSize: 12 }}>从下拉框中选择岗位标签</span>
+                  }
+                </div>
+                <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--t-text-muted)' }}>
+                  <ChevronDown size={11} style={{ transition: 'transform 150ms', transform: jobTagOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                </div>
+              </div>
+              {jobTagOpen && createPortal(
+                <div ref={jobTagPanelRef} style={{ position: 'fixed', top: jobTagDropPos.top, left: jobTagDropPos.left, width: jobTagDropPos.width, zIndex: 9999 }}>
+                  <div style={{
+                    display: 'flex', flexDirection: 'row', maxHeight: 340, overflow: 'hidden',
+                    borderRadius: 'var(--t-radius)', border: '1px solid var(--t-border)',
+                    background: 'var(--t-bg-elevated)', boxShadow: 'var(--t-shadow-elevated)',
+                  }}>
+                    <div style={{ width: 160, flexShrink: 0, borderRight: '1px solid var(--t-border)', overflowY: 'auto', padding: '4px 0', background: 'var(--t-bg-panel)' }}>
+                      {JOB_TAGS_DATA.map(d => {
+                        const active = jobTagCategory === d.category
+                        const hasSelected = d.tags.some(t => selectedJobTags.includes(t))
+                        return (
+                          <div key={d.category}
+                            onMouseDown={(e) => { e.preventDefault(); setJobTagCategory(d.category) }}
+                            style={{
+                              padding: '7px 10px', fontSize: 12, cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: 6,
+                              background: active ? 'var(--t-primary)' : 'transparent',
+                              color: active ? 'var(--t-primary-fg)' : 'var(--t-text-secondary)',
+                              fontWeight: active ? 600 : 400,
+                              borderLeft: active ? '3px solid var(--t-primary-hover)' : '3px solid transparent',
+                            }}>
+                            {hasSelected && (
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: active ? 'var(--t-primary-fg)' : 'var(--t-primary)' }} />
+                            )}
+                            <span style={{ flex: 1, lineHeight: 1.4 }}>{d.category}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div ref={jobTagRightPanelRef} style={{ flex: 1, overflowY: 'auto', padding: '4px 0', background: 'var(--t-bg-elevated)' }}>
+                      {jobTagCategory === null
+                        ? <div style={{ padding: '20px 12px', fontSize: 12, color: 'var(--t-text-muted)', textAlign: 'center' }}>请先从左侧选择分类</div>
+                        : (JOB_TAGS_DATA.find(d => d.category === jobTagCategory)?.tags ?? []).map(tag => {
+                            const checked = selectedJobTags.includes(tag)
+                            return (
+                              <div key={tag} data-tag={tag}
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  setSelectedJobTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+                                }}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: 8,
+                                  padding: '7px 12px', cursor: 'pointer', fontSize: 13,
+                                  color: checked ? 'var(--t-primary)' : 'var(--t-text)',
+                                  background: checked ? 'var(--t-primary-muted)' : 'transparent',
+                                }}>
+                                <div style={{
+                                  width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                                  border: `1.5px solid ${checked ? 'var(--t-primary)' : 'var(--t-border)'}`,
+                                  background: checked ? 'var(--t-primary)' : 'transparent',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                  {checked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                </div>
+                                {tag}
+                              </div>
+                            )
+                          })
+                      }
+                    </div>
+                  </div>
+                </div>,
+                getTerminalPortalTarget(jobTagTriggerRef.current)
+              )}
+              <p style={T.helper}>已选 {selectedJobTags.length} 项</p>
+            </div>
+
+            {/* 软技能 */}
+            <div ref={softSkillWrapRef} style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <label style={{ ...T.label, marginBottom: 0 }}>软技能 *</label>
+                {selectedSoftSkills.length > 0 && (
+                  <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-sans)' }}>
+                    {selectedSoftSkills.length} 项
+                  </span>
+                )}
+              </div>
+              <div style={{ position: 'relative' }} ref={softSkillTriggerRef}>
+                <div
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    if (!softSkillOpen) {
+                      const rect = softSkillTriggerRef.current?.getBoundingClientRect()
+                      if (rect) {
+                        const panelH = 228
+                        const spaceBelow = window.innerHeight - rect.bottom - 4
+                        const top = spaceBelow >= panelH ? rect.bottom + 4 : rect.top - panelH - 4
+                        setSoftSkillDropPos({ top, left: rect.left, width: rect.width })
+                      }
+                    }
+                    setSoftSkillOpen(o => !o)
+                  }}
+                  style={{
+                    background: 'var(--t-bg-input)', color: 'var(--t-text)',
+                    border: `1px solid ${softSkillOpen ? 'var(--t-border-focus)' : 'var(--t-border)'}`,
+                    borderRadius: 'var(--t-radius-sm)', minHeight: 30,
+                    paddingLeft: 8, paddingRight: 28,
+                    paddingTop: selectedSoftSkills.length > 0 ? 4 : 0,
+                    paddingBottom: selectedSoftSkills.length > 0 ? 4 : 0,
+                    display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
+                    cursor: 'pointer', userSelect: 'none', fontSize: 12,
+                  }}
+                >
+                  {selectedSoftSkills.length > 0
+                    ? selectedSoftSkills.map(skill => (
+                        <SelectedSkillTag key={skill} skill={skill} description={SOFT_SKILL_DESCRIPTIONS[skill]} />
+                      ))
+                    : <span style={{ color: 'var(--t-text-muted)', fontSize: 12 }}>从下拉框中选择软技能标签</span>
+                  }
+                </div>
+                <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--t-text-muted)' }}>
+                  <ChevronDown size={11} style={{ transition: 'transform 150ms', transform: softSkillOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                </div>
+              </div>
+              {softSkillOpen && createPortal(
+                <div ref={softSkillPanelRef} style={{
+                  position: 'fixed', top: softSkillDropPos.top, left: softSkillDropPos.left,
+                  width: softSkillDropPos.width, zIndex: 9999, maxHeight: 228, overflowY: 'auto',
+                  borderRadius: 'var(--t-radius)', border: '1px solid var(--t-border)',
+                  background: 'var(--t-bg-elevated)', boxShadow: 'var(--t-shadow-elevated)', padding: '4px 0',
+                }}>
+                  {ALL_SOFT_SKILLS.map(skill => (
+                    <SoftSkillOption
+                      key={skill} skill={skill} description={SOFT_SKILL_DESCRIPTIONS[skill]}
+                      checked={selectedSoftSkills.includes(skill)}
+                      onToggle={s => setSelectedSoftSkills(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                    />
+                  ))}
+                </div>,
+                getTerminalPortalTarget(softSkillTriggerRef.current)
+              )}
+              <p style={T.helper}>已选 {selectedSoftSkills.length} 项</p>
+            </div>
 
             {/* 对标公司 */}
             <div>
@@ -928,7 +1383,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
               </div>
               <textarea
                 ref={targetCoRef}
-                rows={2}
+                rows={1}
                 style={{ ...T.textarea, overflow: 'hidden' }}
                 placeholder="例：马士基, MSC, 中远海运（逗号分隔）"
                 value={targetCompaniesText}

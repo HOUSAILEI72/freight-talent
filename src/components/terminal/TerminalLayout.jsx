@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import {
@@ -12,6 +12,10 @@ import { useAuth } from '../../context/AuthContext'
 import { getRoleHome } from '../../router/roleHome'
 import { EMPLOYER_ICON_NAV } from './navItems'
 import { useTerminalTheme } from '../../context/TerminalThemeContext'
+import { useSocket } from '../../hooks/useSocket'
+import { useNotifications } from '../../context/NotificationContext'
+import { useNotificationSocket } from '../../hooks/useNotificationSocket'
+import NotificationPanel from '../notifications/NotificationPanel'
 
 /**
  * TerminalLayout
@@ -168,6 +172,9 @@ function ThemeToggleButton() {
 function TerminalHeader({ title = 'DASHBOARD' }) {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { socket } = useSocket(!!user)
+  const { unreadCount, panelOpen, setPanelOpen } = useNotifications()
+  useNotificationSocket(socket)
 
   async function handleLogout() {
     await logout()
@@ -202,22 +209,39 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
           <PricingButton onClick={() => navigate('/employer/pricing')} />
         )}
 
-        <button
-          type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-[var(--t-radius)] text-[color:var(--t-text-secondary)] hover:bg-[var(--t-bg-hover)] hover:text-[color:var(--t-text)]"
-          title="通知"
-        >
-          <Bell size={15} />
-        </button>
+        {/* Notification bell */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setPanelOpen(o => !o)}
+            className="flex h-8 w-8 items-center justify-center rounded-[var(--t-radius)] text-[color:var(--t-text-secondary)] hover:bg-[var(--t-bg-hover)] hover:text-[color:var(--t-text)]"
+            title="通知"
+          >
+            <Bell size={15} />
+            {unreadCount > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                style={{ background: 'var(--t-danger)' }}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+          {panelOpen && <NotificationPanel />}
+        </div>
 
         <ThemeToggleButton />
 
         <div className="mx-1 h-5 w-px bg-[var(--t-border)]" />
 
         <div className="terminal-header-user flex items-center gap-2 rounded-[var(--t-radius)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] px-2.5 py-1">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[color:var(--t-primary)] text-[10px] font-bold text-white">
-            {(user?.name?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
-          </div>
+          {user?.avatar_url ? (
+            <img src={user.avatar_url} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color:var(--t-primary)] text-[10px] font-bold text-white">
+              {(user?.name?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
+            </div>
+          )}
           <span className="user-name max-w-[120px] truncate text-[length:var(--t-text-xs)] font-medium text-[color:var(--t-text)]">
             {companyName}
           </span>
@@ -267,11 +291,13 @@ export default function TerminalLayout({
     }
   }, [])
 
-  // Sync body background to avoid color bleed around shell edges.
-  // body is outside .terminal-shell so can't inherit scoped tokens.
+  // Sync body background + data-terminal-theme so portals to document.body
+  // (fixed-position dropdowns) can inherit --t-* tokens.
   useEffect(() => {
     const BG = { dark: bodyBackground ?? '#0b0e13', light: '#f6f8fb' }
     document.body.style.background = BG[effectiveTheme] ?? BG.dark
+    document.body.dataset.terminalTheme = effectiveTheme
+    return () => { delete document.body.dataset.terminalTheme }
   }, [effectiveTheme, bodyBackground])
 
   return (

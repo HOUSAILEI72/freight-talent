@@ -23,7 +23,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedFunction, setSelectedFunction] = useState(DEFAULT_FUNCTION)
   const [selectedArea, setSelectedArea] = useState(DEFAULT_AREA)
-  const [granularity, setGranularity] = useState('week')
+  const [granularity, setGranularity] = useState('bi_monthly')
   const [chart, setChart] = useState(null)
   const [chartLoading, setChartLoading] = useState(false)
   const [trendSummary, setTrendSummary] = useState(null)

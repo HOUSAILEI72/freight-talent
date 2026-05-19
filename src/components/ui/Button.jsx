@@ -1,4 +1,4 @@
-const BASE = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.975]'
+const BASE = 'inline-flex items-center justify-center font-medium rounded-lg transition-[background-color,border-color,color,box-shadow,transform] duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.975]'
 
 const LIGHT_VARIANTS = {
   primary:   'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
@@ -42,7 +42,7 @@ export function Button({ children, variant = 'primary', size = 'md', className =
         style={{
           ...base,
           borderRadius: 'var(--t-radius-sm)',
-          transition: 'all 150ms ease-out',
+          transition: 'background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out, transform 80ms ease-out, opacity 80ms ease-out',
           outline: 'none',
           ...styleProp,
         }}

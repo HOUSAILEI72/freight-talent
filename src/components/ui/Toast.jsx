@@ -56,7 +56,7 @@ export function ToastProvider({ children }) {
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto flex items-start gap-2.5 px-4 py-3 rounded-lg border shadow-xl backdrop-blur-sm max-w-sm transition-all duration-300 ${STYLES[t.type]}`}
+              className={`pointer-events-auto flex items-start gap-2.5 px-4 py-3 rounded-lg border shadow-xl backdrop-blur-sm max-w-sm transition-all duration-300 t-toast-enter ${STYLES[t.type]}`}
               role="alert"
             >
               <Icon size={16} className="flex-shrink-0 mt-0.5" />

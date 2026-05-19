@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, startTransition } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { MessageSquare, Briefcase } from 'lucide-react'
+import { Briefcase, MessageSquare, Send, Mail } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useSocket } from '../../hooks/useSocket'
 import { useConversations } from './hooks/useConversations'
@@ -13,29 +13,31 @@ import { MessageComposer } from './components/MessageComposer'
 import { MessageLoadingState, MessageErrorState } from './components/MessageLoadingState'
 import ConnectionBanner from './components/ConnectionBanner'
 import { groupConversations } from './utils/conversationHelpers'
+import MyApplications from '../../pages/candidate/MyApplications'
+import MyInvitations from '../../pages/candidate/MyInvitations'
 
-// ── Inner panel (extracted so key=activeId causes a clean remount) ────────────
+// ── Inner chat panel ───────────────────────────────────────────────────────
 function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionStatus, terminal, threads, onSwitchThread }) {
   const [input, setInput] = useState('')
 
   const msgState = useConversationMessages({ threadId, myUserId, socket, connectionStatus, onRead })
-
-  const sender = useSendMessage({
+  const sender   = useSendMessage({
     threadId, myUserId, myRole, socket,
     setMessages: msgState.setMessages,
     shouldScrollRef: msgState.shouldScrollRef,
   })
 
-  // cleanup retry timers on unmount
   useEffect(() => () => sender.cleanup(), []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (msgState.loading) return <MessageLoadingState terminal={terminal} />
-  if (msgState.msgError) return <MessageErrorState error={msgState.msgError} terminal={terminal} />
+  if (msgState.loading)   return <MessageLoadingState terminal={terminal} />
+  if (msgState.msgError)  return <MessageErrorState error={msgState.msgError} terminal={terminal} />
+
+  const thread = msgState.thread
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <ConversationHeader
-        thread={msgState.thread}
+        thread={thread}
         threadId={threadId}
         threads={threads}
         onSwitchThread={onSwitchThread}
@@ -57,37 +59,42 @@ function MessagePanel({ threadId, myUserId, myRole, onRead, socket, connectionSt
       <MessageComposer
         input={input}
         onChange={v => sender.handleInputChange(v, setInput)}
-        onSubmit={e => sender.handleSend(e, input, setInput)}
+        onSubmit={(e, msgOverride) => sender.handleSend(e, msgOverride ?? input, setInput)}
         terminal={terminal}
+        candidateId={thread?.candidate_id}
+        jobId={thread?.job_id}
+        threadId={threadId}
+        myRole={myRole}
       />
     </div>
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Main page ──────────────────────────────────────────────────────────────
 export default function MessagesPage({ terminal = false, basePath = '/messages' }) {
   const { threadId: paramThreadId } = useParams()
   const navigate = useNavigate()
   const { user }  = useAuth()
 
-  const [activeId, setActiveId] = useState(paramThreadId ? Number(paramThreadId) : null)
+  const [activeId,   setActiveId]   = useState(paramThreadId ? Number(paramThreadId) : null)
   const activeIdRef = useRef(activeId)
   useEffect(() => { activeIdRef.current = activeId }, [activeId])
 
-  const [ctxMenu, setCtxMenu] = useState(null) // { x, y, convId }
+  const [viewMode, setViewMode] = useState('messages') // 'messages' | 'applications' | 'invitations'
+
+  // When navigating to a specific thread (e.g. from "查看沟通"), switch back to messages mode
+  useEffect(() => {
+    if (paramThreadId) setViewMode('messages')
+  }, [paramThreadId])
+
+  const [ctxMenu, setCtxMenu] = useState(null)
 
   const { socket, connectionStatus } = useSocket(!!user)
 
-  const convState = useConversations({
-    socket, activeIdRef,
-    paramThreadId,
-    basePath,
-    navigate,
-  })
+  const convState = useConversations({ socket, activeIdRef, paramThreadId, basePath, navigate })
 
-  // Sync URL param → activeId
   useEffect(() => {
-    if (paramThreadId) startTransition(() => { setActiveId(Number(paramThreadId)) })
+    if (paramThreadId) startTransition(() => setActiveId(Number(paramThreadId)))
   }, [paramThreadId])
 
   const grouped = useMemo(
@@ -106,81 +113,171 @@ export default function MessagesPage({ terminal = false, basePath = '/messages' 
     navigate(`${basePath}/${tid}`)
   }
 
+  // ── Public light layout (character-level unchanged) ────────────────────
+  if (!terminal) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-6" onClick={() => ctxMenu && setCtxMenu(null)}>
+        {ctxMenu && (
+          <ContextMenu
+            x={ctxMenu.x} y={ctxMenu.y} terminal={false}
+            onHide={() => convState.hideConv(ctxMenu.convId, activeId, setActiveId)}
+            onDelete={() => convState.deleteConv(ctxMenu.convId, activeId, setActiveId)}
+            onClose={() => setCtxMenu(null)}
+          />
+        )}
+        <ConnectionBanner status={connectionStatus} terminal={false} />
+        <div className="mb-4 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-slate-800">消息</h1>
+        </div>
+        <div
+          className="flex rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm"
+          style={{ height: 'calc(100vh - 180px)', minHeight: 500 }}
+        >
+          <ConversationList
+            loadingList={convState.loadingList}
+            listError={convState.listError}
+            conversations={convState.conversations}
+            grouped={grouped}
+            activeId={activeId}
+            hiddenIds={convState.hiddenIds}
+            deletedIds={convState.deletedIds}
+            myRole={user?.role}
+            terminal={false}
+            onSelect={handleSelect}
+            onContextMenu={(e, convId) => setCtxMenu({ x: e.clientX, y: e.clientY, convId })}
+          />
+          {activeId ? (
+            <MessagePanel
+              key={activeId}
+              threadId={activeId}
+              threads={activeGroup?.threads ?? []}
+              onSwitchThread={tid => { setActiveId(tid); navigate(`${basePath}/${tid}`) }}
+              myUserId={user?.id}
+              myRole={user?.role}
+              onRead={convState.handleThreadRead}
+              socket={socket}
+              connectionStatus={connectionStatus}
+              terminal={false}
+            />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
+              <Briefcase size={32} className="text-slate-200" />
+              <p className="text-sm">选择一个会话开始沟通</p>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Terminal BOSS-style layout ─────────────────────────────────────────
+  const MODE_TABS = [
+    { key: 'messages',     label: '消息', Icon: MessageSquare },
+    { key: 'applications', label: '投递', Icon: Send },
+    { key: 'invitations',  label: '邀约', Icon: Mail },
+  ]
+
   return (
     <div
-      className={terminal
-        ? 'terminal-mode flex flex-1 w-full min-w-0 flex-col h-full min-h-0 overflow-hidden px-4 py-4'
-        : 'max-w-6xl mx-auto px-4 py-6'
-      }
-      style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
+      className="terminal-mode flex flex-1 w-full min-w-0 flex-col h-full min-h-0"
+      style={{ background: 'var(--t-bg)', color: 'var(--t-text)', overflow: 'hidden' }}
       onClick={() => ctxMenu && setCtxMenu(null)}
     >
       {ctxMenu && (
         <ContextMenu
-          x={ctxMenu.x} y={ctxMenu.y}
-          terminal={terminal}
+          x={ctxMenu.x} y={ctxMenu.y} terminal
           onHide={() => convState.hideConv(ctxMenu.convId, activeId, setActiveId)}
           onDelete={() => convState.deleteConv(ctxMenu.convId, activeId, setActiveId)}
           onClose={() => setCtxMenu(null)}
         />
       )}
 
-      <ConnectionBanner status={connectionStatus} terminal={terminal} />
+      <ConnectionBanner status={connectionStatus} terminal />
 
-      <div className="mb-4 flex items-center gap-2">
-        <h1
-          className={terminal ? 'text-xl font-bold flex items-center gap-2' : 'text-xl font-bold text-slate-800 flex items-center gap-2'}
-          style={terminal ? { color: 'var(--t-text)' } : undefined}
-        >
-          <MessageSquare size={20} style={terminal ? { color: 'var(--t-chart-blue)' } : undefined} className={terminal ? '' : 'text-blue-500'} />
-          消息
-        </h1>
-      </div>
+      {/* Mode switcher — candidates only */}
+      {user?.role === 'candidate' && (
+        <div style={{
+          display: 'flex', flexShrink: 0,
+          borderBottom: '1px solid var(--t-border)',
+          background: 'var(--t-bg-panel)',
+          paddingLeft: 8,
+        }}>
+          {MODE_TABS.map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setViewMode(key)}
+              style={{
+                padding: '9px 16px', fontSize: 13,
+                fontWeight: viewMode === key ? 600 : 400,
+                color: viewMode === key ? 'var(--t-primary)' : 'var(--t-text-muted)',
+                background: 'transparent', border: 'none',
+                borderBottom: `2px solid ${viewMode === key ? 'var(--t-primary)' : 'transparent'}`,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+                transition: 'color 150ms, border-color 150ms',
+              }}
+              onMouseEnter={e => { if (viewMode !== key) e.currentTarget.style.color = 'var(--t-text-secondary)' }}
+              onMouseLeave={e => { if (viewMode !== key) e.currentTarget.style.color = 'var(--t-text-muted)' }}
+            >
+              <Icon size={13} /> {label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      <div
-        className={terminal ? 'flex flex-1 min-h-0 border overflow-hidden' : 'flex rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm'}
-        style={terminal
-          ? { borderColor: 'var(--t-border)', background: 'var(--t-bg-panel)' }
-          : { height: 'calc(100vh - 180px)', minHeight: 500 }
-        }
-      >
-        <ConversationList
-          loadingList={convState.loadingList}
-          listError={convState.listError}
-          conversations={convState.conversations}
-          grouped={grouped}
-          activeId={activeId}
-          hiddenIds={convState.hiddenIds}
-          deletedIds={convState.deletedIds}
-          myRole={user?.role}
-          terminal={terminal}
-          onSelect={handleSelect}
-          onContextMenu={(e, convId) => setCtxMenu({ x: e.clientX, y: e.clientY, convId })}
-        />
+      {/* Applications panel */}
+      {viewMode === 'applications' && <MyApplications terminal />}
 
-        {activeId ? (
-          <MessagePanel
-            key={activeId}
-            threadId={activeId}
-            threads={activeGroup?.threads ?? []}
-            onSwitchThread={(tid) => { setActiveId(tid); navigate(`${basePath}/${tid}`) }}
-            myUserId={user?.id}
+      {/* Invitations panel */}
+      {viewMode === 'invitations' && <MyInvitations terminal messagesPath={basePath} />}
+
+      {/* Messages: two-column body */}
+      {viewMode === 'messages' && (
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
+          {/* Left: conversation list */}
+          <ConversationList
+            loadingList={convState.loadingList}
+            listError={convState.listError}
+            conversations={convState.conversations}
+            grouped={grouped}
+            activeId={activeId}
+            hiddenIds={convState.hiddenIds}
+            deletedIds={convState.deletedIds}
             myRole={user?.role}
-            onRead={convState.handleThreadRead}
-            socket={socket}
-            connectionStatus={connectionStatus}
-            terminal={terminal}
+            terminal
+            onSelect={handleSelect}
+            onContextMenu={(e, convId) => setCtxMenu({ x: e.clientX, y: e.clientY, convId })}
           />
-        ) : (
-          <div
-            className={terminal ? 'flex-1 flex flex-col items-center justify-center gap-3' : 'flex-1 flex flex-col items-center justify-center text-slate-400 gap-3'}
-            style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
-          >
-            <Briefcase size={32} style={terminal ? { color: 'var(--t-text-muted)' } : undefined} className={terminal ? '' : 'text-slate-200'} />
-            <p className="text-sm">选择一个会话开始沟通</p>
+
+          {/* Right: chat area */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            {activeId ? (
+              <MessagePanel
+                key={activeId}
+                threadId={activeId}
+                threads={activeGroup?.threads ?? []}
+                onSwitchThread={tid => { setActiveId(tid); navigate(`${basePath}/${tid}`) }}
+                myUserId={user?.id}
+                myRole={user?.role}
+                onRead={convState.handleThreadRead}
+                socket={socket}
+                connectionStatus={connectionStatus}
+                terminal
+              />
+            ) : (
+              <div style={{
+                flex: 1,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                gap: 14, color: 'var(--t-text-muted)',
+              }}>
+                <Briefcase size={40} style={{ opacity: 0.2 }} />
+                <p style={{ fontSize: 14 }}>从左侧选择一个会话开始沟通</p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

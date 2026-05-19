@@ -28,7 +28,7 @@ export function ContextMenu({ x, y, terminal, onHide, onDelete, onClose }) {
   }
 
   return (
-    <div ref={ref} style={menuStyle} onClick={e => e.stopPropagation()}>
+    <div ref={ref} className="t-ctx-enter" style={menuStyle} onClick={e => e.stopPropagation()}>
       <button
         style={{ ...itemBase, color: terminal ? 'var(--t-text-secondary)' : '#475569' }}
         onMouseEnter={e => { e.currentTarget.style.background = terminal ? 'var(--t-bg-hover)' : '#f1f5f9' }}
@@ -72,7 +72,6 @@ export function MessageThread({
     }
   }, [messages, shouldScrollRef, loadingMoreRef])
 
-  // Scroll anchor after load-more
   const prevLoadingMore = useRef(false)
   useEffect(() => {
     if (prevLoadingMore.current && !loadingMore) {
@@ -83,46 +82,86 @@ export function MessageThread({
     prevLoadingMore.current = loadingMore
   }, [loadingMore])
 
+  if (terminal) {
+    return (
+      <div
+        className="flex-1 overflow-y-auto terminal-scrollbar"
+        style={{ background: 'var(--t-bg)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}
+      >
+        {hasMore && (
+          <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 4 }}>
+            <button
+              onClick={onLoadMore}
+              disabled={loadingMore}
+              className={loadingMore ? undefined : 't-card-pressable'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '5px 14px', borderRadius: 999, fontSize: 12,
+                background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)',
+                color: 'var(--t-text-secondary)',
+                cursor: loadingMore ? 'default' : 'pointer',
+                opacity: loadingMore ? 0.5 : 1,
+                transition: 'background 120ms, border-color 120ms, color 120ms, transform var(--t-dur-fast) var(--t-ease-std)',
+              }}
+              onMouseEnter={e => { if (!loadingMore) { e.currentTarget.style.borderColor = 'var(--t-border-focus)'; e.currentTarget.style.color = 'var(--t-text)' } }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--t-border)'; e.currentTarget.style.color = 'var(--t-text-secondary)' }}
+            >
+              {loadingMore ? <><Loader2 size={11} className="animate-spin" />加载中…</> : '加载更多历史消息'}
+            </button>
+          </div>
+        )}
+
+        <div ref={topAnchorRef} />
+
+        {messages.length === 0 && (
+          <div style={{
+            flex: 1, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 8, paddingTop: 40,
+          }}>
+            <MessageSquare size={34} style={{ color: 'var(--t-text-muted)', opacity: 0.3 }} />
+            <span style={{ fontSize: 14, color: 'var(--t-text-muted)', fontWeight: 500 }}>发一条消息开始沟通</span>
+            <span style={{ fontSize: 12, color: 'var(--t-text-muted)', opacity: 0.6 }}>输入内容后按 Enter 发送</span>
+          </div>
+        )}
+
+        {messages.map((msg, idx) => {
+          const key        = msg._tempId ?? msg.id
+          const curKey     = msgDateKey(msg.created_at)
+          const prevKey    = idx > 0 ? msgDateKey(messages[idx - 1].created_at) : null
+          const showDivider = curKey && curKey !== prevKey
+          return (
+            <div key={key}>
+              {showDivider && <DateDivider dateKey={curKey} terminal />}
+              <MessageBubble msg={msg} isMine={msg.sender_user_id === myUserId} onRetry={onRetry} terminal />
+            </div>
+          )
+        })}
+
+        <TypingIndicator visible={isTyping} terminal />
+        <div ref={bottomRef} />
+      </div>
+    )
+  }
+
+  // ── public light branch ──────────────────────────────────────────────────
   return (
-    <div
-      className={terminal
-        ? 'flex-1 overflow-y-auto px-5 py-4 space-y-3 terminal-scrollbar'
-        : 'flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-slate-50/40'
-      }
-      style={terminal ? { background: 'var(--t-bg)' } : undefined}
-    >
+    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-slate-50/40">
       {hasMore && (
         <div className="flex justify-center pb-2">
           <button
             onClick={onLoadMore}
             disabled={loadingMore}
-            className={terminal
-              ? 'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full transition-colors disabled:opacity-50'
-              : 'flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 bg-white border border-slate-200 rounded-full hover:border-slate-300 hover:text-slate-700 transition-colors disabled:opacity-50'
-            }
-            style={terminal ? { background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', color: 'var(--t-text-secondary)' } : undefined}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 bg-white border border-slate-200 rounded-full hover:border-slate-300 hover:text-slate-700 transition-colors disabled:opacity-50"
           >
             {loadingMore ? <><Loader2 size={11} className="animate-spin" />加载中...</> : '加载更多历史消息'}
           </button>
         </div>
       )}
       <div ref={topAnchorRef} />
-
       {messages.length === 0 && (
-        terminal ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            paddingTop: 40, paddingBottom: 24, gap: 10,
-          }}>
-            <MessageSquare size={28} style={{ color: 'var(--t-text-muted)', opacity: 0.45 }} />
-            <span style={{ fontSize: 13, color: 'var(--t-text-muted)' }}>发一条消息开始沟通</span>
-          </div>
-        ) : (
-          <div className="text-center text-sm text-slate-400 py-12">暂无消息，发一条开始沟通吧</div>
-        )
+        <div className="text-center text-sm text-slate-400 py-12">暂无消息，发一条开始沟通吧</div>
       )}
-
       {messages.map((msg, idx) => {
         const key        = msg._tempId ?? msg.id
         const curKey     = msgDateKey(msg.created_at)
@@ -130,13 +169,12 @@ export function MessageThread({
         const showDivider = curKey && curKey !== prevKey
         return (
           <div key={key}>
-            {showDivider && <DateDivider dateKey={curKey} terminal={terminal} />}
-            <MessageBubble msg={msg} isMine={msg.sender_user_id === myUserId} onRetry={onRetry} terminal={terminal} />
+            {showDivider && <DateDivider dateKey={curKey} terminal={false} />}
+            <MessageBubble msg={msg} isMine={msg.sender_user_id === myUserId} onRetry={onRetry} terminal={false} />
           </div>
         )
       })}
-
-      <TypingIndicator visible={isTyping} terminal={terminal} />
+      <TypingIndicator visible={isTyping} terminal={false} />
       <div ref={bottomRef} />
     </div>
   )

@@ -18,6 +18,7 @@ export function useCandidatePool() {
   const [totalPages, setTotalPages]       = useState(1)
   const [total, setTotal]                 = useState(0)
   const [poolCounts, setPoolCounts]       = useState({})
+  const [quota, setQuota]                 = useState(null)
 
   function fetchCandidates(filters, targetPage = 1) {
     setLoading(true)
@@ -50,12 +51,14 @@ export function useCandidatePool() {
       jobsApi.getMyJobs(),
       invitationsApi.getSentInvitations(),
       subscriptionsApi.getMySubscription().catch(() => ({ data: { has_active: false } })),
-    ]).then(([jobsRes, sentRes, subRes]) => {
+      subscriptionsApi.getQuota().catch(() => ({ data: null })),
+    ]).then(([jobsRes, sentRes, subRes, quotaRes]) => {
       const published = (jobsRes.data.jobs ?? []).filter(j => j.status === 'published')
       setMyJobs(published)
       if (published.length > 0) setSelectedJob(published[0])
       setInvited(buildInviteMap(sentRes.data.invitations ?? []))
       setHasSubscription(!!(subRes.data?.has_active))
+      if (quotaRes.data) setQuota(quotaRes.data)
     }).catch(err => {
       console.error('Failed to load employer jobs or sent invitations:', {
         status: err.response?.status,
@@ -80,5 +83,6 @@ export function useCandidatePool() {
     fetchCandidates,
     page, totalPages, total,
     poolCounts,
+    quota,
   }
 }

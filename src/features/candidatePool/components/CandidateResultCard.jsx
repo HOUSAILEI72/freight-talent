@@ -27,20 +27,48 @@ function isCurrentJob(w) {
   return !end || end === '至今' || end === 'present' || end === 'now'
 }
 
-function getLatestWorkExperience(arr) {
-  if (!arr?.length) return null
-  const current = arr.find(isCurrentJob)
-  if (current) return current
-  return [...arr].sort((a, b) => {
+function getSortedWorkExperiences(arr, limit = 2) {
+  if (!arr?.length) return []
+  const current = arr.filter(isCurrentJob)
+  const past = arr.filter(w => !isCurrentJob(w)).sort((a, b) => {
     const ea = (a.end_month ?? a.end_date ?? '').toString()
     const eb = (b.end_month ?? b.end_date ?? '').toString()
     return eb.localeCompare(ea)
-  })[0]
+  })
+  return [...current, ...past].slice(0, limit)
 }
 
-function getHighestEducation(arr) {
+function getSortedEducations(arr, limit = 2) {
+  if (!arr?.length) return []
+  return [...arr].sort((a, b) => eduRank(b) - eduRank(a)).slice(0, limit)
+}
+
+function parseYearMonth(str) {
+  if (!str) return null
+  const s = str.toString().trim()
+  const m = s.match(/^(\d{4})[.\-/](\d{1,2})/)
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, 1)
+  const y = s.match(/^(\d{4})$/)
+  if (y) return new Date(parseInt(y[1]), 0, 1)
+  return null
+}
+
+function computeExperienceYears(arr) {
   if (!arr?.length) return null
-  return [...arr].sort((a, b) => eduRank(b) - eduRank(a))[0]
+  let totalMonths = 0
+  const now = new Date()
+  for (const w of arr) {
+    const start = parseYearMonth(w.start_month ?? w.start_date)
+    if (!start) continue
+    const endStr = (w.end_month ?? w.end_date ?? '').toString().toLowerCase()
+    const end = (!endStr || endStr === '至今' || endStr === 'present' || endStr === 'now')
+      ? now
+      : parseYearMonth(endStr)
+    if (!end) continue
+    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+    if (months > 0) totalMonths += months
+  }
+  return totalMonths > 0 ? Math.max(1, Math.round(totalMonths / 12)) : null
 }
 
 /* ── status pill — 统一规格，四种状态共用 ───────────────────────── */
@@ -120,20 +148,37 @@ function Chip({ children, accent, chipType }) {
   )
 }
 
-function TimelineRow({ Icon, iconColor, label, period, title }) {
+function BossTimelineEntry({ Icon, iconColor, period, title }) {
   return (
-    <div className="terminal-timeline-row">
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, minWidth: 0 }}>
+      <Icon size={10} style={{ color: iconColor, flexShrink: 0, marginTop: 2 }} />
       <span
-        className="terminal-timeline-kind"
-        style={{ color: iconColor, borderColor: iconColor }}
+        style={{
+          fontFamily: 'var(--t-font-mono)',
+          fontSize: 10,
+          color: 'var(--t-text-muted)',
+          flexShrink: 0,
+          fontVariantNumeric: 'tabular-nums',
+          letterSpacing: '0.01em',
+          lineHeight: 1.45,
+          whiteSpace: 'nowrap',
+        }}
       >
-        <Icon size={10} style={{ flexShrink: 0 }} />
-        {label}
-      </span>
-      <span className="terminal-timeline-period">
         {period || '—'}
       </span>
-      <span className="terminal-timeline-title">
+      <span
+        style={{
+          fontFamily: 'var(--t-font-cjk)',
+          fontSize: 11,
+          color: 'var(--t-text-secondary)',
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          lineHeight: 1.45,
+          flex: 1,
+        }}
+      >
         {title}
       </span>
     </div>
@@ -153,6 +198,7 @@ function PillBtn({ onClick, disabled, style, onMouseEnter, onMouseLeave, childre
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
+        paddingInline: 8,
         borderRadius: 'var(--t-radius-sm)',
         fontFamily: 'var(--t-font-cjk)',
         fontSize: 11,
@@ -185,8 +231,8 @@ export function CandidateResultCard({
   const navigate   = useNavigate()
   const isUnlocked = !!c.private_visible
 
-  const latestWork = getLatestWorkExperience(c.work_experiences)
-  const highestEdu = getHighestEducation(c.education_experiences)
+  const workEntries = getSortedWorkExperiences(c.work_experiences, 2)
+  const eduEntries  = getSortedEducations(c.education_experiences, 2)
 
   const publicTagged = [
     ...(c.knowledge_tags  ?? []).map(t => ({ t, chipType: 'know' })),
@@ -207,8 +253,9 @@ export function CandidateResultCard({
   const stripFallback = [c.business_type, c.job_type, c.business_area_name].filter(Boolean)
 
   const city = c.expected_city || c.location_name || c.current_city || c.business_area_name
+  const experienceYears = c.experience_years ?? computeExperienceYears(c.work_experiences)
   const metaParts = []
-  if (c.experience_years != null) metaParts.push(`${c.experience_years}年经验`)
+  if (experienceYears != null) metaParts.push(`${experienceYears}年经验`)
   if (isUnlocked && c.age != null) metaParts.push(`${c.age}岁`)
   if (city) metaParts.push(city)
   if (isUnlocked && c.education) metaParts.push(c.education)
@@ -224,13 +271,13 @@ export function CandidateResultCard({
   return (
     <div
       onClick={go}
-      className="cursor-pointer overflow-hidden"
+      className="cursor-pointer overflow-hidden t-card-pressable"
       style={{
         position: 'relative',
         background: 'var(--t-bg-panel)',
         border: '1px solid rgba(96,165,250,0.15)',
         borderRadius: 'var(--t-radius)',
-        transition: 'border-color 160ms, background 160ms',
+        transition: 'border-color 160ms, background 160ms, transform var(--t-dur-fast) var(--t-ease-std)',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background  = 'var(--t-bg-hover)'
@@ -334,33 +381,38 @@ export function CandidateResultCard({
 
         {/* ── CENTER: timeline (unlocked) / public portrait (locked) ── */}
         <div
-          className="terminal-candidate-timeline px-4 py-2 flex flex-col justify-start"
-          style={{ borderRight: '1px solid var(--t-border-subtle)', minWidth: 0, gap: 5 }}
+          className="terminal-candidate-timeline px-4 py-2 flex flex-col justify-center"
+          style={{ borderRight: '1px solid var(--t-border-subtle)', minWidth: 0, gap: 4 }}
         >
           {isUnlocked ? (
             <>
-              {latestWork ? (
-                <TimelineRow
-                  Icon={Briefcase}
-                  iconColor="var(--t-chart-blue)"
-                  label="工作"
-                  period={formatWorkPeriod(latestWork)}
-                  title={[latestWork.company_name ?? latestWork.company, latestWork.title].filter(Boolean).join(' · ') || '—'}
-                />
-              ) : (
-                <p style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>暂无工作经历</p>
+              {workEntries.length > 0
+                ? workEntries.map((w, i) => (
+                    <BossTimelineEntry
+                      key={i}
+                      Icon={Briefcase}
+                      iconColor="var(--t-chart-blue)"
+                      period={formatWorkPeriod(w)}
+                      title={[w.company_name ?? w.company, w.title].filter(Boolean).join(' · ') || '—'}
+                    />
+                  ))
+                : <p style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>暂无工作经历</p>
+              }
+              {workEntries.length > 0 && eduEntries.length > 0 && (
+                <div style={{ height: 1, background: 'var(--t-border-subtle)', margin: '2px 0' }} />
               )}
-              {highestEdu ? (
-                <TimelineRow
-                  Icon={GraduationCap}
-                  iconColor="var(--t-chart-purple)"
-                  label="教育"
-                  period={highestEdu.period || '—'}
-                  title={[highestEdu.school, highestEdu.major, highestEdu.degree ?? highestEdu.level].filter(Boolean).join(' · ') || '—'}
-                />
-              ) : (
-                <p style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>暂无教育经历</p>
-              )}
+              {eduEntries.length > 0
+                ? eduEntries.map((edu, i) => (
+                    <BossTimelineEntry
+                      key={i}
+                      Icon={GraduationCap}
+                      iconColor="var(--t-chart-purple)"
+                      period={edu.period || '—'}
+                      title={[edu.school, edu.major, edu.degree ?? edu.level].filter(Boolean).join(' · ') || '—'}
+                    />
+                  ))
+                : <p style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>暂无教育经历</p>
+              }
             </>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>

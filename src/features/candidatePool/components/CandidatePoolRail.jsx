@@ -2,7 +2,7 @@ import { useHoverRail } from '../../../components/terminal/useHoverRail'
 import { CANDIDATE_POOL_TABS } from '../constants'
 
 const COLLAPSED = 52
-const EXPANDED  = 224
+const EXPANDED  = 172
 
 export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts = {} }) {
   const { open, handleMouseEnter, handleMouseLeave } = useHoverRail()
@@ -11,7 +11,6 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
     <aside
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="terminal-pool-rail-narrow"
       style={{
         width: open ? EXPANDED : COLLAPSED,
         background: 'var(--t-bg-panel)',
@@ -35,17 +34,17 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
         <span style={{
           position: 'absolute', left: '50%', transform: 'translateX(-50%)',
           fontFamily: 'var(--t-font-sans)', fontSize: 10, fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.04em',
+          textTransform: 'uppercase', letterSpacing: '0.06em',
           color: 'var(--t-text-muted)', whiteSpace: 'nowrap',
           opacity: open ? 0 : 1, transition: 'opacity 120ms',
           pointerEvents: 'none',
         }}>
           PL
         </span>
-        <span className="pool-rail-header-text" style={{
+        <span style={{
           position: 'absolute', left: 12,
           fontFamily: 'var(--t-font-sans)', fontSize: 10, fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.04em',
+          textTransform: 'uppercase', letterSpacing: '0.06em',
           color: 'var(--t-text-muted)', whiteSpace: 'nowrap',
           opacity: open ? 1 : 0,
           transition: open ? 'opacity 200ms 160ms' : 'opacity 80ms',
@@ -56,7 +55,7 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
       </div>
 
       {/* Tab list */}
-      <nav style={{ flex: 1, overflowY: 'auto' }} className="terminal-scrollbar">
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }} className="terminal-scrollbar">
         {CANDIDATE_POOL_TABS.map(tab => {
           const Icon   = tab.icon
           const active = tab.key === value
@@ -73,9 +72,9 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
                 display: 'flex',
                 alignItems: 'center',
                 width: '100%',
-                height: 48,
-                gap: 10,
-                padding: '0 12px',
+                height: 40,
+                gap: 8,
+                padding: '0 10px',
                 background: active ? 'var(--t-primary)' : 'transparent',
                 color: active ? '#fff' : 'var(--t-text-secondary)',
                 border: 'none',
@@ -91,28 +90,29 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
                 <span aria-hidden style={{
                   position: 'absolute', left: 0,
                   top: '50%', transform: 'translateY(-50%)',
-                  height: 36, width: 3,
+                  height: 24, width: 3,
                   borderRadius: '0 2px 2px 0',
-                  background: '#60a5fa',
+                  background: 'var(--t-primary)',
+                  animation: 't-accent-in 120ms cubic-bezier(0.22,1,0.36,1) both',
                 }} />
               )}
 
               {/* Icon */}
               <span style={{
-                flexShrink: 0, width: 18,
+                flexShrink: 0, width: 16,
                 display: 'flex', justifyContent: 'center',
-                marginLeft: open ? 0 : `${(COLLAPSED - 18 - 24) / 2}px`,
+                marginLeft: open ? 0 : `${(COLLAPSED - 16 - 20) / 2}px`,
                 transition: `margin-left var(--t-rail-${open ? 'expand' : 'collapse'}-duration) var(--t-rail-ease)`,
               }}>
-                <Icon size={14} />
+                <Icon size={13} />
               </span>
 
-              {/* Label + count — always in DOM */}
-              <span className="pool-rail-label" style={{
+              {/* Label + count */}
+              <span style={{
                 flex: 1,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
+                gap: 5,
                 overflow: 'hidden',
                 opacity: open ? 1 : 0,
                 transform: open ? 'translateX(0)' : 'translateX(-6px)',
@@ -124,22 +124,28 @@ export function CandidatePoolRail({ value = 'all', onChange = () => {}, counts =
               }}>
                 <span style={{
                   flex: 1,
-                  fontFamily: 'var(--t-font-sans)', fontSize: 11,
-                  fontWeight: 600,
-                  textTransform: 'uppercase', letterSpacing: '0.04em',
-                  overflow: 'hidden', textOverflow: 'ellipsis',
+                  fontFamily: 'var(--t-font-sans)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  letterSpacing: '0.01em',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                   textAlign: 'left',
                 }}>
                   {tab.label}
                 </span>
                 {count != null && (
-                  <span className="pool-rail-count" style={{
-                    fontFamily: 'var(--t-font-sans)', fontSize: 10,
-                    padding: '1px 6px', borderRadius: 10,
-                    background: active ? 'rgba(255,255,255,0.2)' : 'var(--t-bg-elevated)',
-                    color: active ? '#fff' : 'var(--t-text-muted)',
+                  <span style={{
+                    fontFamily: 'var(--t-font-mono)',
+                    fontSize: 10,
+                    lineHeight: 1,
+                    padding: '2px 5px',
+                    borderRadius: 8,
+                    background: active ? 'rgba(255,255,255,0.18)' : 'var(--t-bg-elevated)',
+                    color: active ? 'rgba(255,255,255,0.9)' : 'var(--t-text-muted)',
                     border: active ? 'none' : '1px solid var(--t-border)',
                     flexShrink: 0,
+                    fontVariantNumeric: 'tabular-nums',
                   }}>
                     {count}
                   </span>

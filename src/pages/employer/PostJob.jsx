@@ -99,8 +99,19 @@ function formatThousand(val) {
   return Number.isNaN(n) ? String(val) : n.toLocaleString('en-US')
 }
 
-function getTerminalPortalTarget(node) {
-  return node?.closest?.('.terminal-shell') || document.body
+function getTerminalPortalTarget(_node) {
+  return document.body
+}
+
+// html{overflow-y:scroll} makes position:fixed relative to the html element,
+// not the viewport. Subtract html's rect to correct portal-dropdown coordinates.
+function fixedPos(rect, panelH) {
+  const h = document.documentElement.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom - 4
+  const top = spaceBelow >= panelH
+    ? rect.bottom - h.top + 2
+    : rect.top - h.top - panelH - 2
+  return { top, left: rect.left - h.left, width: rect.width }
 }
 
 // ─── TemplatePickerModal ───────────────────────────────────────────────────────
@@ -123,25 +134,39 @@ function TemplatePickerModal({ open, terminal, onClose, onSelect }) {
 
   if (!open) return null
 
-  // Modal 挂载到 document.body（portal），CSS token 在此无效，必须用 hardcoded 值
-  const T = {
-    bg:          '#111720',
-    bgHover:     '#1e2e48',
-    border:      '1px solid #2c4060',
-    text:        '#e2e8f0',
-    textSec:     '#a8bbd0',
-    primary:     '#3b82f6',
-    err:         '#f87171',
-    radius:      '10px',
-    radiusSm:    '4px',
+  // Portal 目标：terminal 模式渲染进 .terminal-shell，token 可继承；fallback 到 body
+  const portalTarget = terminal
+    ? (document.querySelector('.terminal-shell') || document.body)
+    : document.body
+  const T = terminal ? {
+    bg:       'var(--t-bg-panel)',
+    bgHover:  'var(--t-bg-hover)',
+    border:   '1px solid var(--t-border)',
+    text:     'var(--t-text)',
+    textSec:  'var(--t-text-secondary)',
+    primary:  'var(--t-primary)',
+    err:      'var(--t-danger)',
+    radius:   'var(--t-radius-lg)',
+    radiusSm: 'var(--t-radius-sm)',
+  } : {
+    bg:       '#fff',
+    bgHover:  '#f3f4f6',
+    border:   '1px solid #d1d5db',
+    text:     '#111',
+    textSec:  '#6b7280',
+    primary:  '#f59e0b',
+    err:      '#ef4444',
+    radius:   '16px',
+    radiusSm: '8px',
   }
 
-  const overlayStyle = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9998 }
+  const overlayStyle = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9998, animation: 'ai-enter 150ms ease both' }
   const modalStyle = terminal ? {
-    position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+    position: 'fixed', top: '50%', left: '50%',
     zIndex: 9999, width: 'clamp(320px,46vw,480px)', maxHeight: '60vh',
     display: 'flex', flexDirection: 'column',
     background: T.bg, border: T.border, borderRadius: T.radius, overflow: 'hidden',
+    animation: 't-modal-center-in 180ms cubic-bezier(0,0,0.2,1) both',
   } : {
     position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
     zIndex: 9999, width: 'clamp(320px,46vw,480px)', maxHeight: '60vh',
@@ -160,7 +185,7 @@ function TemplatePickerModal({ open, terminal, onClose, onSelect }) {
   return createPortal(
     <>
       <div style={overlayStyle} onClick={onClose} />
-      <div style={modalStyle}>
+      <div className={terminal ? 'terminal-mode' : ''} style={modalStyle}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', ...dividerStyle }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: titleColor }}>选择模板岗位</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: closeColor, display: 'flex', alignItems: 'center' }}>
@@ -232,7 +257,7 @@ function TemplatePickerModal({ open, terminal, onClose, onSelect }) {
         </div>
       </div>
     </>,
-    document.body
+    portalTarget
   )
 }
 
@@ -262,11 +287,13 @@ function SoftSkillOption({ skill, description, checked, terminal, onToggle }) {
       onMouseDown={(e) => { e.preventDefault(); onToggle(skill) }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => { setHovered(false); setTooltipStyle(null) }}
+      className={terminal ? 't-card-pressable' : undefined}
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '6px 12px', cursor: 'pointer', fontSize: 13,
         background: bg,
         color: terminal ? 'var(--t-text)' : '#1e293b',
+        transition: terminal ? 'background 100ms, transform var(--t-dur-fast) var(--t-ease-std)' : undefined,
       }}
     >
       <div style={{
@@ -311,7 +338,7 @@ function SoftSkillOption({ skill, description, checked, terminal, onToggle }) {
 
 // ─── SelectedSkillTag ──────────────────────────────────────────────────────────
 
-function SelectedSkillTag({ skill, description, terminal }) {
+function SelectedSkillTag({ skill, description, terminal, onMouseDown }) {
   const [tooltipStyle, setTooltipStyle] = useState(null)
   const tagRef = useRef(null)
 
@@ -327,6 +354,7 @@ function SelectedSkillTag({ skill, description, terminal }) {
   return (
     <span
       ref={tagRef}
+      onMouseDown={onMouseDown}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setTooltipStyle(null)}
       style={{
@@ -352,15 +380,15 @@ function SelectedSkillTag({ skill, description, terminal }) {
           maxWidth: 240,
           padding: '8px 12px',
           borderRadius: 6,
-          border: '1px solid rgba(30,45,64,0.9)',
-          background: 'rgba(11,14,19,0.96)',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+          border: '1px solid var(--t-border)',
+          background: 'var(--t-bg-elevated)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
           pointerEvents: 'none',
         }}>
-          <p style={{ fontSize: 11, color: 'rgba(148,163,184,0.9)', marginBottom: 3, whiteSpace: 'nowrap' }}>
+          <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 3, whiteSpace: 'nowrap' }}>
             {skill}
           </p>
-          <p style={{ fontSize: 13, color: '#f1f5f9', lineHeight: 1.5, whiteSpace: 'normal' }}>
+          <p style={{ fontSize: 13, color: 'var(--t-text)', lineHeight: 1.5, whiteSpace: 'normal' }}>
             {description}
           </p>
         </div>,
@@ -406,9 +434,11 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
   const [jobTagCategory, setJobTagCategory]     = useState(null)
   const [jobTagOpen, setJobTagOpen]             = useState(false)
   const [jobTagDropPos, setJobTagDropPos]       = useState({ top: 0, left: 0, width: 0 })
-  const jobTagWrapRef    = useRef(null)
-  const jobTagTriggerRef = useRef(null)
-  const jobTagPanelRef   = useRef(null)
+  const [jobTagScrollTarget, setJobTagScrollTarget] = useState(null)
+  const jobTagWrapRef        = useRef(null)
+  const jobTagTriggerRef     = useRef(null)
+  const jobTagPanelRef       = useRef(null)
+  const jobTagRightPanelRef  = useRef(null)
   const [softSkillDropPos, setSoftSkillDropPos] = useState({ top: 0, left: 0, width: 0 })
   const softSkillTriggerRef = useRef(null)
   const [selectedSoftSkills, setSelectedSoftSkills] = useState([])
@@ -447,6 +477,18 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
 
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
   const [tplHovered, setTplHovered] = useState(false)
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
+
+  // ── Subscription gate (terminal only) ────────────────────────────────────
+  const [hasSubscription, setHasSubscription] = useState(false)
+  useEffect(() => {
+    if (!terminal) return
+    import('../../api/subscriptions').then(({ subscriptionsApi }) => {
+      subscriptionsApi.getMySubscription()
+        .then(r => setHasSubscription(!!(r.data?.has_active)))
+        .catch(() => {})
+    })
+  }, [terminal])
 
   // ── Auto-resize refs ──────────────────────────────────────────────────────
   const descRef      = useAutoResize(description)
@@ -714,7 +756,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
 
       description:  description.trim(),
 
-      status: 'published',
+      status: (terminal && !hasSubscription) ? 'draft' : 'published',
     }
 
     setSubmitting(true)
@@ -1041,6 +1083,15 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
     return () => document.removeEventListener('mousedown', onDown)
   }, [])
 
+  // Scroll to a specific tag after dropdown opens and category is set
+  useEffect(() => {
+    if (!jobTagScrollTarget || !jobTagOpen || !jobTagRightPanelRef.current) return
+    const panel = jobTagRightPanelRef.current
+    const el = panel.querySelector(`[data-tag="${CSS.escape(jobTagScrollTarget)}"]`)
+    if (el) el.scrollIntoView({ block: 'nearest' })
+    setJobTagScrollTarget(null)
+  }, [jobTagScrollTarget, jobTagOpen, jobTagCategory])
+
   // Auto-open soft skill dropdown when level + title match CSV
   useEffect(() => {
     const key = `${jobLevel}|${title.trim()}`
@@ -1112,11 +1163,11 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
-        height: 40,
-        padding: '0 14px 0 10px',
+        gap: 6,
+        height: 36,
+        padding: '0 10px 0 8px',
         borderRadius: 'var(--t-radius-sm)',
-        border: aiButtonReady ? '1px solid rgba(96, 165, 250, 0.48)' : '1px solid var(--t-border)',
+        border: aiButtonReady ? '1px solid rgba(96, 165, 250, 0.4)' : '1px solid var(--t-border)',
         background: aiLoading
           ? 'var(--t-primary-muted)'
           : aiButtonReady
@@ -1126,15 +1177,13 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
             : 'var(--t-bg-panel)',
         color: aiButtonReady ? 'var(--t-primary)' : 'var(--t-text-muted)',
         fontSize: 12,
-        fontWeight: 700,
-        letterSpacing: '0.02em',
+        fontWeight: 600,
+        letterSpacing: '0.025em',
         lineHeight: 1,
         cursor: aiLoading ? 'not-allowed' : 'pointer',
         opacity: aiLoading ? 0.78 : 1,
-        boxShadow: aiButtonReady
-          ? aiButtonHovered && !aiLoading
-            ? 'var(--t-shadow-elevated)'
-            : 'none'
+        boxShadow: aiButtonReady && aiButtonHovered && !aiLoading
+          ? '0 2px 6px rgba(59,130,246,0.18)'
           : 'none',
         transform: aiButtonHovered && aiButtonReady && !aiLoading ? 'translateY(-1px)' : 'none',
         transition: 'background 150ms ease-out, border-color 150ms ease-out, box-shadow 150ms ease-out, transform 150ms ease-out, color 150ms ease-out',
@@ -1157,15 +1206,15 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
         fontWeight: 500,
         cursor: aiLoading ? 'not-allowed' : 'pointer',
         opacity: aiLoading ? 0.7 : 1,
-        transition: 'all 0.15s',
+        transition: 'background 120ms, border-color 120ms, color 120ms, opacity 120ms',
         whiteSpace: 'nowrap',
       }
 
   const aiIconWrapStyle = terminal
     ? {
-        width: 24,
-        height: 24,
-        borderRadius: 7,
+        width: 20,
+        height: 20,
+        borderRadius: 5,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1188,8 +1237,8 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
       {terminal ? (
         <span style={aiIconWrapStyle}>
           {aiLoading
-            ? <Loader2 size={14} className="animate-spin" />
-            : <Sparkles size={14} />
+            ? <Loader2 size={12} className="animate-spin" />
+            : <Sparkles size={12} />
           }
         </span>
       ) : (
@@ -1208,21 +1257,25 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
       onMouseEnter={() => setTplHovered(true)}
       onMouseLeave={() => setTplHovered(false)}
       style={terminal ? {
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        height: 40, padding: '0 12px 0 9px',
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        height: 36, padding: '0 10px 0 8px',
         borderRadius: 'var(--t-radius-sm)', border: '1px solid var(--t-border)',
         background: tplHovered ? 'var(--t-bg-hover)' : 'var(--t-bg-elevated)',
-        color: 'var(--t-text-secondary)', fontSize: 12, fontWeight: 700,
-        cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 150ms ease-out',
+        color: tplHovered ? 'var(--t-text)' : 'var(--t-text-secondary)',
+        fontSize: 12, fontWeight: 600, letterSpacing: '0.025em',
+        cursor: 'pointer', whiteSpace: 'nowrap',
+        transform: tplHovered ? 'translateY(-1px)' : 'none',
+        boxShadow: tplHovered ? '0 2px 6px rgba(0,0,0,0.12)' : 'none',
+        transition: 'background 150ms ease-out, color 150ms ease-out, transform 150ms ease-out, box-shadow 150ms ease-out',
       } : {
         display: 'inline-flex', alignItems: 'center', gap: 5,
         padding: '3px 10px', borderRadius: 6, border: '1px solid #d1d5db',
         background: tplHovered ? '#f1f5f9' : '#f9fafb',
         color: '#374151', fontSize: 12, fontWeight: 500,
-        cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s',
+        cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 120ms, box-shadow 120ms',
       }}
     >
-      <Bookmark size={13} />
+      <Bookmark size={12} />
       <span>从模板选择</span>
     </button>
   )
@@ -1526,6 +1579,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
           terminal={terminal}
           placeholder="请选择岗位城市"
           highlightStyle={aiFieldHint && !location?.location_code ? hintTriggerStyle : undefined}
+          onOpenChange={terminal ? setLocationDropdownOpen : undefined}
         />
       </div>
       {location?.location_path && (
@@ -1645,7 +1699,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
         </div>
 
         {/* 右侧：二级标签 */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0', background: terminal ? 'var(--t-bg-elevated)' : '#fff' }}>
+        <div ref={jobTagRightPanelRef} style={{ flex: 1, overflowY: 'auto', padding: '4px 0', background: terminal ? 'var(--t-bg-elevated)' : '#fff' }}>
           {jobTagCategory === null ? (
             <div style={{
               padding: '20px 12px',
@@ -1660,6 +1714,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
             return (
               <div
                 key={tag}
+                data-tag={tag}
                 onMouseDown={(e) => { e.preventDefault(); toggleJobTag(tag) }}
                 style={{
                   display: 'flex',
@@ -1711,7 +1766,21 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
           >
             {selectedJobTags.length > 0
               ? selectedJobTags.map(tag => (
-                  <SelectedSkillTag key={tag} skill={tag} description={null} terminal={terminal} />
+                  <SelectedSkillTag
+                    key={tag}
+                    skill={tag}
+                    description={null}
+                    terminal={terminal}
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      const cat = JOB_TAGS_DATA.find(d => d.tags.includes(tag))?.category ?? null
+                      if (cat) setJobTagCategory(cat)
+                      setJobTagScrollTarget(tag)
+                      if (!jobTagOpen) openJobTagDrop()
+                      setJobTagOpen(true)
+                    }}
+                  />
                 ))
               : <span style={{ color: terminal ? 'var(--t-text-muted)' : '#94a3b8', fontSize: terminal ? 12 : 13 }}>从下拉框中选择岗位标签</span>
             }
@@ -2129,14 +2198,34 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
 
 
   const submitButtons = (
-    <div className="flex items-center justify-end gap-3">
-      <Button terminal={terminal} variant="secondary" onClick={() => navigate('/employer/jobs')} disabled={submitting}>
+    <div className="flex items-center gap-2">
+      <Button
+        terminal={terminal}
+        variant="ghost"
+        onClick={() => navigate('/employer/jobs')}
+        disabled={submitting}
+        style={terminal ? { height: 36, fontSize: 12, fontWeight: 600, letterSpacing: '0.025em', padding: '0 10px', border: '1px solid var(--t-border)' } : undefined}
+      >
         取消
       </Button>
-      <Button terminal={terminal} onClick={handlePublish} disabled={submitting || loadingJob}>
-        {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
-        {submitting ? (isEdit ? '正在保存...' : '正在发布...') : (isEdit ? '保存修改' : '确认发布')}
-        {!submitting && <ChevronRight size={16} />}
+      <Button
+        terminal={terminal}
+        onClick={handlePublish}
+        disabled={submitting || loadingJob}
+        style={terminal ? {
+          height: 36,
+          fontSize: 12,
+          fontWeight: 600,
+          letterSpacing: '0.025em',
+          padding: '0 14px',
+        } : undefined}
+      >
+        {submitting ? <Loader2 size={13} className="animate-spin" /> : null}
+        {submitting
+          ? (isEdit ? '正在保存...' : (terminal && !hasSubscription ? '正在保存草稿...' : '正在发布...'))
+          : (isEdit ? '保存修改' : (terminal && !hasSubscription ? '保存为草稿' : '确认发布'))
+        }
+        {!submitting && <ChevronRight size={13} />}
       </Button>
     </div>
   )
@@ -2170,14 +2259,32 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
                 {isEdit ? 'EDIT JOB' : 'NEW JOB POSTING'}
               </p>
               <h1 className="text-base font-semibold" style={{ color: 'var(--t-text)' }}>发布招聘岗位</h1>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>填写完整后即可立即发布并启动候选人匹配</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
+                {terminal && !hasSubscription && !isEdit ? '订阅后可发布岗位，当前可保存为草稿' : '填写完整后即可立即发布并启动候选人匹配'}
+              </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {templateButtonNode}
               {aiButtonNode}
+              <div style={{ width: 1, height: 18, background: 'var(--t-border)', margin: '0 4px', flexShrink: 0, opacity: 0.7 }} />
               {submitButtons}
             </div>
           </div>
+
+          {/* Subscription gate banner */}
+          {terminal && !hasSubscription && !isEdit && (
+            <div className="mb-2 flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded text-xs" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', color: 'var(--t-text-secondary)' }}>
+              <AlertCircle size={13} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <span>您尚未订阅，岗位将保存为草稿，不会对外发布。</span>
+              <button
+                type="button"
+                onClick={() => navigate('/employer/pricing')}
+                style={{ marginLeft: 4, color: '#f59e0b', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 12 }}
+              >
+                查看订阅方案 →
+              </button>
+            </div>
+          )}
 
           {/* Error */}
           {errorBanner && <div className="mb-2 flex-shrink-0">{errorBanner}</div>}
@@ -2197,7 +2304,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
               <div className={sectionTitleClass} style={{ color: 'var(--t-text-muted)', borderBottom: '1px solid var(--t-border-subtle)', paddingBottom: 6, marginBottom: 0 }}>
                 <span style={{ color: 'var(--t-primary)' }}><Briefcase size={11} /></span> 基本信息
               </div>
-              <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
+              <div className={`overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1 ${locationDropdownOpen ? 'pb-64' : ''}`}>
                 {fieldTitle}
                 {fieldFunction}
                 {fieldExperience}

@@ -74,7 +74,7 @@ export default function CandidateHome() {
   const navigate = useNavigate()
   const [selectedFunction, setSelectedFunction] = useState(DEFAULT_FUNCTION)
   const [selectedArea, setSelectedArea] = useState(DEFAULT_AREA)
-  const [granularity, setGranularity] = useState('week')
+  const [granularity, setGranularity] = useState('bi_monthly')
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -167,11 +167,6 @@ export default function CandidateHome() {
         const mm = String(snapMonth).padStart(2, '0')
         const period = `${snapYear}-${mm}-${String(snapDay).padStart(2, '0')}`
         return { period, label: `${mm}/${String(snapDay).padStart(2, '0')}` }
-      }
-      if (granularity === 'week') {
-        const oneJan = new Date(d.getFullYear(), 0, 1)
-        const week = Math.ceil(((d - oneJan) / 86400000 + oneJan.getDay() + 1) / 7)
-        return { period: `${d.getFullYear()}-W${String(week).padStart(2, '0')}`, label: `W${String(week).padStart(2, '0')}` }
       }
       if (granularity === 'month') {
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`

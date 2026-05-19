@@ -4,6 +4,7 @@ import TerminalLayout from '../../components/terminal/TerminalLayout'
 import { useAuth } from '../../context/AuthContext'
 import { authApi } from '../../api/auth'
 import ThemeModeSelector from '../../components/terminal/ThemeModeSelector'
+import AvatarUpload from '../../components/ui/AvatarUpload'
 
 // ── atoms ─────────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,8 @@ function EditBtn({ onClick, label = '编辑' }) {
 
 export default function TerminalSettings() {
   const { user } = useAuth()
+
+  const [avatarMsg, setAvatarMsg] = useState(null)
 
   // profile section
   const [editProfile, setEditProfile] = useState(false)
@@ -201,6 +204,18 @@ export default function TerminalSettings() {
               </div>
 
               <Toast msg={pfMsg} />
+
+              {/* 头像行（始终显示）*/}
+              <Row label="头像">
+                <AvatarUpload
+                  currentUrl={user?.avatar_url}
+                  userName={user?.name}
+                  size="md"
+                  onChange={() => {}}
+                  onError={msg => setAvatarMsg({ type: 'err', text: msg })}
+                />
+              </Row>
+              {avatarMsg && <Toast msg={avatarMsg} />}
 
               {editProfile ? (
                 <>

@@ -32,8 +32,6 @@ const TERMINAL_PREFIXES = [
   '/candidate/messages',
   '/candidate/tags',
   '/candidate/upload',
-  '/candidate/invitations',
-  '/candidate/applications',
   '/candidate/profile/me',
   '/candidate/profile/builder',
   '/candidate/settings',

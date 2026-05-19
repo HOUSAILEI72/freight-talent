@@ -147,7 +147,7 @@ function SubmitForm({ categories, onDone, onCancel, terminal = false }) {
               ref={descRef}
               value={description}
               onChange={e => setDescription(e.target.value)}
-              rows={2}
+              rows={1}
               placeholder="说明这个标签的含义，便于管理员审批"
               style={{
                 width: '100%', fontSize: 13, background: 'var(--t-bg-input)',
@@ -235,7 +235,7 @@ function SubmitForm({ categories, onDone, onCancel, terminal = false }) {
           ref={descRef}
           value={description}
           onChange={e => setDescription(e.target.value)}
-          rows={2}
+          rows={1}
           placeholder="说明这个标签的含义，便于管理员审批"
           className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-blue-400 resize-none overflow-hidden"
         />

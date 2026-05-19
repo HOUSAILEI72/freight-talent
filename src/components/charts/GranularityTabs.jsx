@@ -1,6 +1,5 @@
 export function GranularityTabs({ value, onChange }) {
   const opts = [
-    { value: "week",       label: "周" },
     { value: "bi_monthly", label: "10&20/月" },
     { value: "month",      label: "月" },
     { value: "quarter",    label: "季度" },

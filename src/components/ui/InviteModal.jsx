@@ -122,7 +122,7 @@ export function InviteModal({ candidate, job, matchScore, onConfirm, onCancel, t
           </label>
           <textarea
             ref={messageRef}
-            rows={6}
+            rows={1}
             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none overflow-hidden"
             value={message}
             onChange={e => setMessage(e.target.value)}

@@ -6,8 +6,6 @@ import { useSendMessage } from '../../messages/hooks/useSendMessage'
 import { MessageThread } from '../../messages/components/MessageThread'
 import { MessageComposer } from '../../messages/components/MessageComposer'
 
-const EASE = 'cubic-bezier(0.22,1,0.36,1)'
-
 const INV_STATUS = {
   pending:  '待回复',
   accepted: '已接受',
@@ -35,12 +33,46 @@ function InvBadge({ status }) {
   )
 }
 
-export function CandidateMiniChatWindow({ activeDockConv, dockCollapsed, onClose, onReadDone }) {
+const DEFAULT_RIGHT = 52  // fallback when dock ref is unavailable
+
+export function CandidateMiniChatWindow({ activeDockConv, dockElRef, onClose, onReadDone }) {
   const { user } = useAuth()
   const [input, setInput] = useState('')
   const didCallReadDone = useRef(false)
+  const chatRef = useRef(null)
+  const [rightOffset, setRightOffset] = useState(DEFAULT_RIGHT)
 
-  const rightOffset = dockCollapsed ? 52 : 316
+  // Dynamically track dock position so chat window stays attached to its left edge
+  useEffect(() => {
+    const dockEl = dockElRef?.current
+    const chatEl = chatRef.current
+    if (!dockEl || !chatEl) {
+      setRightOffset(DEFAULT_RIGHT)
+      return
+    }
+
+    function syncPosition() {
+      const rect = dockEl.getBoundingClientRect()
+      // Skip if dock is not visible (e.g. responsive drawer open, desktop dock hidden)
+      if (rect.width === 0 && rect.height === 0) {
+        setRightOffset(DEFAULT_RIGHT)
+        return
+      }
+      // Chat window right edge = viewport right edge - dock left edge
+      setRightOffset(window.innerWidth - rect.left)
+    }
+
+    syncPosition()
+
+    const observer = new ResizeObserver(syncPosition)
+    observer.observe(dockEl)
+    dockEl.addEventListener('transitionend', syncPosition)
+
+    return () => {
+      observer.disconnect()
+      dockEl.removeEventListener('transitionend', syncPosition)
+    }
+  }, [dockElRef])
 
   const msgState = useConversationMessages({
     threadId:         activeDockConv.threadId,
@@ -82,30 +114,26 @@ export function CandidateMiniChatWindow({ activeDockConv, dockCollapsed, onClose
       `}</style>
 
       <div
+        ref={chatRef}
         className="terminal-mode"
         style={{
-          /* ── scoped token overrides for this window ── */
-          '--t-bg': '#0d1829',
-          '--t-bg-elevated': 'rgba(14,24,46,0.98)',
-
           position:      'fixed',
           bottom:        24,
           right:         rightOffset,
-          width:         460,
-          maxWidth:      'calc(100vw - 420px)',
-          height:        560,
+          width:         380,
+          maxWidth:      'calc(100vw - 80px)',
+          height:        480,
           zIndex:        8200,
           display:       'flex',
           flexDirection: 'column',
           background:    'var(--t-bg-panel)',
-          border:        '1px solid rgba(96,165,250,0.28)',
+          border:        '1px solid var(--t-border-focus)',
           borderRadius:  10,
           overflow:      'hidden',
           boxShadow:     [
             '0 24px 80px rgba(0,0,0,0.48)',
             '0 0 0 1px rgba(96,165,250,0.08)',
           ].join(', '),
-          transition:    `right 280ms ${EASE}`,
         }}
       >
         {/* Top accent line */}
@@ -124,8 +152,8 @@ export function CandidateMiniChatWindow({ activeDockConv, dockCollapsed, onClose
             flexShrink: 0,
             minHeight: 56,
             padding: '11px 12px 10px',
-            borderBottom: '1px solid rgba(96,165,250,0.1)',
-            background: 'rgba(14,24,46,0.98)',
+            borderBottom: '1px solid var(--t-border-subtle)',
+            background: 'var(--t-bg-elevated)',
             display: 'flex', alignItems: 'flex-start', gap: 10,
             position: 'relative', zIndex: 1,
           }}

@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { authApi } from '../../api/auth'
 import { candidatesApi } from '../../api/candidates'
 import ThemeModeSelector from '../../components/terminal/ThemeModeSelector'
+import AvatarUpload from '../../components/ui/AvatarUpload'
 
 // ── atoms ─────────────────────────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ export default function TerminalCandidateSettings() {
 
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [avatarMsg, setAvatarMsg] = useState(null)
 
   useEffect(() => {
     candidatesApi.getMyCandidateProfile()
@@ -228,6 +230,21 @@ export default function TerminalCandidateSettings() {
                 <Row label="账号 ID"><Val>#{user?.id}</Val></Row>
                 <Row label="邮箱"><Val>{user?.email}</Val></Row>
                 <Row label="注册日期"><Val>{joinDate}</Val></Row>
+              </section>
+
+              {/* ── 头像 ── */}
+              <section className="border border-[var(--t-border)]" style={{ borderRadius: 'var(--t-radius)' }}>
+                <SectionHead label="Avatar" />
+                <Row label="头像">
+                  <AvatarUpload
+                    currentUrl={user?.avatar_url}
+                    userName={user?.name}
+                    size="md"
+                    onChange={() => {}}
+                    onError={msg => setAvatarMsg({ type: 'err', text: msg })}
+                  />
+                </Row>
+                {avatarMsg && <Toast msg={avatarMsg} />}
               </section>
 
               {/* ── 姓名（通过 authApi，与 employer settings 一致）── */}

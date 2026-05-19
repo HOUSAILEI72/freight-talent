@@ -3,7 +3,7 @@ import { getSubtitleText, formatExpectedSalary } from '../utils/candidateFormatt
 
 export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInvite, terminal, onSelect, onArchive, onInvite }) {
   const rowClass = terminal
-    ? `p-4 cursor-pointer transition-all border-l-4 ${isSelected ? '' : 'border-l-transparent'}`
+    ? `p-4 cursor-pointer border-l-4 t-card-pressable ${isSelected ? '' : 'border-l-transparent'}`
     : `p-4 cursor-pointer border-b border-slate-100 transition-all ${
         isSelected
           ? 'border-l-4 border-l-blue-500 bg-blue-50'
@@ -14,6 +14,7 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
         borderBottom: '1px solid var(--t-border-subtle)',
         background: isSelected ? 'var(--t-bg-active)' : 'transparent',
         borderLeftColor: isSelected ? 'var(--t-primary)' : 'transparent',
+        transition: 'background 120ms, border-color 120ms, transform var(--t-dur-fast) var(--t-ease-std)',
       }
     : undefined
 
