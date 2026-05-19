@@ -28,10 +28,11 @@ def _strip_sensitive(d):
 
 
 def _before_send(event, hint):
-    req = event.get("request", {})
-    if "headers" in req:
-        req["headers"] = _strip_sensitive(req["headers"])
-    req["data"] = None
+    if "request" in event:
+        req = event["request"]
+        if "headers" in req:
+            req["headers"] = _strip_sensitive(req["headers"])
+        req["data"] = None
     if "extra" in event:
         event["extra"] = _strip_sensitive(event["extra"])
     return event

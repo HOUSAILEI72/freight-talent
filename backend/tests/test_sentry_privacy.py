@@ -69,6 +69,7 @@ def test_handles_missing_request_keys_gracefully():
     event = {}  # no "request", no "extra"
     result = _before_send(event, {})
     assert result is not None
+    assert "request" not in result  # no spurious key injected
 
 
 def test_strips_chinese_pii_keys_in_extra():
