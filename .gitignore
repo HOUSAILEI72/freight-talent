@@ -87,3 +87,5 @@ scripts/ai_backup_*/
 *.pem
 .env
 .superpowers/
+.worktrees/
+.superpowers/
