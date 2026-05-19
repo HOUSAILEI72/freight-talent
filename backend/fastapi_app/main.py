@@ -24,7 +24,7 @@ import httpx
 
 from logging_config import setup_logging
 from fastapi_app.core.config import get_settings
-from fastapi_app.api.v2 import health, conversations, tags, chart, ai_analyze
+from fastapi_app.api.v2 import health, conversations, tags, chart, ai_analyze, notifications, users as users_router
 from fastapi_app.api.v2 import settings as settings_router
 
 # FastAPI 启动时初始化日志（与 Flask 共用同一份配置，写入 fastapi.log）
@@ -32,6 +32,56 @@ setup_logging("fastapi")
 _request_logger = logging.getLogger("fastapi.request")
 
 _settings = get_settings()
+
+import os as _os
+
+_SENSITIVE_FA = {
+    "authorization", "cookie", "set-cookie",
+    "password", "token", "access_token", "refresh_token",
+    "phone", "email", "resume", "file", "attachment", "id_card",
+    "身份证", "手机号", "邮箱",
+}
+
+
+def _strip_sensitive_fa(d):
+    if not isinstance(d, dict):
+        return d
+    result = {}
+    for k, v in d.items():
+        if k.lower() in _SENSITIVE_FA:
+            result[k] = "[FILTERED]"
+        elif isinstance(v, dict):
+            result[k] = _strip_sensitive_fa(v)
+        else:
+            result[k] = v
+    return result
+
+
+def _before_send_fa(event, hint):
+    req = event.get("request", {})
+    if "headers" in req:
+        req["headers"] = _strip_sensitive_fa(req["headers"])
+    if "data" in req:
+        req["data"] = None
+    if "extra" in event:
+        event["extra"] = _strip_sensitive_fa(event["extra"])
+    return event
+
+
+_sentry_dsn = _os.getenv("SENTRY_DSN")
+if _sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        integrations=[StarletteIntegration(), FastApiIntegration()],
+        send_default_pii=False,
+        max_request_body_size="never",
+        environment="production",
+        traces_sample_rate=0.05,
+        before_send=_before_send_fa,
+    )
 
 
 def _flush_chart_cache():
@@ -117,6 +167,8 @@ app.include_router(tags.router,            prefix="/api/v2")
 app.include_router(settings_router.router, prefix="/api/v2")
 app.include_router(chart.router,           prefix="/api/v2")
 app.include_router(ai_analyze.router,      prefix="/api/v2")
+app.include_router(notifications.router,   prefix="/api/v2")
+app.include_router(users_router.router,    prefix="/api/v2")
 
 
 @app.middleware("http")
