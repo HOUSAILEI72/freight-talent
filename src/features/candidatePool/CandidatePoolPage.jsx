@@ -179,16 +179,7 @@ export default function CandidatePoolPage({ terminal = false }) {
     }
   }
 
-  const filteredCandidates = pool.candidates.filter(c => {
-    const isArch = archive.archivedSet.has(c.id)
-    const invKey = pool.selectedJob ? `${pool.selectedJob.id}_${c.id}` : null
-    const isInv  = invKey ? !!pool.invited[invKey] : false
-    if (filters.archiveFilter === 'archived'     && !isArch) return false
-    if (filters.archiveFilter === 'not_archived' &&  isArch) return false
-    if (filters.inviteFilter  === 'invited'      && !isInv)  return false
-    if (filters.inviteFilter  === 'not_invited'  &&  isInv)  return false
-    return true
-  })
+  const filteredCandidates = pool.candidates
 
   const selectedInvKey = pool.selectedJob && selected ? `${pool.selectedJob.id}_${selected.id}` : null
 
@@ -198,8 +189,6 @@ export default function CandidatePoolPage({ terminal = false }) {
     location: filters.location, onLocationChange: handleLocationChange,
     functionCode: filters.functionCode, onFunctionChange: handleFunctionChange,
     gender: filters.gender, setGender: handleGenderChange,
-    archiveFilter: filters.archiveFilter, setArchiveFilter: filters.setArchiveFilter,
-    inviteFilter: filters.inviteFilter, setInviteFilter: filters.setInviteFilter,
     hasFilter: filters.hasFilter,
     onSearch: handleSearch, onReset: handleReset,
     myJobs: pool.myJobs, selectedJob: pool.selectedJob, setSelectedJob: handleJobChange,
@@ -214,7 +203,6 @@ export default function CandidatePoolPage({ terminal = false }) {
     selected, selectedJob: pool.selectedJob,
     invited: pool.invited, archivedSet: archive.archivedSet,
     hasSubscription: pool.hasSubscription,
-    archiveFilter: filters.archiveFilter, inviteFilter: filters.inviteFilter,
     terminal,
     onArchive: archive.handleArchive,
     onOpenConversation: handleOpenConversation,

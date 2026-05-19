@@ -271,7 +271,10 @@ export default function RegionSelector({
     const rawTop = rect.bottom - htmlRect.top + margin
     const top = Math.max(margin, rawTop)
     const left = rect.left - htmlRect.left
-    setDropPos({ top, left, width: rect.width, maxHeight })
+    setDropPos(prev => {
+      if (prev && prev.top === top && prev.left === left && prev.width === rect.width && prev.maxHeight === maxHeight) return prev
+      return { top, left, width: rect.width, maxHeight }
+    })
     return true
   }, [])
 
@@ -299,7 +302,6 @@ export default function RegionSelector({
     if (!open || !terminal) return undefined
     let secondRaf = 0
     scrollColumnForDropdown()
-    updateDropdownPosition()
     const raf = window.requestAnimationFrame(() => {
       scrollColumnForDropdown()
       updateDropdownPosition()

@@ -80,7 +80,7 @@ function JobDetailPanel({ job }) {
 
       {job.description && (
         <div>
-          <p className="text-sm font-semibold text-slate-800 mb-2">岗位职责</p>
+          <p className="text-sm font-semibold text-slate-800 mb-2">岗位描述</p>
           <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{job.description}</p>
         </div>
       )}
@@ -112,9 +112,8 @@ export default function AdminJobs() {
   const [jobType, setJobType]           = useState('')
 
   function fetchJobs(filters) {
-    setLoading(true)
-    setError('')
-    jobsApi.getPublicJobs({ ...filters, page_size: 500 })
+    Promise.resolve()
+      .then(() => { setLoading(true); setError(''); return jobsApi.getPublicJobs({ ...filters, page_size: 500 }) })
       .then(res => {
         const list = res.data.jobs
         setJobs(list)

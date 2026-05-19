@@ -12,6 +12,7 @@ import {
 
 // ── 审批开关 ──────────────────────────────────────────────────────────────────
 function ApprovalToggle() {
+  const toast = useToast()
   const [enabled, setEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -183,6 +184,7 @@ function TagLibrary() {
 
 // ── 待审批标签 Tab ─────────────────────────────────────────────────────────────
 function PendingTags() {
+  const toast = useToast()
   const [tags, setTags] = useState([])
   const [loading, setLoading] = useState(true)
   const [rejectId, setRejectId] = useState(null)
@@ -291,6 +293,7 @@ function PendingTags() {
 
 // ── 待审批描述 Tab ─────────────────────────────────────────────────────────────
 function PendingNotes() {
+  const toast = useToast()
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [rejectId, setRejectId] = useState(null)

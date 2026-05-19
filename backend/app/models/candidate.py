@@ -38,6 +38,7 @@ class Candidate(db.Model):
     # 每条 work_experience: {"period": "2020-2024", "title": "...", "company": "..."}
     # 每条 education_experience: {"period": "2014-2018", "school": "...", "major": "...", "degree": "..."}
     work_experiences = db.Column(db.JSON, nullable=True)
+    project_experiences = db.Column(db.JSON, nullable=True)
     education_experiences = db.Column(db.JSON, nullable=True)
     certificates = db.Column(db.JSON, nullable=True)   # ["国际货代证","报关员"]
 
@@ -201,6 +202,7 @@ class Candidate(db.Model):
                 "education": self.education,
                 "availability_status": self.availability_status,
                 "work_experiences": self.work_experiences or [],
+                "project_experiences": self.project_experiences or [],
                 "education_experiences": self.education_experiences or [],
                 "certificates": self.certificates or [],
                 # ── CAND-2A: current-company sensitive fields ──
@@ -228,6 +230,7 @@ class Candidate(db.Model):
                 "education": None,
                 "availability_status": None,
                 "work_experiences": [],
+                "project_experiences": [],
                 "education_experiences": [],
                 "certificates": [],
                 "current_responsibilities": None,

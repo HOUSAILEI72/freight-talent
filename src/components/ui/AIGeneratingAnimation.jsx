@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 
 // ── Deterministic pseudo-random (seeded, no Math.random in render) ──
 function prand(seed) {
@@ -53,36 +53,38 @@ export default function AIGeneratingAnimation({ isGenerating }) {
   const [charPos,     setCharPos]     = useState(0)
   const [displayText, setDisplayText] = useState('')
   const phaseRef = useRef('idle')
-  phaseRef.current = phase
+  useLayoutEffect(() => { phaseRef.current = phase }, [phase])
 
   // ── State machine: isGenerating → thinking → generating → done ───
   useEffect(() => {
-    if (isGenerating) {
-      setMounted(true)
-      setPhase('thinking')
-      setMsgIdx(0)
-      setCharPos(0)
-      setDisplayText('')
-      const t = setTimeout(() => {
-        if (phaseRef.current === 'thinking') {
-          setPhase('generating')
-          setMsgIdx(0)
-          setCharPos(0)
-          setDisplayText('')
-        }
-      }, 2400)
-      return () => clearTimeout(t)
-    } else if (phaseRef.current !== 'idle') {
-      setPhase('done')
-      setMsgIdx(0)
-      setCharPos(0)
-      setDisplayText('')
-      const t = setTimeout(() => {
-        setMounted(false)
-        setPhase('idle')
-      }, 1800)
-      return () => clearTimeout(t)
-    }
+    let t
+    Promise.resolve().then(() => {
+      if (isGenerating) {
+        setMounted(true)
+        setPhase('thinking')
+        setMsgIdx(0)
+        setCharPos(0)
+        setDisplayText('')
+        t = setTimeout(() => {
+          if (phaseRef.current === 'thinking') {
+            setPhase('generating')
+            setMsgIdx(0)
+            setCharPos(0)
+            setDisplayText('')
+          }
+        }, 2400)
+      } else if (phaseRef.current !== 'idle') {
+        setPhase('done')
+        setMsgIdx(0)
+        setCharPos(0)
+        setDisplayText('')
+        t = setTimeout(() => {
+          setMounted(false)
+          setPhase('idle')
+        }, 1800)
+      }
+    })
+    return () => clearTimeout(t)
   }, [isGenerating])
 
   // ── Message cycling ──────────────────────────────────────────────

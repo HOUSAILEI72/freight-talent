@@ -288,7 +288,7 @@ function CandidateDetailPanel({
         || (candidate.soft_skill_tags?.length ?? 0) > 0) && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'PROFILE' : '能力画像'}
@@ -334,7 +334,7 @@ function CandidateDetailPanel({
           ].filter(g => Array.isArray(g.tags) && g.tags.length > 0).map(g => (
             <div key={g.label} className="mb-2 last:mb-0">
               <p
-                className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-1' : 'text-xs text-slate-400 mb-1'}
+                className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-1' : 'text-xs text-slate-400 mb-1'}
                 style={mutedColor}
               >
                 {g.label}
@@ -363,16 +363,16 @@ function CandidateDetailPanel({
       {isPrivate && (candidate.email || candidate.phone) && (
         terminal ? (
           <div style={{ borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' }}>
-            <p className="font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2" style={mutedColor}>CONTACT</p>
+            <p className="font-sans text-[10px] uppercase tracking-[0.04em] mb-2" style={mutedColor}>CONTACT</p>
             {candidate.phone && (
               <p className="text-xs flex items-center gap-3" style={subColor}>
-                <span className="font-sans text-\[10px\] uppercase tracking-[0.04em] w-8 flex-shrink-0" style={mutedColor}>TEL</span>
+                <span className="font-sans text-[10px] uppercase tracking-[0.04em] w-8 flex-shrink-0" style={mutedColor}>TEL</span>
                 {candidate.phone}
               </p>
             )}
             {candidate.email && (
               <p className="text-xs flex items-center gap-3 mt-1" style={subColor}>
-                <span className="font-sans text-\[10px\] uppercase tracking-[0.04em] w-8 flex-shrink-0" style={mutedColor}>MAIL</span>
+                <span className="font-sans text-[10px] uppercase tracking-[0.04em] w-8 flex-shrink-0" style={mutedColor}>MAIL</span>
                 {candidate.email}
               </p>
             )}
@@ -421,7 +421,7 @@ function CandidateDetailPanel({
       ) && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'CURRENT ROLE' : '当前任职'}
@@ -454,7 +454,7 @@ function CandidateDetailPanel({
                   { label: 'YE-BONUS', value: candidate.current_has_year_end_bonus ? (candidate.current_year_end_bonus_months != null ? `${candidate.current_year_end_bonus_months}M` : 'YES') : (candidate.current_has_year_end_bonus === false ? 'NO' : '—') },
                 ].map(item => (
                   <div key={item.label} className="px-3 py-2" style={{ background: 'var(--t-bg-panel)' }}>
-                    <p className="font-sans text-\[10px\] uppercase tracking-[0.04em] mb-0.5" style={mutedColor}>{item.label}</p>
+                    <p className="font-sans text-[10px] uppercase tracking-[0.04em] mb-0.5" style={mutedColor}>{item.label}</p>
                     <p className="text-xs" style={subColor}>{item.value}</p>
                   </div>
                 ))}
@@ -482,7 +482,7 @@ function CandidateDetailPanel({
       {isPrivate && (candidate.work_experiences?.length > 0) && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'EXPERIENCE' : '工作经历'}
@@ -543,7 +543,7 @@ function CandidateDetailPanel({
       {isPrivate && (candidate.education_experiences?.length > 0) && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'EDUCATION' : '教育经历'}
@@ -572,7 +572,7 @@ function CandidateDetailPanel({
       {isPrivate && (candidate.certificates?.length > 0) && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'CERTS' : '资格证书'}
@@ -599,7 +599,7 @@ function CandidateDetailPanel({
       {Object.keys(tagsByCat).length > 0 && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'TAGS' : '标签'}
@@ -607,7 +607,7 @@ function CandidateDetailPanel({
           <div className="space-y-2">
             {Object.entries(tagsByCat).map(([cat, names]) => (
               <div key={cat}>
-                <p className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-1' : 'text-xs text-slate-400 mb-1'} style={mutedColor}>{cat}</p>
+                <p className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-1' : 'text-xs text-slate-400 mb-1'} style={mutedColor}>{cat}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {names.map((n, i) => (
                     terminal ? (
@@ -633,7 +633,7 @@ function CandidateDetailPanel({
       {candidate.summary && (
         <div style={terminal ? { borderTop: '1px solid var(--t-border-subtle)', paddingTop: '12px' } : undefined}>
           <p
-            className={terminal ? 'font-sans text-\[10px\] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
+            className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
             {terminal ? 'SUMMARY' : '个人简介'}
@@ -680,9 +680,8 @@ export default function CandidatePool({ terminal = false, messagesBasePath = '/m
   const [actionFilter, setActionFilter] = useState('all') // all | archived | invited | not_archived | not_invited
 
   function fetchCandidates(filters) {
-    setLoading(true)
-    setError('')
-    candidatesApi.getCandidates(filters)
+    Promise.resolve()
+      .then(() => { setLoading(true); setError(''); return candidatesApi.getCandidates(filters) })
       .then(res => {
         const list = res.data.candidates
         setCandidates(list)
@@ -773,7 +772,7 @@ export default function CandidatePool({ terminal = false, messagesBasePath = '/m
     setArchivedSet(prev => {
       const next = new Set(prev)
       next.has(candidateId) ? next.delete(candidateId) : next.add(candidateId)
-      try { localStorage.setItem(`archived_${user?.id}`, JSON.stringify([...next])) } catch {}
+      try { localStorage.setItem(`archived_${user?.id}`, JSON.stringify([...next])) } catch { /* localStorage unavailable */ }
       return next
     })
   }

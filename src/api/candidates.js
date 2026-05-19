@@ -46,6 +46,19 @@ export const candidatesApi = {
     return client.get(`/candidates/${candidateId}`)
   },
 
+  /** 获取当前候选人屏蔽的公司列表 */
+  getBlockedCompanies() {
+    return client.get('/candidates/me/blocked-companies')
+  },
+
+  /**
+   * 全量替换屏蔽公司列表
+   * @param {number[]} companyIds
+   */
+  updateBlockedCompanies(companyIds) {
+    return client.put('/candidates/me/blocked-companies', { company_ids: companyIds })
+  },
+
   /**
    * 获取候选人附件简历文件（返回 Blob，供预览或下载）
    * @param {number} candidateId

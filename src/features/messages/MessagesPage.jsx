@@ -84,7 +84,7 @@ export default function MessagesPage({ terminal = false, basePath = '/messages' 
 
   // When navigating to a specific thread (e.g. from "查看沟通"), switch back to messages mode
   useEffect(() => {
-    if (paramThreadId) setViewMode('messages')
+    if (paramThreadId) startTransition(() => setViewMode('messages'))
   }, [paramThreadId])
 
   const [ctxMenu, setCtxMenu] = useState(null)

@@ -46,10 +46,7 @@ export function CandidateMiniChatWindow({ activeDockConv, dockElRef, onClose, on
   useEffect(() => {
     const dockEl = dockElRef?.current
     const chatEl = chatRef.current
-    if (!dockEl || !chatEl) {
-      setRightOffset(DEFAULT_RIGHT)
-      return
-    }
+    if (!dockEl || !chatEl) return
 
     function syncPosition() {
       const rect = dockEl.getBoundingClientRect()
@@ -62,13 +59,14 @@ export function CandidateMiniChatWindow({ activeDockConv, dockElRef, onClose, on
       setRightOffset(window.innerWidth - rect.left)
     }
 
-    syncPosition()
+    const rafId = requestAnimationFrame(syncPosition)
 
     const observer = new ResizeObserver(syncPosition)
     observer.observe(dockEl)
     dockEl.addEventListener('transitionend', syncPosition)
 
     return () => {
+      cancelAnimationFrame(rafId)
       observer.disconnect()
       dockEl.removeEventListener('transitionend', syncPosition)
     }

@@ -284,7 +284,7 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
           {[
             { label: terminal ? 'KNOW' : '知识',   tags: candidate.knowledge_tags },
             { label: terminal ? 'HARD' : '硬技能', tags: candidate.hard_skill_tags },
-            { label: terminal ? 'SOFT' : '软技能', tags: candidate.soft_skill_tags },
+            { label: terminal ? 'SOFT' : '岗位所需软技能', tags: candidate.soft_skill_tags },
           ].filter(g => Array.isArray(g.tags) && g.tags.length > 0).map(g => (
             <div key={g.label} className="mb-2 last:mb-0">
               <p className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-1' : 'text-xs text-slate-400 mb-1'} style={mutedColor}>{g.label}</p>

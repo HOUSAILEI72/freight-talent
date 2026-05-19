@@ -27,4 +27,25 @@ export default defineConfig([
       'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_' }],
     },
   },
+  // Node.js 环境：构建脚本 + vite 配置使用 process.env 等 Node 全局量
+  {
+    files: ['vite.config.js', 'scripts/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+    },
+  },
+  // react-refresh 在以下文件中允许混合导出（context、router 等架构文件）
+  {
+    files: [
+      'src/context/*.jsx',
+      'src/router/index.jsx',
+      'src/components/ui/Toast.jsx',
+      'src/components/terminal/AreaSidebar.jsx',
+      'src/components/terminal/FunctionRail.jsx',
+      'src/pages/jobs/JobsRail.jsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

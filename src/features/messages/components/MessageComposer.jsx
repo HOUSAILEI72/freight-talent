@@ -58,7 +58,7 @@ function loadUserTemplates() {
   try { return JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY) || '[]') } catch { return [] }
 }
 function saveUserTemplates(list) {
-  try { localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(list)) } catch {}
+  try { localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(list)) } catch { /* localStorage unavailable */ }
 }
 
 function TemplatePanel({ onSelect, anchorRef }) {

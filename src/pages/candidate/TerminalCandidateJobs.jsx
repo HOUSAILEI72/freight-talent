@@ -81,7 +81,7 @@ function JobDetailPanel({ job }) {
             {job.is_management_role && (
               <ReadField label="预计团队人数" value={job.management_headcount ? String(job.management_headcount) : null} />
             )}
-            <ReadField label="应聘类型" value={job.employment_type} />
+            <ReadField label="招聘类型" value={job.employment_type} />
             <ReadField label="工作城市" value={
               job.location_path ||
               [job.province, job.city_name, job.district].filter(Boolean).join(' · ') ||
@@ -96,9 +96,9 @@ function JobDetailPanel({ job }) {
         <div className={cardClass} style={cardStyle}>
           <div className={secTitleClass} style={secTitleStyle}><FileText size={11} /> 岗位描述</div>
           <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-y-auto terminal-scrollbar pr-1">
-            <ReadTextarea label="岗位职责" value={job.description} />
+            <ReadTextarea label="岗位描述" value={job.description} />
             <ReadChips label="岗位标签" value={job.knowledge_requirements} />
-            <ReadChips label="软技能" value={job.soft_skill_requirements} />
+            <ReadChips label="岗位所需软技能" value={job.soft_skill_requirements} />
           </div>
         </div>
 
@@ -757,12 +757,12 @@ export default function TerminalCandidateJobs() {
                     value={employmentType}
                     onChange={handleEmploymentTypeChange}
                     options={[
-                      { value: '', label: '应聘类型（全部）' },
+                      { value: '', label: '招聘类型（全部）' },
                       { value: '全职', label: '全职' },
                       { value: '兼职', label: '兼职' },
                       { value: '实习生', label: '实习生' },
                     ]}
-                    placeholder="应聘类型（全部）"
+                    placeholder="招聘类型（全部）"
                     hasValue={!!employmentType}
                   />
                   <div className="flex gap-2">

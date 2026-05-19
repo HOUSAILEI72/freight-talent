@@ -12,8 +12,6 @@ export function CandidateFilterBar({
   location, onLocationChange,
   functionCode, onFunctionChange,
   gender, setGender,
-  archiveFilter, setArchiveFilter,
-  inviteFilter, setInviteFilter,
   hasFilter,
   onSearch, onReset,
   myJobs, selectedJob, setSelectedJob,
@@ -276,71 +274,6 @@ export function CandidateFilterBar({
               <option value="">性别（不限）</option>
               <option value="male">男</option>
               <option value="female">女</option>
-            </select>
-          )}
-
-          {/* Divider */}
-          {terminal && (
-            <div style={{ borderTop: '1px solid var(--t-border-subtle)', margin: '6px 0' }} />
-          )}
-
-          {/* Section label */}
-          {terminal && (
-            <div className="terminal-filter-section-header">
-              <span className="terminal-filter-section-pip" style={{ background: 'var(--t-chart-amber)' }} />
-              <p style={{ fontFamily: 'var(--t-font-ui)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--t-text-muted)', margin: 0 }}>
-                互动状态
-              </p>
-            </div>
-          )}
-
-          {/* Archive filter */}
-          {terminal ? (
-            <TerminalSelect
-              value={archiveFilter}
-              onChange={setArchiveFilter}
-              options={[
-                { value: 'all', label: '收藏（全部）' },
-                { value: 'archived', label: '已收藏' },
-                { value: 'not_archived', label: '未收藏' },
-              ]}
-              placeholder="收藏（全部）"
-              hasValue={archiveFilter !== 'all'}
-            />
-          ) : (
-            <select
-              value={archiveFilter}
-              onChange={e => setArchiveFilter(e.target.value)}
-              className={SEL_CLASS()}
-            >
-              <option value="all">收藏（全部）</option>
-              <option value="archived">已收藏</option>
-              <option value="not_archived">未收藏</option>
-            </select>
-          )}
-
-          {/* Invite filter */}
-          {terminal ? (
-            <TerminalSelect
-              value={inviteFilter}
-              onChange={setInviteFilter}
-              options={[
-                { value: 'all', label: '邀约（全部）' },
-                { value: 'invited', label: '已邀约' },
-                { value: 'not_invited', label: '未邀约' },
-              ]}
-              placeholder="邀约（全部）"
-              hasValue={inviteFilter !== 'all'}
-            />
-          ) : (
-            <select
-              value={inviteFilter}
-              onChange={e => setInviteFilter(e.target.value)}
-              className={SEL_CLASS()}
-            >
-              <option value="all">邀约（全部）</option>
-              <option value="invited">已邀约</option>
-              <option value="not_invited">未邀约</option>
             </select>
           )}
 

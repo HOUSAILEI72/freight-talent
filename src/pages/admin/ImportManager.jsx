@@ -106,6 +106,7 @@ function StatusBadge({ status, isConfirmed }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function PreviewPanel({ result, onConfirm, onDryRun, confirming, dryRunning }) {
+  const toast = useToast()
   const {
     batch_id, import_type, original_filename,
     preview_stats, errors = [], warnings = [], new_fields = [],
@@ -373,6 +374,7 @@ function BatchHistory({ batches, loading, onSelect, activeBatchId }) {
 }
 
 function UploadZone({ onPreview, previewing }) {
+  const toast = useToast()
   const [importType, setImportType] = useState('job')
   const [dragging, setDragging] = useState(false)
   const [file, setFile]   = useState(null)
@@ -474,6 +476,7 @@ function UploadZone({ onPreview, previewing }) {
 }
 
 function DataImportTab() {
+  const toast = useToast()
   const [batches, setBatches]               = useState([])
   const [batchesLoading, setBatchesLoading] = useState(true)
   const [previewResult, setPreviewResult]   = useState(null)
@@ -702,6 +705,7 @@ function TagLibraryTab() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function PendingTagsTab() {
+  const toast = useToast()
   const [tags, setTags]           = useState([])
   const [loading, setLoading]     = useState(true)
   const [rejectId, setRejectId]   = useState(null)
@@ -793,6 +797,7 @@ function PendingTagsTab() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function PendingNotesTab() {
+  const toast = useToast()
   const [notes, setNotes]               = useState([])
   const [loading, setLoading]           = useState(true)
   const [rejectId, setRejectId]         = useState(null)
@@ -884,6 +889,7 @@ function PendingNotesTab() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ApprovalToggle() {
+  const toast = useToast()
   const [enabled, setEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)

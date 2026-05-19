@@ -116,6 +116,7 @@ def create_app(config_class=None):
     from app.routes.public_market import public_market_bp
     from app.routes.headhunting import headhunting_bp
     from app.routes.candidate_dashboard import candidate_dashboard_bp
+    from app.routes.companies import companies_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(jobs_bp)
     app.register_blueprint(candidates_bp)
@@ -129,6 +130,7 @@ def create_app(config_class=None):
     app.register_blueprint(public_market_bp)
     app.register_blueprint(headhunting_bp)
     app.register_blueprint(candidate_dashboard_bp)
+    app.register_blueprint(companies_bp)
 
     # 安装请求日志中间件（每个请求的方法、路径、状态、耗时、user_id、IP）
     init_request_logging(app)
@@ -155,6 +157,8 @@ def create_app(config_class=None):
         from app.models import headhunting_request  # noqa: F401
         from app.models import candidate_email_action  # noqa: F401
         from app.models import notification  # noqa: F401
+        from app.models import company  # noqa: F401
+        from app.models import candidate_blocked_company  # noqa: F401
 
     @app.get("/api/health")
     def health():

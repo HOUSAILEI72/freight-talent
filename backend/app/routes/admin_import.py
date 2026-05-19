@@ -436,7 +436,7 @@ def _confirm_jobs(rows: list, uploader_id: int) -> tuple[int, list, dict]:
         if not salary_label and (s_min or s_max):
             lo = s_min or 0
             hi = s_max or lo
-            salary_label = f"{lo//1000}k-{hi//1000}k" if lo >= 1000 or hi >= 1000 else f"{lo}-{hi}"
+            salary_label = f"{lo // 1000}k-{hi // 1000}k" if lo >= 1000 or hi >= 1000 else f"{lo}-{hi}"
 
         # function_code / function_name
         function_code = _safe_str(df.get("function_code"))

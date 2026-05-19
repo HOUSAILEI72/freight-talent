@@ -26,6 +26,8 @@ from logging_config import setup_logging
 from fastapi_app.core.config import get_settings
 from fastapi_app.api.v2 import health, conversations, tags, chart, ai_analyze, notifications, users as users_router
 from fastapi_app.api.v2 import settings as settings_router
+from fastapi_app.api.v2 import ai_polish, resume as resume_router
+from fastapi_app.api.v2 import ai_diagnosis
 
 # FastAPI 启动时初始化日志（与 Flask 共用同一份配置，写入 fastapi.log）
 setup_logging("fastapi")
@@ -169,6 +171,9 @@ app.include_router(chart.router,           prefix="/api/v2")
 app.include_router(ai_analyze.router,      prefix="/api/v2")
 app.include_router(notifications.router,   prefix="/api/v2")
 app.include_router(users_router.router,    prefix="/api/v2")
+app.include_router(ai_polish.router,       prefix="/api/v2")
+app.include_router(resume_router.router,   prefix="/api/v2")
+app.include_router(ai_diagnosis.router,    prefix="/api/v2")
 
 
 @app.middleware("http")

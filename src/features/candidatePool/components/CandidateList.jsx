@@ -29,7 +29,7 @@ function EmptyState({ terminal, text }) {
 export function CandidateList({
   loading, error, candidates, filteredCandidates,
   selected, selectedJob, invited, archivedSet, hasSubscription,
-  archiveFilter, inviteFilter, terminal,
+  terminal,
   variant,
   onSelect, onArchive, onOpenConversation,
   navigateBasePath,
@@ -79,13 +79,7 @@ export function CandidateList({
   )
 
   if (filteredCandidates.length === 0) return (
-    <EmptyState
-      terminal={terminal}
-      text={terminal
-        ? ((archiveFilter !== 'all' || inviteFilter !== 'all') ? 'NO MATCH' : 'NO CANDIDATES')
-        : ((archiveFilter !== 'all' || inviteFilter !== 'all') ? '无符合条件的候选人' : '暂无匹配候选人')
-      }
-    />
+    <EmptyState terminal={terminal} text={terminal ? 'NO CANDIDATES' : '暂无候选人'} />
   )
 
   // ── wide card grid (terminal variant) ──────────────────────────────────────

@@ -73,6 +73,7 @@ function Section({ items, onApprove, onReject, processing, rejectId, setRejectId
 }
 
 function PendingTagsPanel() {
+  const toast = useToast()
   const [tags, setTags] = useState([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(null)
@@ -280,6 +281,7 @@ function PendingTagsPanel() {
 }
 
 function PendingNotesPanel() {
+  const toast = useToast()
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(null)

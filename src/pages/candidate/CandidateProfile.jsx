@@ -4,6 +4,7 @@ import {
   MapPin, Briefcase, GraduationCap, Clock, Star, Send,
   CheckCircle, Edit, Loader2, AlertCircle, Mail, Phone,
   Home, MessageSquare, Languages, Target, Award, Navigation,
+  FileText, Plus, ChevronRight, Eye, EyeOff, ShieldAlert,
 } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
@@ -61,7 +62,7 @@ function buildTagGroups(profile) {
   const groups = []
   if (profile.knowledge_tags?.length)   groups.push({ label: '知识领域', tags: profile.knowledge_tags,  color: 'blue' })
   if (profile.hard_skill_tags?.length)  groups.push({ label: '硬技能',   tags: profile.hard_skill_tags, color: 'purple' })
-  if (profile.soft_skill_tags?.length)  groups.push({ label: '软技能',   tags: profile.soft_skill_tags, color: 'green' })
+  if (profile.soft_skill_tags?.length)  groups.push({ label: '岗位所需软技能',   tags: profile.soft_skill_tags, color: 'green' })
   // 如果新三组都为空，回退到旧 all_tags
   if (groups.length === 0 && profile.all_tags?.length) {
     groups.push({ label: '技能标签', tags: profile.all_tags, color: 'blue' })
@@ -132,6 +133,99 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
   const [allTagObjects, setAllTagObjects] = useState([])
   const [hasSubscription, setHasSubscription] = useState(null)
 
+  // ── 简历诊断（DeepSeek） ───────────────────────────────────────────────────
+  const [diagnosing, setDiagnosing] = useState(false)
+  const [diagnosisResult, setDiagnosisResult] = useState(null) // DiagnoseResponse | null
+  const [diagnosisError, setDiagnosisError] = useState('')
+
+  // ── AI 解析简历 ───────────────────────────────────────────────────────────
+  const [parsing, setParsing] = useState(false)
+  const [parseError, setParseError] = useState('')
+  const [parsedData, setParsedData] = useState(null)
+  const [applyingParse, setApplyingParse] = useState(false)
+  const [applySuccess, setApplySuccess] = useState(false)
+
+  async function handleAIParse() {
+    setParsing(true); setParseError(''); setParsedData(null); setApplySuccess(false)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/v2/candidates/me/resume/ai-parse', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setParseError(json.detail || `解析失败 (${res.status})`); return }
+      setParsedData(json.data)
+    } catch {
+      setParseError('网络错误，请重试')
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  async function handleApplyParsed() {
+    if (!parsedData) return
+    setApplyingParse(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const payload = {}
+      const strFields = ['full_name', 'education', 'english_level', 'expected_city',
+        'desired_position', 'expected_salary_period', 'summary']
+      strFields.forEach(k => { if (parsedData[k] != null) payload[k] = parsedData[k] })
+      const numFields = ['age', 'experience_years', 'expected_salary_min', 'expected_salary_max']
+      numFields.forEach(k => { if (parsedData[k] != null) payload[k] = parsedData[k] })
+      const arrFields = ['work_experiences', 'education_experiences', 'project_experiences',
+        'certificates', 'hard_skill_tags', 'soft_skill_tags']
+      arrFields.forEach(k => { if (Array.isArray(parsedData[k]) && parsedData[k].length) payload[k] = parsedData[k] })
+      const res = await fetch('/api/candidates/profile', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setParseError(err.message || '保存失败，请重试'); return
+      }
+      const updated = await res.json()
+      setProfile(p => ({ ...p, ...updated.profile }))
+      setApplySuccess(true)
+      setTimeout(() => { setParsedData(null); setApplySuccess(false) }, 1500)
+    } catch {
+      setParseError('保存失败，请重试')
+    } finally {
+      setApplyingParse(false)
+    }
+  }
+
+  // ── 屏蔽公司 ─────────────────────────────────────────────────────────────
+  const [blockedCompanies, setBlockedCompanies] = useState([]) // [{id, name}]
+  const [blockSearchQ, setBlockSearchQ] = useState('')
+  const [blockSuggestions, setBlockSuggestions] = useState([])
+  const [blockSearching, setBlockSearching] = useState(false)
+  const [blockSaving, setBlockSaving] = useState(false)
+
+  async function handleDiagnose() {
+    setDiagnosing(true); setDiagnosisError(''); setDiagnosisResult(null)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/v2/ai/diagnose-resume', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setDiagnosisError(err.detail || `AI 诊断失败 (${res.status})`)
+        return
+      }
+      const data = await res.json()
+      setDiagnosisResult(data)
+    } catch {
+      setDiagnosisError('网络错误，请重试')
+    } finally {
+      setDiagnosing(false)
+    }
+  }
+
   const isOwnProfile = viewMode === 'self'
 
   useEffect(() => {
@@ -163,6 +257,65 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
         .catch(() => setHasSubscription(false))
     }
   }, [user?.role])
+
+  // Load blocked companies for own profile
+  useEffect(() => {
+    if (!isOwnProfile) return
+    const token = localStorage.getItem('token') || ''
+    fetch('/api/candidates/me/blocked-companies', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.success) setBlockedCompanies(d.companies || []) })
+      .catch(() => {})
+  }, [isOwnProfile])
+
+  async function searchCompanies(q) {
+    if (!q.trim()) { setBlockSuggestions([]); return }
+    setBlockSearching(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const r = await fetch(`/api/companies?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const d = await r.json()
+      const already = new Set(blockedCompanies.map(c => c.id))
+      setBlockSuggestions((d.companies || []).filter(c => !already.has(c.id)).slice(0, 6))
+    } catch { setBlockSuggestions([]) }
+    finally { setBlockSearching(false) }
+  }
+
+  async function addBlockedCompany(company) {
+    const updated = [...blockedCompanies, company]
+    setBlockedCompanies(updated)
+    setBlockSearchQ('')
+    setBlockSuggestions([])
+    setBlockSaving(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      await fetch('/api/candidates/me/blocked-companies', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_ids: updated.map(c => c.id) }),
+      })
+    } catch { /* silent */ }
+    finally { setBlockSaving(false) }
+  }
+
+  async function removeBlockedCompany(companyId) {
+    const updated = blockedCompanies.filter(c => c.id !== companyId)
+    setBlockedCompanies(updated)
+    setBlockSaving(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      await fetch('/api/candidates/me/blocked-companies', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_ids: updated.map(c => c.id) }),
+      })
+    } catch { /* silent */ }
+    finally { setBlockSaving(false) }
+  }
 
   async function handleInvite() {
     if (user?.role === 'employer' && !hasSubscription) {
@@ -219,25 +372,24 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
 
   const unlockedDetails = isOwnProfile || !!profile.private_visible
   const tagGroups = buildTagGroups(profile)
-
-  // 地区显示：优先 location_path，回退 current_city
   const locationDisplay = profile.location_path || profile.location_name || profile.current_city
+
 
   return (
     <div
       className={
         terminal
-          ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar px-6 py-8'
+          ? `terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar py-8 ${isOwnProfile ? 'pl-6' : 'px-6'}`
           : 'max-w-5xl mx-auto px-6 py-10'
       }
       style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
     >
-      <div className={terminal ? 'mx-auto w-full max-w-5xl' : ''}>
+      <div className={terminal ? (isOwnProfile ? 'w-full' : 'mx-auto w-full max-w-5xl') : ''}>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className={terminal ? 'flex gap-4 items-start' : 'grid lg:grid-cols-3 gap-6'}>
 
-        {/* ── 左栏 ── */}
-        <div className="lg:col-span-1 space-y-4">
+        {/* ── 左栏：简介卡 ── */}
+        <div className={terminal ? '' : 'lg:col-span-1 space-y-4'} style={terminal ? { width: 248, flexShrink: 0 } : undefined}>
           <div
             className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border text-center' : 'card p-6 text-center'}
             style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
@@ -369,18 +521,12 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
                   </Button>
                 )
               )}
-              {isOwnProfile && (
-                <Button terminal={terminal} variant="secondary" className="w-full" onClick={() => navigate('/candidate/upload')}>
-                  <Edit size={14} />
-                  更新简历文件
-                </Button>
-              )}
             </div>
           </div>
         </div>
 
-        {/* ── 右栏 ── */}
-        <div className="lg:col-span-2 space-y-4">
+        {/* ── 中栏：主内容 ── */}
+        <div className={terminal ? '' : 'lg:col-span-2 space-y-4'} style={terminal ? { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 } : undefined}>
 
           {/* 个人简介 */}
           {profile.summary && (
@@ -789,9 +935,283 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
           )}
 
         </div>
+
+        {/* ── 右侧管理面板（terminal + 自己查看） ── */}
+        {terminal && isOwnProfile && (
+          <div style={{ width: 256, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* ── 附件管理 ── */}
+            <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>附件管理</span>
+                <button type="button" onClick={() => navigate('/candidate/upload')}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 6, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', cursor: 'pointer' }}>
+                  <Plus size={14} />
+                </button>
+              </div>
+              {profile.resume_file_name ? (
+                <>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 8 }}>文件（1/1）</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', marginBottom: 10 }}>
+                    <div style={{ width: 38, height: 46, borderRadius: 6, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, color: '#fff', letterSpacing: '0.05em' }}>PDF</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--t-text)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile.resume_file_name}</p>
+                      <p style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>
+                        更新于 {profile.resume_uploaded_at ? profile.resume_uploaded_at.slice(0, 10).replace(/-/g, '.') : '—'}
+                      </p>
+                    </div>
+                  </div>
+                  {/* AI 解析按钮 */}
+                  <button type="button" onClick={handleAIParse} disabled={parsing}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 0', borderRadius: 6, border: '1px solid var(--t-primary)', background: 'var(--t-primary-muted)', color: 'var(--t-primary)', fontSize: 12, fontWeight: 500, cursor: parsing ? 'not-allowed' : 'pointer', opacity: parsing ? 0.7 : 1 }}>
+                    {parsing ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                    {parsing ? 'AI 解析中...' : 'AI 解析档案'}
+                  </button>
+                  {parseError && <p style={{ fontSize: 11, color: 'var(--t-danger)', marginTop: 6 }}>{parseError}</p>}
+                </>
+              ) : (
+                <div style={{ padding: '16px 0', textAlign: 'center' }}>
+                  <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 8 }}>暂未上传简历附件</p>
+                  <button type="button" onClick={() => navigate('/candidate/upload')}
+                    style={{ fontSize: 12, color: 'var(--t-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    立即上传 →
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ── 简历诊断（DeepSeek） ── */}
+            <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>简历诊断</p>
+                <button type="button" onClick={handleDiagnose} disabled={diagnosing}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '3px 8px', borderRadius: 5, border: '1px solid var(--t-primary)', background: 'var(--t-primary-muted)', color: 'var(--t-primary)', cursor: diagnosing ? 'not-allowed' : 'pointer', opacity: diagnosing ? 0.7 : 1, whiteSpace: 'nowrap' }}>
+                  {diagnosing ? <Loader2 size={10} className="animate-spin" /> : <ShieldAlert size={10} />}
+                  {diagnosing ? '分析中...' : 'AI 诊断'}
+                </button>
+              </div>
+
+              {/* 初始空态 */}
+              {!diagnosing && !diagnosisResult && !diagnosisError && (
+                <div style={{ padding: '12px 0', textAlign: 'center' }}>
+                  <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 6, lineHeight: 1.6 }}>点击「AI 诊断」，DeepSeek 将分析你的档案并给出改进建议</p>
+                </div>
+              )}
+
+              {/* 加载中 */}
+              {diagnosing && (
+                <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <Loader2 size={20} className="animate-spin" style={{ color: 'var(--t-primary)' }} />
+                  <p style={{ fontSize: 12, color: 'var(--t-text-muted)' }}>DeepSeek 正在分析档案...</p>
+                </div>
+              )}
+
+              {/* 错误 */}
+              {diagnosisError && (
+                <div style={{ fontSize: 12, color: 'var(--t-danger)', padding: '8px 0' }}>{diagnosisError}</div>
+              )}
+
+              {/* 结果 */}
+              {diagnosisResult && (
+                <div style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 8, padding: '14px 16px' }}>
+                  <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--t-text-secondary)', marginBottom: 6 }}>完善简历内容</p>
+                  <p style={{ fontSize: 36, fontWeight: 700, color: 'var(--t-chart-amber)', lineHeight: 1, marginBottom: 2 }}>{diagnosisResult.items.length}</p>
+                  <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 14 }}>项待优化</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {diagnosisResult.items.map((item, idx) => (
+                      <div key={idx} style={{ paddingLeft: 10, borderLeft: `3px solid ${item.priority === 'high' ? 'var(--t-danger)' : 'var(--t-primary)'}` }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)', marginBottom: 3 }}>{item.title}</p>
+                        <p style={{ fontSize: 11, color: 'var(--t-text-muted)', lineHeight: 1.6 }}>{item.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── 隐私设置 ── */}
+            <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>隐私设置</span>
+                <button type="button" onClick={() => navigate('/candidate/settings')}
+                  style={{ fontSize: 12, color: 'var(--t-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 }}>
+                  设置
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, color: 'var(--t-text-secondary)' }}>简历设置</span>
+                <span style={{ fontSize: 12, color: 'var(--t-text-secondary)' }}>
+                  {profile.contact_visible ? '对外开放' : '仅自己可见'}
+                </span>
+              </div>
+            </div>
+
+            {/* ── 屏蔽公司 ── */}
+            <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>屏蔽公司</span>
+                {blockSaving && <Loader2 size={12} className="animate-spin" style={{ color: 'var(--t-text-muted)' }} />}
+              </div>
+
+              {/* Search input */}
+              <div style={{ position: 'relative', marginBottom: 10 }}>
+                <input
+                  type="text"
+                  value={blockSearchQ}
+                  placeholder="搜索并添加..."
+                  onChange={e => {
+                    setBlockSearchQ(e.target.value)
+                    searchCompanies(e.target.value)
+                  }}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '5px 8px', fontSize: 12, borderRadius: 6,
+                    border: '1px solid var(--t-border)', outline: 'none',
+                    background: 'var(--t-bg-input)', color: 'var(--t-text)',
+                  }}
+                />
+                {blockSearching && (
+                  <Loader2 size={11} className="animate-spin"
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-text-muted)' }} />
+                )}
+                {blockSuggestions.length > 0 && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                    background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)',
+                    borderRadius: 6, marginTop: 2, overflow: 'hidden',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  }}>
+                    {blockSuggestions.map(c => (
+                      <button key={c.id} type="button"
+                        onClick={() => addBlockedCompany(c)}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left',
+                          padding: '7px 10px', fontSize: 12, color: 'var(--t-text)',
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          borderBottom: '1px solid var(--t-border-subtle)',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--t-bg-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >{c.name}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Blocked list */}
+              {blockedCompanies.length === 0 ? (
+                <p style={{ fontSize: 12, color: 'var(--t-text-muted)', textAlign: 'center', padding: '8px 0' }}>
+                  暂未屏蔽任何公司
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {blockedCompanies.map(c => (
+                    <div key={c.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '5px 8px', borderRadius: 6,
+                      background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)',
+                    }}>
+                      <span style={{ fontSize: 12, color: 'var(--t-text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                      <button type="button" onClick={() => removeBlockedCompany(c.id)}
+                        style={{ flexShrink: 0, marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--t-text-muted)', display: 'flex', alignItems: 'center' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--t-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--t-text-muted)'}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
       </div>
 
       {noteTag && <TagNoteModal tag={noteTag} onClose={() => setNoteTag(null)} />}
+
+      {/* ── AI 解析确认弹窗 ── */}
+      {parsedData && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9500, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          onClick={e => { if (e.target === e.currentTarget) setParsedData(null) }}>
+          <div style={{ width: '100%', maxWidth: 540, maxHeight: '85vh', display: 'flex', flexDirection: 'column', borderRadius: 'var(--t-radius-lg)', border: '1px solid var(--t-border)', background: 'var(--t-bg-panel)', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--t-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FileText size={15} style={{ color: 'var(--t-primary)' }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>AI 解析结果</span>
+              </div>
+              <button type="button" onClick={() => setParsedData(null)} style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--t-text-muted)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 4 }}>以下字段将覆盖写入你的档案，请确认无误后点击「应用到档案」。</p>
+              {[
+                ['姓名', parsedData.full_name],
+                ['年龄', parsedData.age],
+                ['工作年限', parsedData.experience_years != null ? `${parsedData.experience_years} 年` : null],
+                ['学历', parsedData.education],
+                ['英语水平', parsedData.english_level],
+                ['期望城市', parsedData.expected_city],
+                ['期望岗位', parsedData.desired_position],
+                ['期望薪资', parsedData.expected_salary_min != null
+                  ? `${parsedData.expected_salary_min?.toLocaleString()}—${parsedData.expected_salary_max?.toLocaleString()} /${parsedData.expected_salary_period === 'year' ? '年' : '月'}`
+                  : null],
+              ].filter(([, v]) => v != null).map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', gap: 12, padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <span style={{ fontSize: 11, color: 'var(--t-text-muted)', width: 64, flexShrink: 0 }}>{label}</span>
+                  <span style={{ fontSize: 12, color: 'var(--t-text)', fontWeight: 500 }}>{String(value)}</span>
+                </div>
+              ))}
+              {parsedData.summary && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 4 }}>个人优势</p>
+                  <p style={{ fontSize: 12, color: 'var(--t-text)', lineHeight: 1.7 }}>{parsedData.summary.slice(0, 200)}{parsedData.summary.length > 200 ? '…' : ''}</p>
+                </div>
+              )}
+              {parsedData.work_experiences?.length > 0 && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 6 }}>工作经历（{parsedData.work_experiences.length} 条）</p>
+                  {parsedData.work_experiences.slice(0, 3).map((w, i) => (
+                    <p key={i} style={{ fontSize: 12, color: 'var(--t-text)', marginBottom: 2 }}>{w.company_name} · {w.title}　{w.start_month}—{w.end_month}</p>
+                  ))}
+                  {parsedData.work_experiences.length > 3 && <p style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>……共 {parsedData.work_experiences.length} 条</p>}
+                </div>
+              )}
+              {parsedData.education_experiences?.length > 0 && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 6 }}>教育经历（{parsedData.education_experiences.length} 条）</p>
+                  {parsedData.education_experiences.map((e, i) => (
+                    <p key={i} style={{ fontSize: 12, color: 'var(--t-text)', marginBottom: 2 }}>{e.school} · {e.major} · {e.degree}</p>
+                  ))}
+                </div>
+              )}
+              {parsedData.certificates?.length > 0 && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 4 }}>证书</p>
+                  <p style={{ fontSize: 12, color: 'var(--t-text)' }}>{parsedData.certificates.join('、')}</p>
+                </div>
+              )}
+              {parseError && <p style={{ fontSize: 12, color: 'var(--t-danger)' }}>{parseError}</p>}
+            </div>
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--t-border)', display: 'flex', gap: 10, flexShrink: 0 }}>
+              <button type="button" onClick={() => setParsedData(null)}
+                style={{ flex: 1, padding: '8px 0', borderRadius: 6, border: '1px solid var(--t-border)', background: 'transparent', color: 'var(--t-text-secondary)', fontSize: 13, cursor: 'pointer' }}>
+                取消
+              </button>
+              <button type="button" onClick={handleApplyParsed} disabled={applyingParse || applySuccess}
+                style={{ flex: 2, padding: '8px 0', borderRadius: 6, border: 'none', background: applySuccess ? 'var(--t-success)' : 'var(--t-primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: applyingParse ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {applyingParse ? <Loader2 size={13} className="animate-spin" /> : null}
+                {applySuccess ? '已应用 ✓' : applyingParse ? '保存中...' : '应用到档案'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   )

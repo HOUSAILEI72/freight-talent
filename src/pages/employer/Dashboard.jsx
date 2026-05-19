@@ -54,10 +54,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     let alive = true
-    setChartLoading(true)
     const regionForApi = selectedArea === 'Global' ? 'ALL' : selectedArea
-    employerDashboardApi
-      .getChart({ functionValue: selectedFunction, regionValue: regionForApi, granularity })
+    Promise.resolve()
+      .then(() => { if (alive) setChartLoading(true); return employerDashboardApi.getChart({ functionValue: selectedFunction, regionValue: regionForApi, granularity }) })
       .then((res) => { if (alive) setChart(res.data) })
       .catch(() => { if (alive) setChart(null) })
       .finally(() => { if (alive) setChartLoading(false) })
@@ -66,9 +65,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     let alive = true
-    setTrendLoading(true)
-    employerDashboardApi
-      .getTrendSummary({ functionValue: 'ALL', regionValue: 'ALL' })
+    Promise.resolve()
+      .then(() => { if (alive) setTrendLoading(true); return employerDashboardApi.getTrendSummary({ functionValue: 'ALL', regionValue: 'ALL' }) })
       .then((res) => { if (alive) setTrendSummary(res.data) })
       .catch(() => { if (alive) setTrendSummary(null) })
       .finally(() => { if (alive) setTrendLoading(false) })

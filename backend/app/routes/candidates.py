@@ -7,6 +7,8 @@ from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.models.user import User
 from app.models.candidate import Candidate
+from app.models.company import Company
+from app.models.candidate_blocked_company import CandidateBlockedCompany
 from app.modules.candidates.serializers import build_public_dict
 from app.modules.candidates.repository import (
     get_candidate_by_user_id,
@@ -348,6 +350,15 @@ def update_me():
             return _err(err)
         work_exp_val = we
 
+    proj_exp_val = sentinel
+    if "project_experiences" in data:
+        pe, err = _validate_object_array(
+            data.get("project_experiences"), "project_experiences"
+        )
+        if err:
+            return _err(err)
+        proj_exp_val = pe
+
     edu_exp_val = sentinel
     if "education_experiences" in data:
         ee, err = _validate_object_array(
@@ -453,6 +464,8 @@ def update_me():
         profile.current_year_end_bonus_months = yebm_val
     if work_exp_val is not sentinel:
         profile.work_experiences = work_exp_val
+    if proj_exp_val is not sentinel:
+        profile.project_experiences = proj_exp_val
     if edu_exp_val is not sentinel:
         profile.education_experiences = edu_exp_val
     if certificates_val is not sentinel:
@@ -531,6 +544,73 @@ def confirm_latest_resume():
     })
 
 
+@candidates_bp.get("/me/blocked-companies")
+@jwt_required()
+def get_blocked_companies():
+    """GET /api/candidates/me/blocked-companies — 返回当前候选人屏蔽的公司列表。"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("candidate", "admin"):
+        return _err("仅候选人账号可访问", 403)
+
+    profile = get_candidate_by_user_id(user.id)
+    if not profile:
+        return _err("候选人档案不存在", 404)
+
+    rows = (
+        db.session.query(Company)
+        .join(CandidateBlockedCompany, CandidateBlockedCompany.company_id == Company.id)
+        .filter(CandidateBlockedCompany.candidate_id == profile.id)
+        .order_by(Company.name)
+        .all()
+    )
+    return jsonify({"success": True, "companies": [c.to_dict() for c in rows]})
+
+
+@candidates_bp.put("/me/blocked-companies")
+@jwt_required()
+def update_blocked_companies():
+    """PUT /api/candidates/me/blocked-companies — 全量替换屏蔽公司列表。
+    Body: {"company_ids": [1, 2, 3]}
+    """
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("candidate", "admin"):
+        return _err("仅候选人账号可访问", 403)
+
+    profile = get_candidate_by_user_id(user.id)
+    if not profile:
+        return _err("候选人档案不存在", 404)
+
+    data = request.get_json(silent=True) or {}
+    raw_ids = data.get("company_ids", [])
+    if not isinstance(raw_ids, list):
+        return _err("company_ids 必须为数组", 400)
+
+    # 校验传入 ID 均合法
+    company_ids = [int(i) for i in raw_ids if str(i).isdigit() or isinstance(i, int)]
+    valid_count = Company.query.filter(Company.id.in_(company_ids)).count() if company_ids else 0
+    if valid_count != len(company_ids):
+        return _err("包含无效的公司 ID", 400)
+
+    # 全量替换：删旧 → 插新
+    CandidateBlockedCompany.query.filter_by(candidate_id=profile.id).delete()
+    for cid in company_ids:
+        db.session.add(CandidateBlockedCompany(candidate_id=profile.id, company_id=cid))
+    db.session.commit()
+
+    rows = (
+        db.session.query(Company)
+        .join(CandidateBlockedCompany, CandidateBlockedCompany.company_id == Company.id)
+        .filter(CandidateBlockedCompany.candidate_id == profile.id)
+        .order_by(Company.name)
+        .all()
+    )
+    return jsonify({"success": True, "companies": [c.to_dict() for c in rows]})
+
+
 @candidates_bp.get("")
 @jwt_required()
 def list_candidates():
@@ -583,6 +663,19 @@ def list_candidates():
     )
 
     candidates_list = result["items"]
+
+    # 屏蔽过滤：employer 查看时，过滤掉已将该公司加入屏蔽列表的候选人。
+    if user.role == "employer" and candidates_list and user.company_name:
+        company = Company.query.filter_by(name=user.company_name).first()
+        if company:
+            blocked_cand_ids = {
+                row[0]
+                for row in db.session.query(CandidateBlockedCompany.candidate_id)
+                .filter_by(company_id=company.id)
+                .all()
+            }
+            if blocked_cand_ids:
+                candidates_list = [c for c in candidates_list if c.id not in blocked_cand_ids]
 
     # 候选人池列表：admin 看全私；employer 仅订阅覆盖的候选人开放隐私（Phase 8）。
     # 解锁规则：active subscription 且 function_code + business_area_code 双命中。
@@ -711,6 +804,16 @@ def get_candidate_public(candidate_id):
         return _err("仅企业或管理员账号可查看候选人档案", 403)
     if not is_own and profile.availability_status == "closed" and user.role != "admin":
         return _err("该候选人暂不开放查看", 403)
+
+    # 屏蔽检查：employer 查看时验证其公司是否被该候选人屏蔽。
+    if not is_own and user.role == "employer" and user.company_name:
+        company = Company.query.filter_by(name=user.company_name).first()
+        if company:
+            is_blocked = CandidateBlockedCompany.query.filter_by(
+                candidate_id=profile.id, company_id=company.id
+            ).first()
+            if is_blocked:
+                return _err("候选人不存在", 404)
 
     # 隐私可见性判定（Phase 8）：
     #   - 候选人本人 / admin → 永远私有

@@ -124,12 +124,19 @@ function TemplatePickerModal({ open, terminal, onClose, onSelect }) {
 
   useEffect(() => {
     if (!open) return
-    setLoading(true)
-    setErr(null)
-    jobsApi.getTemplates()
-      .then(r => setList(r.data.jobs || []))
-      .catch(() => setErr('加载失败，请重试'))
-      .finally(() => setLoading(false))
+    let cancelled = false
+    Promise.resolve()
+      .then(() => {
+        if (cancelled) return
+        setList([])
+        setErr(null)
+        setLoading(true)
+        return jobsApi.getTemplates()
+      })
+      .then(r => { if (!cancelled && r) setList(r.data.jobs || []) })
+      .catch(() => { if (!cancelled) setErr('加载失败，请重试') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [open])
 
   if (!open) return null
@@ -330,7 +337,7 @@ function SoftSkillOption({ skill, description, checked, terminal, onToggle }) {
         }}>
           {description}
         </div>,
-        getTerminalPortalTarget(rowRef.current)
+        document.body
       )}
     </div>
   )
@@ -392,7 +399,7 @@ function SelectedSkillTag({ skill, description, terminal, onMouseDown }) {
             {description}
           </p>
         </div>,
-        getTerminalPortalTarget(tagRef.current)
+        document.body
       )}
     </span>
   )
@@ -445,6 +452,8 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
   const [softSkillOpen, setSoftSkillOpen]       = useState(false)
   const [softSkillMatchedList, setSoftSkillMatchedList] = useState([])
   const softSkillWrapRef = useRef(null)
+  const [customJobTagInput, setCustomJobTagInput] = useState('')
+  const [customSkillInput,  setCustomSkillInput]  = useState('')
 
   const [salaryMin,    setSalaryMin]          = useState('')
   const [salaryMax,    setSalaryMax]          = useState('')
@@ -468,6 +477,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
   const benefitPanelRef   = useRef(null)
 
   const [description,  setDescription]  = useState('')
+  const [targetCompaniesText, setTargetCompaniesText] = useState('')
 
   // ── AI 分析状态 ───────────────────────────────────────────────────────────
   const [aiLoading,   setAiLoading]   = useState(false)
@@ -492,6 +502,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
 
   // ── Auto-resize refs ──────────────────────────────────────────────────────
   const descRef      = useAutoResize(description)
+  const targetCoRef  = useAutoResize(targetCompaniesText)
 
   // ── Load job for edit mode ────────────────────────────────────────────────
   useEffect(() => {
@@ -541,6 +552,11 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
         }
         setDescription(j.description || '')
         setSelectedBenefits(j.benefits || [])
+        if (j.target_companies?.length > 0) {
+          setTargetCompaniesText(Array.isArray(j.target_companies) ? j.target_companies.join('，') : j.target_companies || '')
+        } else {
+          setTargetCompaniesText('')
+        }
       })
       .catch(() => {
         if (!cancelled) setSubmitError('加载岗位失败，请刷新重试')
@@ -552,6 +568,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
   // ── Derived ───────────────────────────────────────────────────────────────
   const jobTagArr  = selectedJobTags
   const softSkillArr = selectedSoftSkills
+  const targetCompaniesArr = useMemo(() => splitTokens(targetCompaniesText), [targetCompaniesText])
 
   const selectedFunction = FUNCTION_OPTIONS.find(f => f.key === functionCode) || null
 
@@ -567,7 +584,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
     setAiError('')
     const hasExisting = description.trim() || selectedJobTags.length > 0 || selectedSoftSkills.length > 0
     if (hasExisting) {
-      const ok = window.confirm('AI 将覆盖已填写的岗位职责、岗位标签和软技能，确认继续？')
+      const ok = window.confirm('AI 将覆盖已填写的岗位描述、岗位标签和岗位所需软技能，确认继续？')
       if (!ok) return
     }
     setAiLoading(true)
@@ -637,6 +654,11 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
     }
     setSelectedBenefits(job.benefits || [])
     setDescription(job.description || '')
+    if (job.target_companies?.length > 0) {
+      setTargetCompaniesText(Array.isArray(job.target_companies) ? job.target_companies.join('，') : job.target_companies || '')
+    } else {
+      setTargetCompaniesText('')
+    }
     setSubmitError('')
   }
 
@@ -654,15 +676,15 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
     if (!location.location_name || !location.location_path || !location.location_type) {
       return '地区数据不完整，请重新选择'
     }
-    if (!employmentType) return '请选择应聘类型'
+    if (!employmentType) return '请选择招聘类型'
     if (addressDetail.trim().length > 200) return '详细地址不能超过 200 个字符'
 
-    if (!description.trim())         return '请填写岗位职责'
+    if (!description.trim())         return '请填写岗位描述'
 
     if (experienceYears === '')      return '请选择经验要求'
     if (!degreeRequired.trim())      return '请填写最低学历要求'
     if (jobTagArr.length === 0)      return '请选择至少一个岗位标签'
-    if (softSkillArr.length === 0)   return '请填写软技能要求'
+    if (softSkillArr.length === 0)   return '请填写岗位所需软技能要求'
 
     const sMin = Number(salaryMin)
     const sMax = Number(salaryMax)
@@ -755,6 +777,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
       benefits: selectedBenefits,
 
       description:  description.trim(),
+      target_companies: targetCompaniesArr.length > 0 ? targetCompaniesArr : null,
 
       status: (terminal && !hasSubscription) ? 'draft' : 'published',
     }
@@ -887,6 +910,117 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
   const disabledInputClass = terminal
     ? inputClass + ' cursor-not-allowed'
     : inputClass + ' cursor-not-allowed'
+
+  // ── Title autocomplete ────────────────────────────────────────────────────
+  const [titleSugOpen, setTitleSugOpen] = useState(false)
+  const [titleActiveIdx, setTitleActiveIdx] = useState(-1)
+  const titleWrapRef = useRef(null)
+  const [titleDropPos, setTitleDropPos] = useState({ top: 0, left: 0, width: 0 })
+
+  const titleSuggestions = useMemo(() => {
+    if (!title.trim()) return []
+    const q = title.trim()
+    return JOB_TITLE_SUGGESTIONS.filter(s => s.includes(q))
+  }, [title])
+
+  // Close title suggestions on outside click
+  useEffect(() => {
+    function onDown(e) {
+      if (titleWrapRef.current && !titleWrapRef.current.contains(e.target)) {
+        setTitleSugOpen(false)
+        setTitleActiveIdx(-1)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  function openTitleDrop() {
+    const rect = titleWrapRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setTitleDropPos({ top: rect.bottom + 2, left: rect.left, width: rect.width })
+    setTitleSugOpen(true)
+  }
+
+  // Close soft skill dropdown on outside click
+  const softSkillPanelRef = useRef(null)
+  useEffect(() => {
+    function onDown(e) {
+      const inWrap = softSkillWrapRef.current?.contains(e.target)
+      const inPanel = softSkillPanelRef.current?.contains(e.target)
+      if (!inWrap && !inPanel) {
+        setSoftSkillOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  // Close job tag dropdown on outside click
+  useEffect(() => {
+    function onDown(e) {
+      const inWrap  = jobTagWrapRef.current?.contains(e.target)
+      const inPanel = jobTagPanelRef.current?.contains(e.target)
+      if (!inWrap && !inPanel) {
+        setJobTagOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  // Scroll to a specific tag after dropdown opens and category is set
+  useEffect(() => {
+    if (!jobTagScrollTarget || !jobTagOpen || !jobTagRightPanelRef.current) return
+    const panel = jobTagRightPanelRef.current
+    const el = panel.querySelector(`[data-tag="${CSS.escape(jobTagScrollTarget)}"]`)
+    if (el) el.scrollIntoView({ block: 'nearest' })
+    setJobTagScrollTarget(null)
+  }, [jobTagScrollTarget, jobTagOpen, jobTagCategory])
+
+  // Auto-open soft skill dropdown when level + title match CSV
+  useEffect(() => {
+    const key = `${jobLevel}|${title.trim()}`
+    const matched = SOFT_SKILL_MAP[key]
+    if (matched && matched.length > 0) {
+      setSoftSkillMatchedList(matched)
+      setSoftSkillOpen(true)
+      setSelectedSoftSkills([])
+    } else {
+      setSoftSkillMatchedList([])
+      setSoftSkillOpen(false)
+    }
+  }, [jobLevel, title])
+
+  // Close benefits dropdown on outside click
+  useEffect(() => {
+    function onDown(e) {
+      const inWrap  = benefitWrapRef.current?.contains(e.target)
+      const inPanel = benefitPanelRef.current?.contains(e.target)
+      if (!inWrap && !inPanel) setBenefitDropOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  const handleTitleKeyDown = useCallback((e) => {
+    if (!titleSugOpen || titleSuggestions.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setTitleActiveIdx(i => Math.min(i + 1, titleSuggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setTitleActiveIdx(i => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter' && titleActiveIdx >= 0) {
+      e.preventDefault()
+      setTitle(titleSuggestions[titleActiveIdx])
+      setTitleSugOpen(false)
+      setTitleActiveIdx(-1)
+    } else if (e.key === 'Escape') {
+      setTitleSugOpen(false)
+      setTitleActiveIdx(-1)
+    }
+  }, [titleSugOpen, titleSuggestions, titleActiveIdx])
 
   // ── Success screen ────────────────────────────────────────────────────────
   if (step === STEP_SUCCESS) {
@@ -1022,119 +1156,6 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
 
   // ── Commission bonus amount disabled ──────────────────────────────────────
   const commissionAmountDisabled = commissionBonusPeriod === 'not_applicable'
-
-  // ── Shared field blocks (used in both terminal and light layouts) ─────────
-
-  // ── Title autocomplete ────────────────────────────────────────────────────
-  const [titleSugOpen, setTitleSugOpen] = useState(false)
-  const [titleActiveIdx, setTitleActiveIdx] = useState(-1)
-  const titleWrapRef = useRef(null)
-  const [titleDropPos, setTitleDropPos] = useState({ top: 0, left: 0, width: 0 })
-
-  const titleSuggestions = useMemo(() => {
-    if (!title.trim()) return []
-    const q = title.trim()
-    return JOB_TITLE_SUGGESTIONS.filter(s => s.includes(q))
-  }, [title])
-
-  // Close title suggestions on outside click
-  useEffect(() => {
-    function onDown(e) {
-      if (titleWrapRef.current && !titleWrapRef.current.contains(e.target)) {
-        setTitleSugOpen(false)
-        setTitleActiveIdx(-1)
-      }
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [])
-
-  function openTitleDrop() {
-    const rect = titleWrapRef.current?.getBoundingClientRect()
-    if (!rect) return
-    setTitleDropPos({ top: rect.bottom + 2, left: rect.left, width: rect.width })
-    setTitleSugOpen(true)
-  }
-
-  // Close soft skill dropdown on outside click
-  const softSkillPanelRef = useRef(null)
-  useEffect(() => {
-    function onDown(e) {
-      const inWrap = softSkillWrapRef.current?.contains(e.target)
-      const inPanel = softSkillPanelRef.current?.contains(e.target)
-      if (!inWrap && !inPanel) {
-        setSoftSkillOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [])
-
-  // Close job tag dropdown on outside click
-  useEffect(() => {
-    function onDown(e) {
-      const inWrap  = jobTagWrapRef.current?.contains(e.target)
-      const inPanel = jobTagPanelRef.current?.contains(e.target)
-      if (!inWrap && !inPanel) {
-        setJobTagOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [])
-
-  // Scroll to a specific tag after dropdown opens and category is set
-  useEffect(() => {
-    if (!jobTagScrollTarget || !jobTagOpen || !jobTagRightPanelRef.current) return
-    const panel = jobTagRightPanelRef.current
-    const el = panel.querySelector(`[data-tag="${CSS.escape(jobTagScrollTarget)}"]`)
-    if (el) el.scrollIntoView({ block: 'nearest' })
-    setJobTagScrollTarget(null)
-  }, [jobTagScrollTarget, jobTagOpen, jobTagCategory])
-
-  // Auto-open soft skill dropdown when level + title match CSV
-  useEffect(() => {
-    const key = `${jobLevel}|${title.trim()}`
-    const matched = SOFT_SKILL_MAP[key]
-    if (matched && matched.length > 0) {
-      setSoftSkillMatchedList(matched)
-      setSoftSkillOpen(true)
-      setSelectedSoftSkills([])
-    } else {
-      setSoftSkillMatchedList([])
-      setSoftSkillOpen(false)
-    }
-  }, [jobLevel, title])
-
-  // Close benefits dropdown on outside click
-  useEffect(() => {
-    function onDown(e) {
-      const inWrap  = benefitWrapRef.current?.contains(e.target)
-      const inPanel = benefitPanelRef.current?.contains(e.target)
-      if (!inWrap && !inPanel) setBenefitDropOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [])
-
-  const handleTitleKeyDown = useCallback((e) => {
-    if (!titleSugOpen || titleSuggestions.length === 0) return
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setTitleActiveIdx(i => Math.min(i + 1, titleSuggestions.length - 1))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setTitleActiveIdx(i => Math.max(i - 1, 0))
-    } else if (e.key === 'Enter' && titleActiveIdx >= 0) {
-      e.preventDefault()
-      setTitle(titleSuggestions[titleActiveIdx])
-      setTitleSugOpen(false)
-      setTitleActiveIdx(-1)
-    } else if (e.key === 'Escape') {
-      setTitleSugOpen(false)
-      setTitleActiveIdx(-1)
-    }
-  }, [titleSugOpen, titleSuggestions, titleActiveIdx])
 
   // ── Edit mode: loading screen (must be after all hooks) ─────────────────
   if (loadingJob) {
@@ -1482,7 +1503,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
 
   const fieldJobLevel = (
     <div>
-      <label className={labelClass} style={labelStyle}>职级层级</label>
+      <label className={labelClass} style={labelStyle}>岗位层级</label>
       {terminal ? (
         <TerminalSelect
           value={jobLevel}
@@ -1539,7 +1560,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
 
   const fieldEmploymentType = (
     <div>
-      <label className={labelClass} style={labelStyle}>应聘类型 *</label>
+      <label className={labelClass} style={labelStyle}>招聘类型 *</label>
       {terminal ? (
         <TerminalSelect
           value={employmentType}
@@ -1603,7 +1624,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
     <div>
       {/* Label row: terminal shows label only (AI button is in header); light shows label + AI button */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <label className={labelClass} style={{ ...labelStyle, marginBottom: 0 }}>岗位职责 *</label>
+        <label className={labelClass} style={{ ...labelStyle, marginBottom: 0 }}>岗位描述 *</label>
         {!terminal && aiButtonNode}
       </div>
       {aiError && (
@@ -1699,54 +1720,97 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
         </div>
 
         {/* 右侧：二级标签 */}
-        <div ref={jobTagRightPanelRef} style={{ flex: 1, overflowY: 'auto', padding: '4px 0', background: terminal ? 'var(--t-bg-elevated)' : '#fff' }}>
-          {jobTagCategory === null ? (
-            <div style={{
-              padding: '20px 12px',
-              fontSize: 12,
-              color: terminal ? 'var(--t-text-muted)' : '#94a3b8',
-              textAlign: 'center',
-            }}>
-              请先从左侧选择分类
-            </div>
-          ) : currentTags.map(tag => {
-            const checked = selectedJobTags.includes(tag)
-            return (
-              <div
-                key={tag}
-                data-tag={tag}
-                onMouseDown={(e) => { e.preventDefault(); toggleJobTag(tag) }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '7px 12px',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  color: checked
-                    ? (terminal ? 'var(--t-primary)' : '#2563eb')
-                    : (terminal ? 'var(--t-text)' : '#1e293b'),
-                  background: checked
-                    ? (terminal ? 'var(--t-primary-muted)' : '#eff6ff')
-                    : 'transparent',
-                }}
-              >
-                <div style={{
-                  width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                  border: `1.5px solid ${checked ? (terminal ? 'var(--t-primary)' : '#2563eb') : (terminal ? 'var(--t-border)' : '#cbd5e1')}`,
-                  background: checked ? (terminal ? 'var(--t-primary)' : '#2563eb') : 'transparent',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {checked && (
-                    <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                      <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </div>
-                {tag}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: terminal ? 'var(--t-bg-elevated)' : '#fff' }}>
+          <div ref={jobTagRightPanelRef} style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+            {jobTagCategory === null ? (
+              <div style={{
+                padding: '20px 12px',
+                fontSize: 12,
+                color: terminal ? 'var(--t-text-muted)' : '#94a3b8',
+                textAlign: 'center',
+              }}>
+                请先从左侧选择分类
               </div>
-            )
-          })}
+            ) : currentTags.map(tag => {
+              const checked = selectedJobTags.includes(tag)
+              return (
+                <div
+                  key={tag}
+                  data-tag={tag}
+                  onMouseDown={(e) => { e.preventDefault(); toggleJobTag(tag) }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '7px 12px',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    color: checked
+                      ? (terminal ? 'var(--t-primary)' : '#2563eb')
+                      : (terminal ? 'var(--t-text)' : '#1e293b'),
+                    background: checked
+                      ? (terminal ? 'var(--t-primary-muted)' : '#eff6ff')
+                      : 'transparent',
+                  }}
+                >
+                  <div style={{
+                    width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                    border: `1.5px solid ${checked ? (terminal ? 'var(--t-primary)' : '#2563eb') : (terminal ? 'var(--t-border)' : '#cbd5e1')}`,
+                    background: checked ? (terminal ? 'var(--t-primary)' : '#2563eb') : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {checked && (
+                      <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                        <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  {tag}
+                </div>
+              )
+            })}
+          </div>
+          {/* 自定义标签输入 */}
+          <div style={{ padding: '5px 8px', borderTop: terminal ? '1px solid var(--t-border-subtle)' : '1px solid #e2e8f0', display: 'flex', gap: 4, flexShrink: 0 }}>
+            <input
+              type="text"
+              value={customJobTagInput}
+              onChange={e => setCustomJobTagInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const tag = customJobTagInput.trim()
+                  if (tag && !selectedJobTags.includes(tag)) setSelectedJobTags(prev => [...prev, tag])
+                  setCustomJobTagInput('')
+                }
+              }}
+              placeholder="自定义标签，回车添加"
+              style={{
+                flex: 1, padding: '4px 7px', fontSize: 11, borderRadius: 3,
+                border: terminal ? '1px solid var(--t-border)' : '1px solid #d1d5db',
+                background: terminal ? 'var(--t-bg-input)' : '#fff',
+                color: terminal ? 'var(--t-text)' : '#1e293b',
+                outline: 'none', fontFamily: 'inherit',
+              }}
+            />
+            <button
+              type="button"
+              onMouseDown={e => {
+                e.preventDefault()
+                const tag = customJobTagInput.trim()
+                if (tag && !selectedJobTags.includes(tag)) setSelectedJobTags(prev => [...prev, tag])
+                setCustomJobTagInput('')
+              }}
+              style={{
+                padding: '4px 8px', fontSize: 11, borderRadius: 3, whiteSpace: 'nowrap',
+                border: terminal ? '1px solid var(--t-border)' : '1px solid #d1d5db',
+                background: terminal ? 'var(--t-bg-elevated)' : '#f9fafb',
+                color: terminal ? 'var(--t-text-secondary)' : '#374151', cursor: 'pointer',
+              }}
+            >
+              添加
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -1840,7 +1904,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
 
   const fieldSoftSkill = (
     <div ref={softSkillWrapRef} style={{ position: 'relative' }}>
-      <label className={labelClass} style={labelStyle}>软技能 *</label>
+      <label className={labelClass} style={labelStyle}>岗位所需软技能 *</label>
       <div style={{ position: 'relative' }} ref={softSkillTriggerRef}>
         <div
           className={terminal ? undefined : inputClass}
@@ -1881,57 +1945,181 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
             left: softSkillDropPos.left,
             width: softSkillDropPos.width,
             zIndex: 9999,
-            maxHeight: 228,
-            overflowY: 'auto',
+            maxHeight: 260,
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
             borderRadius: 'var(--t-radius)',
             border: '1px solid var(--t-border)',
             background: 'var(--t-bg-elevated)',
             boxShadow: 'var(--t-shadow-elevated)',
-            padding: '4px 0',
           }}>
-            {softSkillDropdownList.map(skill => {
-              const checked = selectedSoftSkills.includes(skill)
-              return (
-                <SoftSkillOption
-                  key={skill}
-                  skill={skill}
-                  description={SOFT_SKILL_DESCRIPTIONS[skill]}
-                  checked={checked}
-                  terminal={terminal}
-                  onToggle={toggleSoftSkill}
-                />
-              )
-            })}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+              {softSkillDropdownList.map(skill => {
+                const checked = selectedSoftSkills.includes(skill)
+                return (
+                  <SoftSkillOption
+                    key={skill}
+                    skill={skill}
+                    description={SOFT_SKILL_DESCRIPTIONS[skill]}
+                    checked={checked}
+                    terminal={terminal}
+                    onToggle={toggleSoftSkill}
+                  />
+                )
+              })}
+            </div>
+            <div style={{ padding: '5px 8px', borderTop: '1px solid var(--t-border-subtle)', display: 'flex', gap: 4, flexShrink: 0 }}>
+              <input
+                type="text"
+                value={customSkillInput}
+                onChange={e => setCustomSkillInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const s = customSkillInput.trim()
+                    if (s && !selectedSoftSkills.includes(s)) setSelectedSoftSkills(prev => [...prev, s])
+                    setCustomSkillInput('')
+                  }
+                }}
+                placeholder="自定义技能，回车添加"
+                style={{
+                  flex: 1, padding: '4px 7px', fontSize: 11, borderRadius: 3,
+                  border: '1px solid var(--t-border)', background: 'var(--t-bg-input)',
+                  color: 'var(--t-text)', outline: 'none', fontFamily: 'inherit',
+                }}
+              />
+              <button
+                type="button"
+                onMouseDown={e => {
+                  e.preventDefault()
+                  const s = customSkillInput.trim()
+                  if (s && !selectedSoftSkills.includes(s)) setSelectedSoftSkills(prev => [...prev, s])
+                  setCustomSkillInput('')
+                }}
+                style={{
+                  padding: '4px 8px', fontSize: 11, borderRadius: 3, whiteSpace: 'nowrap',
+                  border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)',
+                  color: 'var(--t-text-secondary)', cursor: 'pointer',
+                }}
+              >
+                添加
+              </button>
+            </div>
           </div>,
           getTerminalPortalTarget(softSkillTriggerRef.current)
         )
         : (
           <div style={{
             position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999,
-            maxHeight: 228, overflowY: 'auto', marginTop: 4,
+            maxHeight: 260, marginTop: 4,
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
             borderRadius: 8,
             border: '1px solid #e2e8f0',
             background: '#fff',
             boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-            padding: '4px 0',
           }}>
-            {softSkillDropdownList.map(skill => {
-              const checked = selectedSoftSkills.includes(skill)
-              return (
-                <SoftSkillOption
-                  key={skill}
-                  skill={skill}
-                  description={SOFT_SKILL_DESCRIPTIONS[skill]}
-                  checked={checked}
-                  terminal={terminal}
-                  onToggle={toggleSoftSkill}
-                />
-              )
-            })}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+              {softSkillDropdownList.map(skill => {
+                const checked = selectedSoftSkills.includes(skill)
+                return (
+                  <SoftSkillOption
+                    key={skill}
+                    skill={skill}
+                    description={SOFT_SKILL_DESCRIPTIONS[skill]}
+                    checked={checked}
+                    terminal={terminal}
+                    onToggle={toggleSoftSkill}
+                  />
+                )
+              })}
+            </div>
+            <div style={{ padding: '5px 8px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: 4, flexShrink: 0 }}>
+              <input
+                type="text"
+                value={customSkillInput}
+                onChange={e => setCustomSkillInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const s = customSkillInput.trim()
+                    if (s && !selectedSoftSkills.includes(s)) setSelectedSoftSkills(prev => [...prev, s])
+                    setCustomSkillInput('')
+                  }
+                }}
+                placeholder="自定义技能，回车添加"
+                style={{
+                  flex: 1, padding: '4px 7px', fontSize: 11, borderRadius: 3,
+                  border: '1px solid #d1d5db', background: '#fff',
+                  color: '#1e293b', outline: 'none', fontFamily: 'inherit',
+                }}
+              />
+              <button
+                type="button"
+                onMouseDown={e => {
+                  e.preventDefault()
+                  const s = customSkillInput.trim()
+                  if (s && !selectedSoftSkills.includes(s)) setSelectedSoftSkills(prev => [...prev, s])
+                  setCustomSkillInput('')
+                }}
+                style={{
+                  padding: '4px 8px', fontSize: 11, borderRadius: 3, whiteSpace: 'nowrap',
+                  border: '1px solid #d1d5db', background: '#f9fafb',
+                  color: '#374151', cursor: 'pointer',
+                }}
+              >
+                添加
+              </button>
+            </div>
           </div>
         )
       )}
       <p className={helperClass} style={helperStyle}>已选 {selectedSoftSkills.length} 项</p>
+    </div>
+  )
+
+  const fieldTargetCompanies = (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: terminal ? 4 : 6 }}>
+        <label className={terminal ? 'block text-xs font-medium' : labelClass} style={terminal ? { color: 'var(--t-text-secondary)', marginBottom: 0 } : { ...labelStyle, marginBottom: 0 }}>
+          对标公司
+        </label>
+        {targetCompaniesArr.length > 0 && (
+          <span style={{ fontSize: 10, color: terminal ? 'var(--t-chart-blue)' : '#3b82f6', fontFamily: terminal ? 'var(--t-font-sans)' : undefined }}>
+            {targetCompaniesArr.length} 家
+          </span>
+        )}
+      </div>
+      <textarea
+        ref={targetCoRef}
+        rows={1}
+        className={terminal ? undefined : textareaClass + ' overflow-hidden'}
+        style={terminal
+          ? { width: '100%', padding: '7px 10px', borderRadius: 4, background: 'var(--t-bg-input)', border: '1px solid var(--t-border)', color: 'var(--t-text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box', overflow: 'hidden' }
+          : textareaStyle}
+        placeholder="例：马士基, MSC, 中远海运（逗号分隔）"
+        value={targetCompaniesText}
+        onChange={e => setTargetCompaniesText(e.target.value)}
+      />
+      <p className={helperClass} style={helperStyle}>填写目标候选人的来源公司，帮助精准定向</p>
+      {targetCompaniesArr.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
+          {targetCompaniesArr.slice(0, 8).map(p => (
+            <span key={p} style={{
+              display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: 3,
+              background: terminal ? 'var(--t-primary-muted)' : '#eff6ff',
+              border: terminal ? '1px solid var(--t-border)' : '1px solid #bfdbfe',
+              color: terminal ? 'var(--t-chart-blue)' : '#1d4ed8', fontSize: 10,
+              fontFamily: terminal ? 'var(--t-font-sans)' : undefined,
+            }}>
+              {p}
+            </span>
+          ))}
+          {targetCompaniesArr.length > 8 && (
+            <span style={{ fontSize: 10, color: terminal ? 'var(--t-text-muted)' : '#94a3b8', alignSelf: 'center' }}>
+              +{targetCompaniesArr.length - 8}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 
@@ -2265,7 +2453,6 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {templateButtonNode}
-              {aiButtonNode}
               <div style={{ width: 1, height: 18, background: 'var(--t-border)', margin: '0 4px', flexShrink: 0, opacity: 0.7 }} />
               {submitButtons}
             </div>
@@ -2320,13 +2507,17 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
 
             {/* ── Col 2: 岗位描述 ── */}
             <div className={cardClass} style={{ ...cardStyle, borderTop: '2px solid rgba(34, 197, 94, 0.28)' }}>
-              <div className={sectionTitleClass} style={{ color: 'var(--t-text-muted)', borderBottom: '1px solid var(--t-border-subtle)', paddingBottom: 6, marginBottom: 0 }}>
-                <span style={{ color: 'var(--t-success)' }}><FileText size={11} /></span> 岗位描述
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--t-border-subtle)', paddingBottom: 6, marginBottom: 0 }}>
+                <div className={sectionTitleClass} style={{ color: 'var(--t-text-muted)', marginBottom: 0 }}>
+                  <span style={{ color: 'var(--t-success)' }}><FileText size={11} /></span> 岗位描述
+                </div>
+                {aiButtonNode}
               </div>
               <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
                 {fieldDescription}
                 {fieldJobTags}
                 {fieldSoftSkill}
+                {fieldTargetCompanies}
               </div>
             </div>
 
@@ -2338,8 +2529,8 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
               <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
                 {fieldSalaryRange}
                 {fieldCommission}
-                {fieldBenefits}
                 {fieldYearEndBonus}
+                {fieldBenefits}
               </div>
             </div>
 
@@ -2396,6 +2587,7 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
             {fieldDescription}
             {fieldJobTags}
             {fieldSoftSkill}
+            {fieldTargetCompanies}
           </div>
 
           {/* ════ Section 3: 薪酬待遇 ════ */}
@@ -2405,8 +2597,8 @@ export default function PostJob({ terminal = false, mode = 'create' }) {
             </div>
             {fieldSalaryRange}
             {fieldCommission}
-            {fieldBenefits}
             {fieldYearEndBonus}
+            {fieldBenefits}
           </div>
 
           {submitButtons}

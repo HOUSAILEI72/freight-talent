@@ -20,8 +20,11 @@ export function TagNoteModal({ tag, onClose }) {
   // 加载当前用户已有的描述
   useEffect(() => {
     if (!tag?.id) return
-    setStatus('loading')
-    getMyTagNote(tag.id)
+    Promise.resolve()
+      .then(() => {
+        setStatus('loading')
+        return getMyTagNote(tag.id)
+      })
       .then((data) => {
         if (data.note) {
           setNote(data.note.note || '')

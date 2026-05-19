@@ -5,8 +5,6 @@ export function useCandidateFilters() {
   const [avail, setAvail]                     = useState('all')
   const [location, setLocation]               = useState(null)
   const [functionCode, setFunctionCode]       = useState('')
-  const [archiveFilter, setArchiveFilter]     = useState('all')
-  const [inviteFilter, setInviteFilter]       = useState('all')
   const [gender, setGender]                   = useState('')
   const [poolType, setPoolType]               = useState('all')
 
@@ -31,19 +29,17 @@ export function useCandidateFilters() {
 
   function resetFilters() {
     setQ(''); setAvail('all'); setLocation(null); setFunctionCode('')
-    setArchiveFilter('all'); setInviteFilter('all'); setGender('')
+    setGender('')
     // poolType 保留：重置搜索条件不归零候选人池分类
   }
 
-  const hasFilter = !!(q || avail !== 'all' || location?.location_code || functionCode || archiveFilter !== 'all' || inviteFilter !== 'all' || gender)
+  const hasFilter = !!(q || avail !== 'all' || location?.location_code || functionCode || gender)
 
   return {
     q, setQ,
     avail, setAvail,
     location, setLocation,
     functionCode, setFunctionCode,
-    archiveFilter, setArchiveFilter,
-    inviteFilter, setInviteFilter,
     gender, setGender,
     poolType, setPoolType,
     buildFilters,

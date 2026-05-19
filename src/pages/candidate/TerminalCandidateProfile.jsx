@@ -4,7 +4,7 @@ import { CheckCircle, ChevronRight, Loader2 } from 'lucide-react'
 import TerminalLayout from '../../components/terminal/TerminalLayout'
 import { CANDIDATE_ICON_NAV } from '../../components/terminal/navItems'
 import CandidateProfile from './CandidateProfile'
-import CandidateProfileBuilder from './CandidateProfileBuilder'
+import CandidateProfileEdit from './CandidateProfileEdit'
 import { useAuth } from '../../context/AuthContext'
 
 const TABS = [
@@ -92,7 +92,7 @@ export default function TerminalCandidateProfile() {
         {tab === 'view' ? (
           <CandidateProfile viewMode="self" terminal onEdit={() => setTab('edit')} />
         ) : (
-          <CandidateProfileBuilder terminal onDone={() => setTab('view')} saveRef={saveRef} onSavingChange={setBuilderSaving} />
+          <CandidateProfileEdit terminal onDone={() => setTab('view')} saveRef={saveRef} onSavingChange={setBuilderSaving} />
         )}
       </div>
     </TerminalLayout>

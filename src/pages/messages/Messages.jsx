@@ -437,7 +437,11 @@ function JobSelector({ threads, activeId, onSelect, terminal }) {
   }
 
   // 关闭时清空搜索词和筛选
-  useEffect(() => { if (!open) { setQ(''); setFnFilter(''); setAreaFilter('') } }, [open])
+  useEffect(() => {
+    if (!open) {
+      Promise.resolve().then(() => { setQ(''); setFnFilter(''); setAreaFilter('') })
+    }
+  }, [open])
 
   const activeThread = threads.find(t => t.id === activeId)
 
@@ -1246,7 +1250,6 @@ export default function Messages({ terminal = false, basePath = '/messages' }) {
   }, [])
 
   const fetchConversations = useCallback((isInitial = false) => {
-    if (isInitial) setLoadingList(true)
     conversationsApi.getMyConversations()
       .then(res => {
         const convs = res.data.conversations ?? []
@@ -1281,10 +1284,11 @@ export default function Messages({ terminal = false, basePath = '/messages' }) {
         if (isInitial) setListError(message)
       })
       .finally(() => { if (isInitial) setLoadingList(false) })
-  }, [mergeConversations, navigate, paramThreadId])
+  }, [basePath, mergeConversations, navigate, paramThreadId])
 
   // Initial load
   useEffect(() => {
+    Promise.resolve().then(() => setLoadingList(true))
     startTransition(() => { fetchConversations(true) })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

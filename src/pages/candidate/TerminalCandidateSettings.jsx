@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
-import { Save, X, Edit3, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Save, X, Edit3, Lock, Eye, EyeOff, CheckCircle, AlertCircle, ShieldBan, Search, Plus, Trash2 } from 'lucide-react'
 import TerminalLayout from '../../components/terminal/TerminalLayout'
 import { CANDIDATE_ICON_NAV } from '../../components/terminal/navItems'
 import { useAuth } from '../../context/AuthContext'
 import { authApi } from '../../api/auth'
 import { candidatesApi } from '../../api/candidates'
+import { companiesApi } from '../../api/companies'
 import ThemeModeSelector from '../../components/terminal/ThemeModeSelector'
 import AvatarUpload from '../../components/ui/AvatarUpload'
 
@@ -93,6 +94,173 @@ function EditBtn({ onClick, label = '编辑' }) {
       <Edit3 size={11} />
       {label}
     </button>
+  )
+}
+
+// ── BlockedCompaniesSection ───────────────────────────────────────────────────
+
+function BlockedCompaniesSection() {
+  const [blocked, setBlocked] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  // search picker state
+  const [searchQ, setSearchQ] = useState('')
+  const [suggestions, setSuggestions] = useState([])
+  const [searching, setSearching] = useState(false)
+  const debounceRef = useRef(null)
+
+  useEffect(() => {
+    candidatesApi.getBlockedCompanies()
+      .then(res => setBlocked(res.data.companies ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const search = useCallback((q) => {
+    clearTimeout(debounceRef.current)
+    if (!q.trim()) { setSuggestions([]); return }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await companiesApi.listCompanies(q.trim())
+        const ids = new Set(blocked.map(c => c.id))
+        setSuggestions((res.data.companies ?? []).filter(c => !ids.has(c.id)))
+      } catch {
+        setSuggestions([])
+      } finally {
+        setSearching(false)
+      }
+    }, 250)
+  }, [blocked])
+
+  function handleSearchChange(e) {
+    const q = e.target.value
+    setSearchQ(q)
+    search(q)
+  }
+
+  function addCompany(company) {
+    setBlocked(prev => [...prev, company])
+    setSuggestions(prev => prev.filter(c => c.id !== company.id))
+    setSearchQ('')
+  }
+
+  function removeCompany(id) {
+    setBlocked(prev => prev.filter(c => c.id !== id))
+  }
+
+  async function save() {
+    setSaving(true)
+    setMsg(null)
+    try {
+      const res = await candidatesApi.updateBlockedCompanies(blocked.map(c => c.id))
+      setBlocked(res.data.companies ?? [])
+      setMsg({ type: 'ok', text: '屏蔽列表已保存' })
+    } catch (e) {
+      setMsg({ type: 'err', text: e.response?.data?.message ?? '保存失败' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <section className="border border-[var(--t-border)]" style={{ borderRadius: 'var(--t-radius)' }}>
+        <SectionHead label="Blocked Companies" />
+        <div className="px-5 py-4 text-xs text-[color:var(--t-text-muted)]">加载中…</div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="border border-[var(--t-border)]" style={{ borderRadius: 'var(--t-radius)' }}>
+      <SectionHead
+        label="Blocked Companies"
+        action={
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="flex items-center gap-1 rounded-[var(--t-radius-sm)] border border-[var(--t-border)] px-2.5 py-1 text-[10px] font-[var(--t-font-sans)] text-[color:var(--t-text-muted)] transition-colors hover:border-[color:var(--t-primary)] hover:text-[color:var(--t-primary)] disabled:opacity-40"
+          >
+            <Save size={11} />
+            {saving ? '保存中…' : '保存'}
+          </button>
+        }
+      />
+
+      {/* 说明文字 */}
+      <div className="flex items-start gap-2 border-b border-[var(--t-border-subtle)] px-5 py-3">
+        <ShieldBan size={13} className="mt-0.5 shrink-0 text-[color:var(--t-text-muted)]" />
+        <p className="text-xs leading-relaxed text-[color:var(--t-text-muted)]">
+          屏蔽后，对方企业的所有员工将无法在候选人池中找到你，也无法查看你的档案。
+        </p>
+      </div>
+
+      {/* 搜索输入 */}
+      <div className="border-b border-[var(--t-border-subtle)] px-5 py-3">
+        <div className="relative">
+          <Search
+            size={13}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--t-text-muted)]"
+          />
+          <input
+            type="text"
+            value={searchQ}
+            onChange={handleSearchChange}
+            placeholder="搜索公司名称…"
+            className="h-8 w-full rounded-[var(--t-radius-sm)] border border-[var(--t-border)] bg-[var(--t-bg-input)] pl-8 pr-3 text-sm text-[color:var(--t-text)] placeholder:text-[color:var(--t-text-muted)] focus:border-[var(--t-border-focus)] focus:outline-none"
+          />
+        </div>
+        {/* 搜索建议下拉 */}
+        {(suggestions.length > 0 || searching) && (
+          <div className="mt-1 rounded-[var(--t-radius-sm)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] shadow-lg">
+            {searching && (
+              <div className="px-3 py-2 text-xs text-[color:var(--t-text-muted)]">搜索中…</div>
+            )}
+            {!searching && suggestions.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => addCompany(c)}
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-[color:var(--t-text)] transition-colors hover:bg-[var(--t-bg-hover)]"
+              >
+                <span>{c.name}</span>
+                <Plus size={13} className="text-[color:var(--t-primary)]" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* toast */}
+      {msg && <Toast msg={msg} />}
+
+      {/* 已屏蔽列表 */}
+      {blocked.length === 0 ? (
+        <div className="px-5 py-4 text-xs text-[color:var(--t-text-muted)]">
+          暂无屏蔽公司
+        </div>
+      ) : (
+        <div className="divide-y divide-[var(--t-border-subtle)]">
+          {blocked.map(c => (
+            <div key={c.id} className="flex items-center justify-between px-5 py-2.5">
+              <span className="text-sm text-[color:var(--t-text)]">{c.name}</span>
+              <button
+                type="button"
+                onClick={() => removeCompany(c.id)}
+                className="flex items-center gap-1 text-xs text-[color:var(--t-text-muted)] transition-colors hover:text-[color:var(--t-danger)]"
+              >
+                <Trash2 size={12} />
+                移除
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -307,6 +475,9 @@ export default function TerminalCandidateSettings() {
                   </>
                 )}
               </section>
+
+              {/* ── 屏蔽公司 ── */}
+              <BlockedCompaniesSection />
 
               {/* ── 外观 ── */}
               <section className="border border-[var(--t-border)]" style={{ borderRadius: 'var(--t-radius)' }}>

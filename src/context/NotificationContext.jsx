@@ -23,13 +23,18 @@ export function NotificationProvider({ children }) {
   }, [user])
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications()
-    } else {
-      setNotifications([])
-      setUnreadCount(0)
-      setPanelOpen(false)
-    }
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (cancelled) return
+      if (user) {
+        fetchNotifications()
+      } else {
+        setNotifications([])
+        setUnreadCount(0)
+        setPanelOpen(false)
+      }
+    })
+    return () => { cancelled = true }
   }, [user, fetchNotifications])
 
   const addNotification = useCallback((notif) => {

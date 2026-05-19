@@ -17,7 +17,7 @@ function buildTagGroups(profile) {
   const groups = []
   if (profile.knowledge_tags?.length)  groups.push({ label: '知识领域', tags: profile.knowledge_tags,  color: 'blue' })
   if (profile.hard_skill_tags?.length) groups.push({ label: '硬技能',   tags: profile.hard_skill_tags, color: 'purple' })
-  if (profile.soft_skill_tags?.length) groups.push({ label: '软技能',   tags: profile.soft_skill_tags, color: 'green' })
+  if (profile.soft_skill_tags?.length) groups.push({ label: '岗位所需软技能',   tags: profile.soft_skill_tags, color: 'green' })
   if (groups.length === 0 && profile.all_tags?.length) {
     groups.push({ label: '技能标签', tags: profile.all_tags, color: 'blue' })
   }

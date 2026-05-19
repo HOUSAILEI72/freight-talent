@@ -186,7 +186,7 @@ function PersonalHdDetail({ req }) {
             <ReadField label="岗位板块" value={job.function_name || job.function_code} />
             <ReadField label="岗位城市" value={job.location_path || job.location_name || job.location_code} />
             <ReadField label="详细地址" value={job.address} />
-            <ReadField label="应聘类型" value={job.employment_type} />
+            <ReadField label="招聘类型" value={job.employment_type} />
             <ReadField label="经验要求" value={job.experience_required} />
             <ReadField label="学历要求" value={job.degree_required} />
             {job.is_management_role && (
@@ -212,13 +212,13 @@ function PersonalHdDetail({ req }) {
           </div>
         </div>
 
-        {/* Col 2: 岗位职责 + 技能要求 */}
+        {/* Col 2: 岗位描述 + 技能要求 */}
         <div className={cardClass} style={cardStyle}>
           <div className={secTitleClass} style={secTitleStyle}><FileText size={11} /> 职责 &amp; 技能</div>
           <div className="overflow-y-auto terminal-scrollbar flex-1 min-h-0 space-y-3 pr-1">
-            <ReadTextarea label="岗位职责" value={job.description} />
+            <ReadTextarea label="岗位描述" value={job.description} />
             <ReadChips label="岗位标签" value={splitTokens(job.knowledge_requirements)} />
-            <ReadChips label="软技能要求" value={splitTokens(job.soft_skill_requirements)} />
+            <ReadChips label="岗位所需软技能" value={splitTokens(job.soft_skill_requirements)} />
             {job.target_companies && job.target_companies.length > 0 && (
               <ReadChips label="目标公司" value={Array.isArray(job.target_companies) ? job.target_companies : splitTokens(job.target_companies)} />
             )}
@@ -421,6 +421,90 @@ function HdRequestRow({ req, selected, onSelect, serviceType }) {
 }
 
 
+const ACTION_BUTTON_BASE = {
+  height: 28,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 5,
+  padding: '0 9px',
+  borderRadius: 'var(--t-radius-sm)',
+  fontSize: 11,
+  fontWeight: 650,
+  letterSpacing: '0.01em',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  transition: 'border-color 120ms ease, background 120ms ease, color 120ms ease, opacity 120ms ease',
+}
+
+function getActionStyles(isTemplate) {
+  return {
+    primary: {
+      border: '1px solid var(--t-primary)',
+      color: '#fff',
+      background: 'var(--t-primary)',
+    },
+    neutral: {
+      border: '1px solid var(--t-border)',
+      color: 'var(--t-text-secondary)',
+      background: 'var(--t-bg-elevated)',
+    },
+    template: {
+      border: isTemplate ? '1px solid var(--t-chart-yellow)' : '1px solid var(--t-border)',
+      color: isTemplate ? 'var(--t-chart-yellow)' : 'var(--t-text-secondary)',
+      background: isTemplate ? 'rgba(245, 158, 11, 0.10)' : 'var(--t-bg-elevated)',
+    },
+    dangerGhost: {
+      border: '1px solid transparent',
+      color: 'var(--t-text-muted)',
+      background: 'transparent',
+    },
+  }
+}
+
+function ActionButton({ children, icon: Icon, tone = 'neutral', title, iconOnly = false, onClick, isTemplate = false }) {
+  const actionStyles = getActionStyles(isTemplate)
+  const baseTone = actionStyles[tone] || actionStyles.neutral
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      style={{
+        ...ACTION_BUTTON_BASE,
+        ...baseTone,
+        width: iconOnly ? 28 : 'auto',
+        padding: iconOnly ? 0 : ACTION_BUTTON_BASE.padding,
+      }}
+      onMouseEnter={e => {
+        if (tone === 'dangerGhost') {
+          e.currentTarget.style.borderColor = 'var(--t-danger)'
+          e.currentTarget.style.color = 'var(--t-danger)'
+          e.currentTarget.style.background = 'var(--t-danger-muted)'
+          return
+        }
+        if (tone === 'neutral') {
+          e.currentTarget.style.borderColor = 'var(--t-primary)'
+          e.currentTarget.style.color = 'var(--t-primary)'
+          e.currentTarget.style.background = 'var(--t-primary-muted)'
+          return
+        }
+        e.currentTarget.style.opacity = '0.86'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = baseTone.border.replace('1px solid ', '')
+        e.currentTarget.style.color = baseTone.color
+        e.currentTarget.style.background = baseTone.background
+        e.currentTarget.style.opacity = '1'
+      }}
+    >
+      {Icon && <Icon size={12} />}
+      {!iconOnly && children}
+    </button>
+  )
+}
+
 function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChange, onEditJob, onDeleteJob, onSetTemplate }) {
   const tagsByCat = job.tags_by_category || {}
   const baseLocation =
@@ -453,85 +537,6 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
       border: '1px solid var(--t-border-subtle)',
       background: 'var(--t-bg-elevated)',
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
-    }
-    const actionButtonBase = {
-      height: 28,
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 5,
-      padding: '0 9px',
-      borderRadius: 'var(--t-radius-sm)',
-      fontSize: 11,
-      fontWeight: 650,
-      letterSpacing: '0.01em',
-      cursor: 'pointer',
-      whiteSpace: 'nowrap',
-      transition: 'border-color 120ms ease, background 120ms ease, color 120ms ease, opacity 120ms ease',
-    }
-    const actionStyles = {
-      primary: {
-        border: '1px solid var(--t-primary)',
-        color: '#fff',
-        background: 'var(--t-primary)',
-      },
-      neutral: {
-        border: '1px solid var(--t-border)',
-        color: 'var(--t-text-secondary)',
-        background: 'var(--t-bg-elevated)',
-      },
-      template: {
-        border: job.is_template ? '1px solid var(--t-chart-yellow)' : '1px solid var(--t-border)',
-        color: job.is_template ? 'var(--t-chart-yellow)' : 'var(--t-text-secondary)',
-        background: job.is_template ? 'rgba(245, 158, 11, 0.10)' : 'var(--t-bg-elevated)',
-      },
-      dangerGhost: {
-        border: '1px solid transparent',
-        color: 'var(--t-text-muted)',
-        background: 'transparent',
-      },
-    }
-
-    function ActionButton({ children, icon: Icon, tone = 'neutral', title, iconOnly = false, onClick }) {
-      const baseTone = actionStyles[tone] || actionStyles.neutral
-      return (
-        <button
-          type="button"
-          title={title}
-          aria-label={title}
-          onClick={onClick}
-          style={{
-            ...actionButtonBase,
-            ...baseTone,
-            width: iconOnly ? 28 : 'auto',
-            padding: iconOnly ? 0 : actionButtonBase.padding,
-          }}
-          onMouseEnter={e => {
-            if (tone === 'dangerGhost') {
-              e.currentTarget.style.borderColor = 'var(--t-danger)'
-              e.currentTarget.style.color = 'var(--t-danger)'
-              e.currentTarget.style.background = 'var(--t-danger-muted)'
-              return
-            }
-            if (tone === 'neutral') {
-              e.currentTarget.style.borderColor = 'var(--t-primary)'
-              e.currentTarget.style.color = 'var(--t-primary)'
-              e.currentTarget.style.background = 'var(--t-primary-muted)'
-              return
-            }
-            e.currentTarget.style.opacity = '0.86'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = baseTone.border.replace('1px solid ', '')
-            e.currentTarget.style.color = baseTone.color
-            e.currentTarget.style.background = baseTone.background
-            e.currentTarget.style.opacity = '1'
-          }}
-        >
-          {Icon && <Icon size={12} />}
-          {!iconOnly && children}
-        </button>
-      )
     }
 
     return (
@@ -579,6 +584,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
               <ActionButton
                 icon={job.is_template ? BookmarkCheck : Bookmark}
                 tone="template"
+                isTemplate={job.is_template}
                 title={job.is_template ? '取消模板' : '设为模板'}
                 onClick={() => onSetTemplate?.(job, !job.is_template)}
               >
@@ -618,7 +624,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
               {job.is_management_role && (
                 <ReadField label="预计团队人数" value={job.management_headcount ? String(job.management_headcount) : null} />
               )}
-              <ReadField label="应聘类型" value={job.employment_type} />
+              <ReadField label="招聘类型" value={job.employment_type} />
               <ReadField label="岗位工作城市" value={
                 job.location_path ||
                 [job.province, job.city_name, job.district].filter(Boolean).join(' · ') ||
@@ -635,9 +641,9 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
           <div className={cardClass} style={cardStyle}>
             <div className={secTitleClass} style={secTitleStyle}><Briefcase size={11} /> 岗位描述</div>
             <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-y-auto terminal-scrollbar pr-1">
-              <ReadTextarea label="岗位职责" value={job.description} />
+              <ReadTextarea label="岗位描述" value={job.description} />
               <ReadChips label="岗位标签" value={job.knowledge_requirements} />
-              <ReadChips label="软技能" value={job.soft_skill_requirements} />
+              <ReadChips label="岗位所需软技能" value={job.soft_skill_requirements} />
             </div>
           </div>
 
@@ -702,7 +708,7 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
           { icon: Users, label: '管理属性', value: job.is_management_role ? `管理岗${job.management_headcount ? ` · ${job.management_headcount} 人` : ''}` : '非管理岗' },
           { icon: Users, label: '招聘人数', value: job.headcount ? `${job.headcount} 人` : '—' },
           { icon: Zap,   label: '紧急程度', value: job.urgency_level === 1 ? '紧急' : job.urgency_level === 3 ? '不急' : '正常' },
-          { icon: Briefcase, label: '应聘类型', value: job.employment_type ?? '—' },
+          { icon: Briefcase, label: '招聘类型', value: job.employment_type ?? '—' },
         ].map(item => (
           <div key={item.label} className="bg-slate-50 rounded-xl px-3 py-2.5">
             <div className="flex items-center gap-1.5 mb-1">
@@ -733,10 +739,10 @@ function JobDetailPanel({ job, terminal = false, canManage = false, onStatusChan
         </div>
       )}
 
-      {/* 岗位职责 */}
+      {/* 岗位描述 */}
       {job.description && (
         <div>
-          <p className="text-sm font-semibold text-slate-800 mb-2">岗位职责</p>
+          <p className="text-sm font-semibold text-slate-800 mb-2">岗位描述</p>
           <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{job.description}</p>
         </div>
       )}
@@ -1271,12 +1277,12 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
                 value={employmentType}
                 onChange={handleEmploymentTypeChange}
                 options={[
-                  { value: '', label: '应聘类型（全部）' },
+                  { value: '', label: '招聘类型（全部）' },
                   { value: '全职', label: '全职' },
                   { value: '兼职', label: '兼职' },
                   { value: '实习生', label: '实习生' },
                 ]}
-                placeholder="应聘类型（全部）"
+                placeholder="招聘类型（全部）"
                 hasValue={!!employmentType}
               />
             ) : (
@@ -1285,7 +1291,7 @@ export default function JobMarketplace({ terminal = false, showNewJobButton = fa
               onChange={(e) => handleEmploymentTypeChange(e.target.value)}
               className='w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 bg-white'
             >
-              <option value="">应聘类型（全部）</option>
+              <option value="">招聘类型（全部）</option>
               <option value="全职">全职</option>
               <option value="兼职">兼职</option>
               <option value="实习生">实习生</option>

@@ -1,7 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, Menu, X, LogOut } from 'lucide-react'
+import { Bell, Menu, X, LogOut, Shield } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import ComplianceModal from '../compliance/ComplianceModal'
 
 const NAV_BY_ROLE = {
   employer: [
@@ -32,11 +33,7 @@ const NAV_BY_ROLE = {
   ],
 }
 
-const DEFAULT_NAV = [
-  { label: '候选人', href: '/candidate/upload' },
-  { label: '企业招聘', href: '/employer/dashboard' },
-  { label: '岗位广场', href: '/employer/jobs/new' },
-]
+const DEFAULT_NAV = []
 
 // 角色对应的头像首字
 function avatarChar(user) {
@@ -51,6 +48,7 @@ export function Navbar() {
   const { user, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [complianceOpen, setComplianceOpen] = useState(false)
 
   const navItems = user ? (NAV_BY_ROLE[user.role] ?? DEFAULT_NAV) : DEFAULT_NAV
 
@@ -88,6 +86,13 @@ export function Navbar() {
                 {item.label}
               </Link>
             ))}
+            <button
+              onClick={() => setComplianceOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            >
+              <Shield size={14} />
+              招聘规范
+            </button>
           </nav>
 
           {/* Right actions */}
@@ -166,6 +171,13 @@ export function Navbar() {
               {item.label}
             </Link>
           ))}
+          <button
+            onClick={() => { setMobileOpen(false); setComplianceOpen(true) }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-600"
+          >
+            <Shield size={14} />
+            招聘规范
+          </button>
           {user ? (
             <button
               onClick={() => { setMobileOpen(false); handleLogout() }}
@@ -184,6 +196,8 @@ export function Navbar() {
           )}
         </div>
       )}
+
+      <ComplianceModal open={complianceOpen} onClose={() => setComplianceOpen(false)} />
     </header>
   )
 }

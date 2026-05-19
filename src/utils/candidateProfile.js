@@ -85,14 +85,14 @@ export const PROFILE_FIELD_LABELS = {
   email:                    '个人邮箱',
   current_company:          '当前公司',
   current_title:            '当前职位',
-  current_responsibilities: '岗位职责',
+  current_responsibilities: '岗位描述',
   location_code:            '所在地区',
   location_name:            '所在地区',
   location_path:            '所在地区',
   location_type:            '所在地区',
   knowledge_tags:           '知识标签（至少 1 项）',
   hard_skill_tags:          '硬技能标签（至少 1 项）',
-  soft_skill_tags:          '软技能标签（至少 1 项）',
+  soft_skill_tags:          '岗位所需软技能标签（至少 1 项）',
   work_experiences:         '至少一段工作经历',
 }
 

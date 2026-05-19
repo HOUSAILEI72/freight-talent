@@ -35,6 +35,12 @@ const YEAR_END_BONUS_QUICK = [
   { value: 'custom', label: '自行填数' },
 ]
 
+const BENEFIT_OPTIONS = [
+  '五险一金','带薪年假','法定节假日','节日福利','生日福利',
+  '年度体检','团建旅游','商业保险','股权激励','期权激励',
+  '弹性上下班','晚班交通补贴','高温补贴',
+]
+
 const REQUIRED_TERMS = [
   { key: 'type_a',           text: 'A 类型：月收入 ≥ 1 万，服务费为候选人税前年收入 23%，入职 14 日内付 60%，保证期 3 个月届满后 14 日内付清余款' },
   { key: 'type_b',           text: 'B 类型：月收入 < 1 万，服务费为候选人税前 1 个月工资，入职 14 日内付 60%，保证期 1 个月届满后 14 日内付清余款' },
@@ -311,7 +317,7 @@ function SoftSkillOption({ skill, description, checked, onToggle }) {
         }}>
           {description}
         </div>,
-        getTerminalPortalTarget(rowRef.current)
+        document.body
       )}
     </div>
   )
@@ -353,7 +359,7 @@ function SelectedSkillTag({ skill, description, onMouseDown }) {
           <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 3, whiteSpace: 'nowrap' }}>{skill}</p>
           <p style={{ fontSize: 13, color: 'var(--t-text)', lineHeight: 1.5, whiteSpace: 'normal' }}>{description}</p>
         </div>,
-        getTerminalPortalTarget(tagRef.current)
+        document.body
       )}
     </span>
   )
@@ -564,6 +570,17 @@ export default function PersonalHeadhunting({ terminal = false }) {
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
   }, [])
+
+  useEffect(() => {
+    function onDown(e) {
+      const inWrap  = benefitWrapRef.current?.contains(e.target)
+      const inPanel = benefitPanelRef.current?.contains(e.target)
+      if (!inWrap && !inPanel) setBenefitDropOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
   const [salaryMin,               setSalaryMin]               = useState('')
   const [salaryMax,               setSalaryMax]               = useState('')
   const [salaryMonths,            setSalaryMonths]            = useState(13)
@@ -575,6 +592,14 @@ export default function PersonalHeadhunting({ terminal = false }) {
   const [hasYearEndBonus,         setHasYearEndBonus]         = useState('')
   const [yearEndBonusQuickSelect, setYearEndBonusQuickSelect] = useState(null)
   const [yearEndBonusCustom,      setYearEndBonusCustom]      = useState('')
+  const [selectedBenefits,  setSelectedBenefits]  = useState([])
+  const [benefitDropOpen,   setBenefitDropOpen]   = useState(false)
+  const [benefitDropPos,    setBenefitDropPos]     = useState({ top: 0, left: 0, width: 0 })
+  const benefitTriggerRef = useRef(null)
+  const benefitWrapRef    = useRef(null)
+  const benefitPanelRef   = useRef(null)
+  const [customJobTagInput, setCustomJobTagInput] = useState('')
+  const [customSkillInput,  setCustomSkillInput]  = useState('')
 
   // ── Subscription gate (terminal only) ───────────────────────────────────
   const [hasSubscription, setHasSubscription] = useState(false)
@@ -611,7 +636,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
     setAiError('')
     const hasExisting = description.trim() || selectedJobTags.length > 0 || selectedSoftSkills.length > 0
     if (hasExisting) {
-      const ok = window.confirm('AI 将覆盖已填写的岗位职责、岗位标签和软技能，确认继续？')
+      const ok = window.confirm('AI 将覆盖已填写的岗位描述、岗位标签和岗位所需软技能，确认继续？')
       if (!ok) return
     }
     setAiLoading(true)
@@ -672,13 +697,13 @@ export default function PersonalHeadhunting({ terminal = false }) {
     }
     if (!location?.location_code)  return '请选择岗位工作城市'
     if (!location.location_name || !location.location_path || !location.location_type) return '地区数据不完整，请重新选择'
-    if (!employmentType)           return '请选择应聘类型'
+    if (!employmentType)           return '请选择招聘类型'
     if (addressDetail.trim().length > 200) return '详细地址不能超过 200 个字符'
-    if (!description.trim())          return '请填写岗位职责'
+    if (!description.trim())          return '请填写岗位描述'
     if (experienceYears === '')       return '请选择经验要求'
     if (!degreeRequired.trim())       return '请填写最低学历要求'
     if (selectedJobTags.length === 0) return '请选择至少一个岗位标签'
-    if (selectedSoftSkills.length === 0) return '请填写软技能要求'
+    if (selectedSoftSkills.length === 0) return '请填写岗位所需软技能要求'
     const sMin = Number(salaryMin); const sMax = Number(salaryMax)
     if (!Number.isFinite(sMin) || !Number.isFinite(sMax) || sMin <= 0 || sMax <= 0) return '请填写有效的薪资区间（数字）'
     if (sMin > sMax) return '最低月薪不能大于最高月薪'
@@ -762,6 +787,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
         commission_bonus_amount: commissionBonusPeriod !== 'not_applicable' ? Number(commissionBonusAmount) : null,
         has_year_end_bonus:      hasYearEndBonus === 'true',
         year_end_bonus_months:   yearEndBonusMonthsVal,
+        benefits:                selectedBenefits,
       },
       terms:    Object.fromEntries(REQUIRED_TERMS.map(t => [t.key, true])),
       add_ons: {
@@ -1107,7 +1133,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
 
             {/* 应聘类型 */}
             <div>
-              <label style={T.label}>应聘类型 *</label>
+              <label style={T.label}>招聘类型 *</label>
               <TerminalSelect
                 value={employmentType}
                 onChange={setEmploymentType}
@@ -1159,7 +1185,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
 
             {/* 岗位职责 */}
             <div>
-              <label style={T.label}>岗位职责 *</label>
+              <label style={T.label}>岗位描述 *</label>
               <textarea ref={descRef} rows={1} style={{ ...T.textarea, overflow: 'hidden' }} placeholder="描述该岗位的主要工作职责..."
                 value={description} onChange={e => setDescription(e.target.value)} />
             </div>
@@ -1266,36 +1292,75 @@ export default function PersonalHeadhunting({ terminal = false }) {
                         )
                       })}
                     </div>
-                    <div ref={jobTagRightPanelRef} style={{ flex: 1, overflowY: 'auto', padding: '4px 0', background: 'var(--t-bg-elevated)' }}>
-                      {jobTagCategory === null
-                        ? <div style={{ padding: '20px 12px', fontSize: 12, color: 'var(--t-text-muted)', textAlign: 'center' }}>请先从左侧选择分类</div>
-                        : (JOB_TAGS_DATA.find(d => d.category === jobTagCategory)?.tags ?? []).map(tag => {
-                            const checked = selectedJobTags.includes(tag)
-                            return (
-                              <div key={tag} data-tag={tag}
-                                onMouseDown={(e) => {
-                                  e.preventDefault()
-                                  setSelectedJobTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-                                }}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: 8,
-                                  padding: '7px 12px', cursor: 'pointer', fontSize: 13,
-                                  color: checked ? 'var(--t-primary)' : 'var(--t-text)',
-                                  background: checked ? 'var(--t-primary-muted)' : 'transparent',
-                                }}>
-                                <div style={{
-                                  width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                                  border: `1.5px solid ${checked ? 'var(--t-primary)' : 'var(--t-border)'}`,
-                                  background: checked ? 'var(--t-primary)' : 'transparent',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                }}>
-                                  {checked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--t-bg-elevated)' }}>
+                      <div ref={jobTagRightPanelRef} style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+                        {jobTagCategory === null
+                          ? <div style={{ padding: '20px 12px', fontSize: 12, color: 'var(--t-text-muted)', textAlign: 'center' }}>请先从左侧选择分类</div>
+                          : (JOB_TAGS_DATA.find(d => d.category === jobTagCategory)?.tags ?? []).map(tag => {
+                              const checked = selectedJobTags.includes(tag)
+                              return (
+                                <div key={tag} data-tag={tag}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    setSelectedJobTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+                                  }}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    padding: '7px 12px', cursor: 'pointer', fontSize: 13,
+                                    color: checked ? 'var(--t-primary)' : 'var(--t-text)',
+                                    background: checked ? 'var(--t-primary-muted)' : 'transparent',
+                                  }}>
+                                  <div style={{
+                                    width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                                    border: `1.5px solid ${checked ? 'var(--t-primary)' : 'var(--t-border)'}`,
+                                    background: checked ? 'var(--t-primary)' : 'transparent',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  }}>
+                                    {checked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                  </div>
+                                  {tag}
                                 </div>
-                                {tag}
-                              </div>
-                            )
-                          })
-                      }
+                              )
+                            })
+                        }
+                      </div>
+                      <div style={{ padding: '5px 8px', borderTop: '1px solid var(--t-border-subtle)', display: 'flex', gap: 4, flexShrink: 0 }}>
+                        <input
+                          type="text"
+                          value={customJobTagInput}
+                          onChange={e => setCustomJobTagInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              const tag = customJobTagInput.trim()
+                              if (tag && !selectedJobTags.includes(tag)) setSelectedJobTags(prev => [...prev, tag])
+                              setCustomJobTagInput('')
+                            }
+                          }}
+                          placeholder="自定义标签，回车添加"
+                          style={{
+                            flex: 1, padding: '4px 7px', fontSize: 11, borderRadius: 3,
+                            border: '1px solid var(--t-border)', background: 'var(--t-bg-input)',
+                            color: 'var(--t-text)', outline: 'none', fontFamily: 'inherit',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onMouseDown={e => {
+                            e.preventDefault()
+                            const tag = customJobTagInput.trim()
+                            if (tag && !selectedJobTags.includes(tag)) setSelectedJobTags(prev => [...prev, tag])
+                            setCustomJobTagInput('')
+                          }}
+                          style={{
+                            padding: '4px 8px', fontSize: 11, borderRadius: 3, whiteSpace: 'nowrap',
+                            border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)',
+                            color: 'var(--t-text-secondary)', cursor: 'pointer',
+                          }}
+                        >
+                          添加
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>,
@@ -1307,7 +1372,7 @@ export default function PersonalHeadhunting({ terminal = false }) {
             {/* 软技能 */}
             <div ref={softSkillWrapRef} style={{ position: 'relative' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <label style={{ ...T.label, marginBottom: 0 }}>软技能 *</label>
+                <label style={{ ...T.label, marginBottom: 0 }}>岗位所需软技能 *</label>
                 {selectedSoftSkills.length > 0 && (
                   <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-sans)' }}>
                     {selectedSoftSkills.length} 项
@@ -1354,17 +1419,57 @@ export default function PersonalHeadhunting({ terminal = false }) {
               {softSkillOpen && createPortal(
                 <div ref={softSkillPanelRef} style={{
                   position: 'fixed', top: softSkillDropPos.top, left: softSkillDropPos.left,
-                  width: softSkillDropPos.width, zIndex: 9999, maxHeight: 228, overflowY: 'auto',
+                  width: softSkillDropPos.width, zIndex: 9999, maxHeight: 260,
+                  display: 'flex', flexDirection: 'column', overflow: 'hidden',
                   borderRadius: 'var(--t-radius)', border: '1px solid var(--t-border)',
-                  background: 'var(--t-bg-elevated)', boxShadow: 'var(--t-shadow-elevated)', padding: '4px 0',
+                  background: 'var(--t-bg-elevated)', boxShadow: 'var(--t-shadow-elevated)',
                 }}>
-                  {ALL_SOFT_SKILLS.map(skill => (
-                    <SoftSkillOption
-                      key={skill} skill={skill} description={SOFT_SKILL_DESCRIPTIONS[skill]}
-                      checked={selectedSoftSkills.includes(skill)}
-                      onToggle={s => setSelectedSoftSkills(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+                    {ALL_SOFT_SKILLS.map(skill => (
+                      <SoftSkillOption
+                        key={skill} skill={skill} description={SOFT_SKILL_DESCRIPTIONS[skill]}
+                        checked={selectedSoftSkills.includes(skill)}
+                        onToggle={s => setSelectedSoftSkills(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                      />
+                    ))}
+                  </div>
+                  <div style={{ padding: '5px 8px', borderTop: '1px solid var(--t-border-subtle)', display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <input
+                      type="text"
+                      value={customSkillInput}
+                      onChange={e => setCustomSkillInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const s = customSkillInput.trim()
+                          if (s && !selectedSoftSkills.includes(s)) setSelectedSoftSkills(prev => [...prev, s])
+                          setCustomSkillInput('')
+                        }
+                      }}
+                      placeholder="自定义技能，回车添加"
+                      style={{
+                        flex: 1, padding: '4px 7px', fontSize: 11, borderRadius: 3,
+                        border: '1px solid var(--t-border)', background: 'var(--t-bg-input)',
+                        color: 'var(--t-text)', outline: 'none', fontFamily: 'inherit',
+                      }}
                     />
-                  ))}
+                    <button
+                      type="button"
+                      onMouseDown={e => {
+                        e.preventDefault()
+                        const s = customSkillInput.trim()
+                        if (s && !selectedSoftSkills.includes(s)) setSelectedSoftSkills(prev => [...prev, s])
+                        setCustomSkillInput('')
+                      }}
+                      style={{
+                        padding: '4px 8px', fontSize: 11, borderRadius: 3, whiteSpace: 'nowrap',
+                        border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)',
+                        color: 'var(--t-text-secondary)', cursor: 'pointer',
+                      }}
+                    >
+                      添加
+                    </button>
+                  </div>
                 </div>,
                 getTerminalPortalTarget(softSkillTriggerRef.current)
               )}
@@ -1490,6 +1595,95 @@ export default function PersonalHeadhunting({ terminal = false }) {
                 )}
               </div>
             )}
+
+            {/* 福利列表 */}
+            <div ref={benefitWrapRef} style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <label style={{ ...T.label, marginBottom: 0 }}>福利列表</label>
+                {selectedBenefits.length > 0 && (
+                  <span style={{ fontSize: 10, color: 'var(--t-chart-blue)', fontFamily: 'var(--t-font-sans)' }}>
+                    {selectedBenefits.length} 项
+                  </span>
+                )}
+              </div>
+              <div style={{ position: 'relative' }} ref={benefitTriggerRef}>
+                <div
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    if (!benefitDropOpen) {
+                      const rect = benefitTriggerRef.current?.getBoundingClientRect()
+                      if (rect) {
+                        const panelH = 260
+                        const spaceBelow = window.innerHeight - rect.bottom - 4
+                        const top = spaceBelow >= panelH ? rect.bottom + 4 : rect.top - panelH - 4
+                        setBenefitDropPos({ top, left: rect.left, width: rect.width })
+                      }
+                    }
+                    setBenefitDropOpen(o => !o)
+                  }}
+                  style={{
+                    background: 'var(--t-bg-input)', color: 'var(--t-text)',
+                    border: `1px solid ${benefitDropOpen ? 'var(--t-border-focus)' : 'var(--t-border)'}`,
+                    borderRadius: 'var(--t-radius-sm)', minHeight: 30,
+                    paddingLeft: 8, paddingRight: 28,
+                    paddingTop: selectedBenefits.length > 0 ? 4 : 0,
+                    paddingBottom: selectedBenefits.length > 0 ? 4 : 0,
+                    display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
+                    cursor: 'pointer', userSelect: 'none', fontSize: 12,
+                  }}
+                >
+                  {selectedBenefits.length > 0
+                    ? selectedBenefits.map(b => (
+                        <SelectedSkillTag key={b} skill={b} description={null}
+                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedBenefits(prev => prev.filter(x => x !== b)) }} />
+                      ))
+                    : <span style={{ color: 'var(--t-text-muted)', fontSize: 12 }}>从下拉框中选择福利项目</span>
+                  }
+                </div>
+                <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--t-text-muted)' }}>
+                  <ChevronDown size={11} style={{ transition: 'transform 150ms', transform: benefitDropOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                </div>
+              </div>
+              {benefitDropOpen && createPortal(
+                <div ref={benefitPanelRef} style={{
+                  position: 'fixed', top: benefitDropPos.top, left: benefitDropPos.left,
+                  width: benefitDropPos.width, zIndex: 9999,
+                  maxHeight: 260, overflowY: 'auto',
+                  borderRadius: 'var(--t-radius)', border: '1px solid var(--t-border)',
+                  background: 'var(--t-bg-elevated)', boxShadow: 'var(--t-shadow-elevated)', padding: '4px 0',
+                }}>
+                  {BENEFIT_OPTIONS.map(opt => {
+                    const checked = selectedBenefits.includes(opt)
+                    return (
+                      <div key={opt}
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          setSelectedBenefits(prev => prev.includes(opt) ? prev.filter(b => b !== opt) : [...prev, opt])
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          padding: '7px 12px', cursor: 'pointer', fontSize: 13,
+                          color: checked ? 'var(--t-primary)' : 'var(--t-text)',
+                          background: checked ? 'var(--t-primary-muted)' : 'transparent',
+                        }}
+                      >
+                        <div style={{
+                          width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                          border: `1.5px solid ${checked ? 'var(--t-primary)' : 'var(--t-border)'}`,
+                          background: checked ? 'var(--t-primary)' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {checked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </div>
+                        {opt}
+                      </div>
+                    )
+                  })}
+                </div>,
+                getTerminalPortalTarget(benefitTriggerRef.current)
+              )}
+              <p style={T.helper}>已选 {selectedBenefits.length} 项</p>
+            </div>
           </div>
         </div>
 

@@ -67,7 +67,7 @@ function SoftSkillOption({ skill, description, checked, terminal, onToggle }) {
       {skill}
       {tooltipStyle && description && createPortal(
         <div style={{ position: 'fixed', top: tooltipStyle.top, left: tooltipStyle.left, transform: 'translateY(-50%)', zIndex: 10000, maxWidth: 220, padding: '6px 10px', borderRadius: 6, fontSize: 12, lineHeight: 1.6, background: terminal ? 'var(--t-bg-elevated)' : '#1e293b', border: terminal ? '1px solid var(--t-border)' : 'none', color: terminal ? 'var(--t-text)' : '#f1f5f9', boxShadow: terminal ? 'var(--t-shadow-elevated)' : '0 4px 12px rgba(0,0,0,0.25)', pointerEvents: 'none' }}>{description}</div>,
-        getTerminalPortalTarget(rowRef.current)
+        document.body
       )}
     </div>
   )
@@ -91,7 +91,7 @@ function SelectedSkillTag({ skill, description, terminal, onMouseDown }) {
           <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 3, whiteSpace: 'nowrap' }}>{skill}</p>
           <p style={{ fontSize: 13, color: 'var(--t-text)', lineHeight: 1.5, whiteSpace: 'normal' }}>{description}</p>
         </div>,
-        getTerminalPortalTarget(tagRef.current)
+        document.body
       )}
     </span>
   )
@@ -247,8 +247,7 @@ function MonthYearPicker({ value, onChange, allowEmpty = false, terminal }) {
 
   useEffect(() => {
     const [y, m] = parseValue(value)
-    setLocalYear(y)
-    setLocalMonth(m)
+    Promise.resolve().then(() => { setLocalYear(y); setLocalMonth(m) })
   }, [value])
 
   const currentYear = new Date().getFullYear()
@@ -366,6 +365,8 @@ export default function CandidateProfileBuilder({ terminal = false, onDone, save
   const softSkillWrapRef    = useRef(null)
   const softSkillTriggerRef = useRef(null)
   const softSkillPanelRef   = useRef(null)
+  const [customJobTagInput, setCustomJobTagInput] = useState('')
+  const [customSkillInput,  setCustomSkillInput]  = useState('')
 
   // ── Section 5: 教育与证书 ──────────────────────────────────────────────
   const [education, setEducation]                 = useState('')
@@ -565,7 +566,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone, save
     if (availability !== 'open') {
       if (!currentCompany.trim())          return '请填写当前公司'
       if (!currentTitle.trim())            return '请填写当前职位'
-      if (!currentResponsibilities.trim()) return '请填写岗位职责'
+      if (!currentResponsibilities.trim()) return '请填写岗位描述'
     }
     if (!functionCode)                   return '请选择业务方向'
     if (isManagementStr !== 'yes' && isManagementStr !== 'no') return '请选择是否带团队'
@@ -630,7 +631,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone, save
     }
 
     if (selectedJobTags.length === 0) return '请至少选择 1 个岗位标签'
-    if (selectedSoftSkills.length === 0) return '请至少选择 1 个软技能'
+    if (selectedSoftSkills.length === 0) return '请至少选择 1 个岗位所需软技能'
 
     return ''
   }
@@ -1208,7 +1209,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone, save
         )}
       </div>
       <div>
-        <label className={labelClass} style={labelStyle}>岗位职责 *</label>
+        <label className={labelClass} style={labelStyle}>岗位描述 *</label>
         <AutoTextarea rows={1} className={textareaClass} style={inputStyle}
           value={currentResponsibilities}
           onChange={e => setCurrentResponsibilities(e.target.value)}
@@ -1545,23 +1546,65 @@ export default function CandidateProfileBuilder({ terminal = false, onDone, save
             )
           })}
         </div>
-        <div ref={jobTagRightPanelRef} style={{ flex: 1, overflowY: 'auto', padding: '4px 0', background: terminal ? 'var(--t-bg-elevated)' : '#fff' }}>
-          {jobTagCategory === null
-            ? <div style={{ padding: '20px 12px', fontSize: 12, color: terminal ? 'var(--t-text-muted)' : '#94a3b8', textAlign: 'center' }}>请先从左侧选择分类</div>
-            : currentTags.map(tag => {
-                const checked = selectedJobTags.includes(tag)
-                return (
-                  <div key={tag} data-tag={tag} onMouseDown={(e) => { e.preventDefault(); toggleJobTag(tag) }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 13, color: checked ? (terminal ? 'var(--t-primary)' : '#2563eb') : (terminal ? 'var(--t-text)' : '#1e293b'), background: checked ? (terminal ? 'var(--t-primary-muted)' : '#eff6ff') : 'transparent' }}
-                  >
-                    <div style={{ width: 14, height: 14, borderRadius: 3, flexShrink: 0, border: `1.5px solid ${checked ? (terminal ? 'var(--t-primary)' : '#2563eb') : (terminal ? 'var(--t-border)' : '#cbd5e1')}`, background: checked ? (terminal ? 'var(--t-primary)' : '#2563eb') : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {checked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: terminal ? 'var(--t-bg-elevated)' : '#fff' }}>
+          <div ref={jobTagRightPanelRef} style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+            {jobTagCategory === null
+              ? <div style={{ padding: '20px 12px', fontSize: 12, color: terminal ? 'var(--t-text-muted)' : '#94a3b8', textAlign: 'center' }}>请先从左侧选择分类</div>
+              : currentTags.map(tag => {
+                  const checked = selectedJobTags.includes(tag)
+                  return (
+                    <div key={tag} data-tag={tag} onMouseDown={(e) => { e.preventDefault(); toggleJobTag(tag) }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 13, color: checked ? (terminal ? 'var(--t-primary)' : '#2563eb') : (terminal ? 'var(--t-text)' : '#1e293b'), background: checked ? (terminal ? 'var(--t-primary-muted)' : '#eff6ff') : 'transparent' }}
+                    >
+                      <div style={{ width: 14, height: 14, borderRadius: 3, flexShrink: 0, border: `1.5px solid ${checked ? (terminal ? 'var(--t-primary)' : '#2563eb') : (terminal ? 'var(--t-border)' : '#cbd5e1')}`, background: checked ? (terminal ? 'var(--t-primary)' : '#2563eb') : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {checked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      </div>
+                      {tag}
                     </div>
-                    {tag}
-                  </div>
-                )
-              })
-          }
+                  )
+                })
+            }
+          </div>
+          <div style={{ padding: '5px 8px', borderTop: terminal ? '1px solid var(--t-border-subtle)' : '1px solid #e2e8f0', display: 'flex', gap: 4, flexShrink: 0 }}>
+            <input
+              type="text"
+              value={customJobTagInput}
+              onChange={e => setCustomJobTagInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const tag = customJobTagInput.trim()
+                  if (tag && !selectedJobTags.includes(tag)) setSelectedJobTags(prev => [...prev, tag])
+                  setCustomJobTagInput('')
+                }
+              }}
+              placeholder="自定义标签，回车添加"
+              style={{
+                flex: 1, padding: '4px 7px', fontSize: 11, borderRadius: 3,
+                border: terminal ? '1px solid var(--t-border)' : '1px solid #d1d5db',
+                background: terminal ? 'var(--t-bg-input)' : '#fff',
+                color: terminal ? 'var(--t-text)' : '#1e293b',
+                outline: 'none', fontFamily: 'inherit',
+              }}
+            />
+            <button
+              type="button"
+              onMouseDown={e => {
+                e.preventDefault()
+                const tag = customJobTagInput.trim()
+                if (tag && !selectedJobTags.includes(tag)) setSelectedJobTags(prev => [...prev, tag])
+                setCustomJobTagInput('')
+              }}
+              style={{
+                padding: '4px 8px', fontSize: 11, borderRadius: 3, whiteSpace: 'nowrap',
+                border: terminal ? '1px solid var(--t-border)' : '1px solid #d1d5db',
+                background: terminal ? 'var(--t-bg-elevated)' : '#f9fafb',
+                color: terminal ? 'var(--t-text-secondary)' : '#374151', cursor: 'pointer',
+              }}
+            >
+              添加
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -1612,7 +1655,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone, save
         </div>
 
         <div ref={softSkillWrapRef} style={{ position: 'relative' }}>
-          <label className={labelClass} style={labelStyle}>软技能 * （已选 {selectedSoftSkills.length} 项）</label>
+          <label className={labelClass} style={labelStyle}>岗位所需软技能 * （已选 {selectedSoftSkills.length} 项）</label>
           <div style={{ position: 'relative' }} ref={softSkillTriggerRef}>
             <div
               className={terminal ? undefined : inputClass}
@@ -1632,18 +1675,64 @@ export default function CandidateProfileBuilder({ terminal = false, onDone, save
           </div>
           {softSkillOpen && (terminal
             ? createPortal(
-                <div ref={softSkillPanelRef} style={{ position: 'fixed', top: softSkillDropPos.top, left: softSkillDropPos.left, width: softSkillDropPos.width, zIndex: 9999, maxHeight: 228, overflowY: 'auto', borderRadius: 'var(--t-radius)', border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', boxShadow: 'var(--t-shadow-elevated)', padding: '4px 0' }}>
-                  {ALL_SOFT_SKILLS.map(skill => (
-                    <SoftSkillOption key={skill} skill={skill} description={SOFT_SKILL_DESCRIPTIONS[skill]} checked={selectedSoftSkills.includes(skill)} terminal={terminal} onToggle={toggleSoftSkill} />
-                  ))}
+                <div ref={softSkillPanelRef} style={{ position: 'fixed', top: softSkillDropPos.top, left: softSkillDropPos.left, width: softSkillDropPos.width, zIndex: 9999, maxHeight: 260, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 'var(--t-radius)', border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', boxShadow: 'var(--t-shadow-elevated)' }}>
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+                    {ALL_SOFT_SKILLS.map(skill => (
+                      <SoftSkillOption key={skill} skill={skill} description={SOFT_SKILL_DESCRIPTIONS[skill]} checked={selectedSoftSkills.includes(skill)} terminal={terminal} onToggle={toggleSoftSkill} />
+                    ))}
+                  </div>
+                  <div style={{ padding: '5px 8px', borderTop: '1px solid var(--t-border-subtle)', display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <input
+                      type="text"
+                      value={customSkillInput}
+                      onChange={e => setCustomSkillInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const s = customSkillInput.trim()
+                          if (s && !selectedSoftSkills.includes(s)) setSelectedSoftSkills(prev => [...prev, s])
+                          setCustomSkillInput('')
+                        }
+                      }}
+                      placeholder="自定义技能，回车添加"
+                      style={{ flex: 1, padding: '4px 7px', fontSize: 11, borderRadius: 3, border: '1px solid var(--t-border)', background: 'var(--t-bg-input)', color: 'var(--t-text)', outline: 'none', fontFamily: 'inherit' }}
+                    />
+                    <button type="button" onMouseDown={e => { e.preventDefault(); const s = customSkillInput.trim(); if (s && !selectedSoftSkills.includes(s)) setSelectedSoftSkills(prev => [...prev, s]); setCustomSkillInput('') }}
+                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 3, whiteSpace: 'nowrap', border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', cursor: 'pointer' }}>
+                      添加
+                    </button>
+                  </div>
                 </div>,
                 getTerminalPortalTarget(softSkillTriggerRef.current)
               )
             : (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999, maxHeight: 228, overflowY: 'auto', marginTop: 4, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '4px 0' }}>
-                  {ALL_SOFT_SKILLS.map(skill => (
-                    <SoftSkillOption key={skill} skill={skill} description={SOFT_SKILL_DESCRIPTIONS[skill]} checked={selectedSoftSkills.includes(skill)} terminal={terminal} onToggle={toggleSoftSkill} />
-                  ))}
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999, maxHeight: 260, display: 'flex', flexDirection: 'column', overflow: 'hidden', marginTop: 4, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+                    {ALL_SOFT_SKILLS.map(skill => (
+                      <SoftSkillOption key={skill} skill={skill} description={SOFT_SKILL_DESCRIPTIONS[skill]} checked={selectedSoftSkills.includes(skill)} terminal={terminal} onToggle={toggleSoftSkill} />
+                    ))}
+                  </div>
+                  <div style={{ padding: '5px 8px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <input
+                      type="text"
+                      value={customSkillInput}
+                      onChange={e => setCustomSkillInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const s = customSkillInput.trim()
+                          if (s && !selectedSoftSkills.includes(s)) setSelectedSoftSkills(prev => [...prev, s])
+                          setCustomSkillInput('')
+                        }
+                      }}
+                      placeholder="自定义技能，回车添加"
+                      style={{ flex: 1, padding: '4px 7px', fontSize: 11, borderRadius: 3, border: '1px solid #d1d5db', background: '#fff', color: '#1e293b', outline: 'none', fontFamily: 'inherit' }}
+                    />
+                    <button type="button" onMouseDown={e => { e.preventDefault(); const s = customSkillInput.trim(); if (s && !selectedSoftSkills.includes(s)) setSelectedSoftSkills(prev => [...prev, s]); setCustomSkillInput('') }}
+                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 3, whiteSpace: 'nowrap', border: '1px solid #d1d5db', background: '#f9fafb', color: '#374151', cursor: 'pointer' }}>
+                      添加
+                    </button>
+                  </div>
                 </div>
               )
           )}
