@@ -5,6 +5,48 @@ from app.extensions import db, jwt, bcrypt, cors, migrate, limiter, socketio, bl
 from logging_config import setup_logging
 from app.request_logging import init_request_logging
 
+_SENSITIVE = {
+    "authorization", "cookie", "set-cookie",
+    "password", "token", "access_token", "refresh_token",
+    "phone", "email", "resume", "file", "attachment", "id_card",
+    "身份证", "手机号", "邮箱",
+}
+
+
+def _strip_sensitive(d):
+    if not isinstance(d, dict):
+        return d
+    return {
+        k: "[FILTERED]" if k.lower() in _SENSITIVE else v
+        for k, v in d.items()
+    }
+
+
+def _before_send(event, hint):
+    req = event.get("request", {})
+    if "headers" in req:
+        req["headers"] = _strip_sensitive(req["headers"])
+    if "data" in req:
+        req["data"] = None
+    if "extra" in event:
+        event["extra"] = _strip_sensitive(event["extra"])
+    return event
+
+
+_sentry_dsn = os.getenv("SENTRY_DSN")
+if _sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.flask import FlaskIntegration
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        integrations=[FlaskIntegration()],
+        send_default_pii=False,
+        max_request_body_size="never",
+        environment="production",
+        traces_sample_rate=0.05,
+        before_send=_before_send,
+    )
+
 
 def create_app(config_class=None):
     setup_logging("flask")
@@ -107,6 +149,7 @@ def create_app(config_class=None):
         from app.models import employer_candidate_favorite  # noqa: F401
         from app.models import headhunting_request  # noqa: F401
         from app.models import candidate_email_action  # noqa: F401
+        from app.models import notification  # noqa: F401
 
     @app.get("/api/health")
     def health():
