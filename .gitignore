@@ -85,3 +85,4 @@ scripts/ai_backup_*/
 *.secret
 *.key
 *.pem
+.env
