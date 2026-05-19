@@ -12,9 +12,15 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False, default="candidate")
     name = db.Column(db.String(60), nullable=False)
     company_name = db.Column(db.String(100), nullable=True)  # employer only
+    avatar_url = db.Column(db.String(500), nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     last_login = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.Index('ix_users_role',       'role'),
+        db.Index('ix_users_created_at', 'created_at'),
+    )
 
     def set_password(self, password: str):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
@@ -37,5 +43,6 @@ class User(db.Model):
             "role": self.role,
             "name": self.name,
             "company_name": self.company_name,
+            "avatar_url": self.avatar_url,
             "created_at": self._iso(self.created_at),
         }

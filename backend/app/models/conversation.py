@@ -15,6 +15,13 @@ class ConversationThread(db.Model):
     updated_at    = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),
                               onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
+    __table_args__ = (
+        db.Index('ix_conv_thread_employer_id',      'employer_id'),
+        db.Index('ix_conv_thread_candidate_id',     'candidate_id'),
+        db.Index('ix_conv_thread_employer_updated', 'employer_id', 'updated_at'),
+        db.Index('ix_conv_thread_candidate_updated','candidate_id', 'updated_at'),
+    )
+
     invitation = db.relationship('Invitation', backref=db.backref('thread', uselist=False))
     job        = db.relationship('Job',        backref=db.backref('threads', lazy='dynamic'))
     candidate  = db.relationship('Candidate',  backref=db.backref('threads', lazy='dynamic'))
@@ -39,12 +46,17 @@ class Message(db.Model):
 
     id             = db.Column(db.Integer, primary_key=True)
     thread_id      = db.Column(db.Integer, db.ForeignKey('conversation_threads.id', ondelete='CASCADE'),
-                               nullable=False, index=True)
+                               nullable=False)
     sender_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     sender_role    = db.Column(db.String(20), nullable=False)   # 'employer' | 'candidate' | 'admin'
     content        = db.Column(db.Text, nullable=False)
     is_read        = db.Column(db.Boolean, default=False, nullable=False)
     created_at     = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        db.Index('ix_message_thread_read_sender', 'thread_id', 'is_read', 'sender_user_id'),
+        db.Index('ix_message_thread_id_page',     'thread_id', 'id'),
+    )
 
     sender = db.relationship('User', backref=db.backref('messages', lazy='dynamic'))
 

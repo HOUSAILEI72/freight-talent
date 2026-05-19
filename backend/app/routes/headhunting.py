@@ -172,4 +172,13 @@ def create_request():
     db.session.add(req)
     db.session.commit()
 
+    from app.utils.notifications import create_and_push_notification
+    create_and_push_notification(
+        user_id=user.id,
+        type='headhunting_request',
+        title='猎头服务需求已提交',
+        body=f'服务类型: {service_type}',
+        data={'request_id': req.id},
+    )
+
     return jsonify({"success": True, "request": req.to_dict()}), 201

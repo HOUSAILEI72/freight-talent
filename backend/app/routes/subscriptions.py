@@ -23,44 +23,60 @@ VALID_FUNCTIONS = [
     "Road", "ContractLogistics", "Warehousing", "Customs",
 ]
 
-ANNUAL_DISCOUNT = 0.85
+AVAILABLE_REGIONS = [
+    {"code": "GREAT_CHINA",   "label": "中国大区",   "hint": "华东·华北·华南·华西·华中·港澳台"},
+    {"code": "SOUTHEAST_ASIA","label": "东南亚",     "hint": "Southeast Asia"},
+    {"code": "MIDDLE_EAST",   "label": "中东",       "hint": "Middle East"},
+    {"code": "EUROPE",        "label": "欧洲",       "hint": "Europe"},
+    {"code": "AMERICAS",      "label": "美洲",       "hint": "Americas"},
+]
+VALID_AREA_CODES = {r["code"] for r in AVAILABLE_REGIONS}
+
+# Annual billing: pay 10 months, get 12 months (2 months free)
+ANNUAL_MONTHS_BILLED = 10
 
 # New China + Function subscription plans.
 PLANS = [
     {
         "id": "china_function",
         "name": "China + Selected Function",
-        "monthly_price": 700,
-        "annual_price": int(700 * 12 * ANNUAL_DISCOUNT),  # 7140
-        "annual_discount": ANNUAL_DISCOUNT,
+        "monthly_price": 650,
+        "annual_price": 650 * ANNUAL_MONTHS_BILLED,  # 6500
+        "annual_months_billed": ANNUAL_MONTHS_BILLED,
         "description": "覆盖中国区域单个职能方向",
         "features": [
             "中国全区域 (China, East/North/South/West/Central China, HK, TW, Macau)",
-            "选择 1 个职能方向 (Sea/Air/Road/Railway/Contract Logistics/ECOMS)",
-            "完整候选人档案查看",
+            "选择 1 个职能方向 (Sea/Air/CrossBorder/Railway/Road/ContractLogistics/Warehousing/Customs)",
+            "完整候选人档案查看 (50份/订阅期)",
+            "主动沟通权限 (30位/订阅期)",
             "发起邀约 & 沟通",
             "岗位发布 & AI 匹配",
         ],
         "allowed_functions": VALID_FUNCTIONS,
         "area_scope": "China",
+        "resume_view_limit": 50,
+        "contact_limit": 30,
     },
     {
         "id": "china_all_functions",
         "name": "China + All Functions",
         "monthly_price": 850,
-        "annual_price": int(850 * 12 * ANNUAL_DISCOUNT),  # 8670
-        "annual_discount": ANNUAL_DISCOUNT,
+        "annual_price": 850 * ANNUAL_MONTHS_BILLED,  # 8500
+        "annual_months_billed": ANNUAL_MONTHS_BILLED,
         "description": "覆盖中国区域全部职能方向",
         "features": [
             "中国全区域 (China, East/North/South/West/Central China, HK, TW, Macau)",
             "全职能方向 (ALL)",
-            "完整候选人档案查看",
+            "完整候选人档案查看 (50份/订阅期)",
+            "主动沟通权限 (30位/订阅期)",
             "发起邀约 & 沟通",
             "岗位发布 & AI 匹配",
             "高级筛选过滤",
         ],
         "allowed_functions": ["ALL"],
         "area_scope": "China",
+        "resume_view_limit": 50,
+        "contact_limit": 30,
         "highlighted": True,
     },
 ]
@@ -103,7 +119,42 @@ def get_my_subscription():
 
 @subscriptions_bp.get("/plans")
 def get_plans():
-    return jsonify({"success": True, "plans": PLANS})
+    return jsonify({"success": True, "plans": PLANS, "regions": AVAILABLE_REGIONS})
+
+
+@subscriptions_bp.get("/quota")
+@jwt_required()
+def get_quota():
+    """GET /api/subscriptions/quota — resume view + contact quota for the current employer."""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+
+    sub = (
+        Subscription.query
+        .filter_by(employer_id=user.id)
+        .order_by(Subscription.created_at.desc())
+        .first()
+    )
+    if not sub or not sub.is_active():
+        return jsonify({
+            "success": True,
+            "has_active": False,
+            "resume_views": {"used": 0, "limit": Subscription.RESUME_VIEW_LIMIT},
+            "contacts":     {"used": 0, "limit": Subscription.CONTACT_LIMIT},
+        })
+
+    from app.models.invitation import Invitation
+    contacts = (
+        db.session.query(Invitation.candidate_id)
+        .filter(
+            Invitation.employer_id == user.id,
+            Invitation.created_at >= sub.starts_at,
+        )
+        .distinct()
+        .count()
+    )
+    return jsonify({"success": True, "has_active": True, **sub.quota_dict(contacts)})
 
 
 @subscriptions_bp.post("/dev-activate")
@@ -153,8 +204,11 @@ def dev_activate():
     else:  # china_all_functions
         func_codes = ["ALL"]
 
-    # Area scope is always China
-    area_codes = ["GREAT_CHINA"]
+    # Area scope — caller selects region; default to GREAT_CHINA for backward compat
+    area_code = (data.get("area_code") or "GREAT_CHINA").strip()
+    if area_code not in VALID_AREA_CODES:
+        return _err(f"无效的 area_code: {area_code}，可选: {', '.join(sorted(VALID_AREA_CODES))}")
+    area_codes = [area_code]
 
     # Default duration based on billing_cycle
     if days <= 0:

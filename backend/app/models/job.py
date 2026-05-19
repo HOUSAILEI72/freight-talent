@@ -48,7 +48,7 @@ class Job(db.Model):
     business_area_name = db.Column(db.String(100), nullable=True)
 
     # ── Phase C: Function (sector) ──
-    function_code      = db.Column(db.String(50), nullable=True)
+    function_code      = db.Column(db.String(50), nullable=True, index=True)
     function_name      = db.Column(db.String(100), nullable=True)
 
     # ── Phase C: Management flag ──

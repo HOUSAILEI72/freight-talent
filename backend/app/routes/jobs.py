@@ -474,18 +474,16 @@ def public_jobs():
             )
             query = query.filter(sub.exists())
 
-    ordered = query.order_by(Job.created_at.desc())
-
     try:
         page      = max(1, int(request.args.get("page", 1)))
         page_size = max(1, min(int(request.args.get("page_size", 20)), 500))
     except (ValueError, TypeError):
         page, page_size = 1, 20
 
-    total = ordered.count()
+    total = query.count()
     total_pages = max(1, (total + page_size - 1) // page_size)
     page = min(page, total_pages)
-    jobs_list = ordered.offset((page - 1) * page_size).limit(page_size).all()
+    jobs_list = query.order_by(Job.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
 
     # 注入按分类聚合的标签（含 pending）
     tag_map = _load_job_tags_by_category([j.id for j in jobs_list])

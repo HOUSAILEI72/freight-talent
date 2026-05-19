@@ -43,6 +43,8 @@ class JobApplication(db.Model):
         db.Index("idx_job_application_candidate_id", "candidate_id"),
         db.Index("idx_job_application_employer_id",  "employer_id"),
         db.Index("idx_job_application_status",       "status"),
+        db.Index("ix_job_app_employer_status",       "employer_id", "status"),
+        db.Index("ix_job_app_candidate_created",     "candidate_id", "created_at"),
     )
 
     job       = db.relationship("Job",       backref=db.backref("applications", lazy="dynamic"))

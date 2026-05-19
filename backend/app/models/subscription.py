@@ -26,7 +26,11 @@ class Subscription(db.Model):
         db.Integer,
         db.ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
+    )
+
+    __table_args__ = (
+        db.Index('ix_subscription_employer_id',     'employer_id'),
+        db.Index('ix_subscription_employer_status', 'employer_id', 'status'),
     )
 
     # --- billing / lifecycle ---
@@ -47,6 +51,9 @@ class Subscription(db.Model):
     starts_at  = db.Column(db.DateTime(timezone=True), nullable=True)
     ends_at    = db.Column(db.DateTime(timezone=True), nullable=True)
 
+    # --- quota tracking ---
+    resume_views_used = db.Column(db.Integer, nullable=False, default=0)
+
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
@@ -58,6 +65,15 @@ class Subscription(db.Model):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+
+    RESUME_VIEW_LIMIT = 50
+    CONTACT_LIMIT = 30
+
+    def quota_dict(self, contacts_initiated: int) -> dict:
+        return {
+            "resume_views": {"used": self.resume_views_used, "limit": self.RESUME_VIEW_LIMIT},
+            "contacts":     {"used": contacts_initiated,      "limit": self.CONTACT_LIMIT},
+        }
 
     def is_active(self) -> bool:
         if self.status != "active":
@@ -123,6 +139,7 @@ class Subscription(db.Model):
             "tier":          self.tier,         # keep for backward compatibility
             "function_codes":      self.function_codes,
             "business_area_codes": self.business_area_codes,
+            "resume_views_used": self.resume_views_used,
             "starts_at":   self.starts_at.isoformat() if self.starts_at else None,
             "ends_at":     self.ends_at.isoformat() if self.ends_at else None,
             "created_at":  self.created_at.isoformat() if self.created_at else None,

@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import func as sa_func
+from sqlalchemy.orm import joinedload
 from ..extensions import db
 from ..models.user import User
 from ..models.job import Job
@@ -42,14 +44,16 @@ def overview():
     new_candidates_7d = Candidate.query.filter(Candidate.created_at >= seven_days_ago).count()
     new_invitations_7d = Invitation.query.filter(Invitation.created_at >= seven_days_ago).count()
 
-    # ── 实时动态：最近邀约 + 岗位 + 候选人 ───────────────────
+    # ── 实时动态：最近邀约 + 岗位 + 候选人（eager load 避免 N+1）───────────────────
     recent_invs = (
         Invitation.query
+        .options(joinedload(Invitation.candidate), joinedload(Invitation.employer))
         .order_by(Invitation.created_at.desc())
         .limit(3).all()
     )
     recent_jobs = (
         Job.query
+        .options(joinedload(Job.company))
         .order_by(Job.created_at.desc())
         .limit(3).all()
     )
@@ -87,28 +91,43 @@ def overview():
     activity.sort(key=lambda x: x['time'], reverse=True)
     activity = activity[:6]
 
-    # ── 近7天日趋势 ────────────────────────────────────────────
+    # ── 近7天日趋势（3次 GROUP BY 替代 21次 per-day COUNT）────────────────────────
+    cand_by_day = {
+        str(r[0]): r[1]
+        for r in db.session.query(
+            sa_func.date(Candidate.created_at),
+            sa_func.count(Candidate.id),
+        ).filter(Candidate.created_at >= seven_days_ago).group_by(
+            sa_func.date(Candidate.created_at)
+        ).all()
+    }
+    job_by_day = {
+        str(r[0]): r[1]
+        for r in db.session.query(
+            sa_func.date(Job.created_at),
+            sa_func.count(Job.id),
+        ).filter(Job.created_at >= seven_days_ago).group_by(
+            sa_func.date(Job.created_at)
+        ).all()
+    }
+    inv_by_day = {
+        str(r[0]): r[1]
+        for r in db.session.query(
+            sa_func.date(Invitation.created_at),
+            sa_func.count(Invitation.id),
+        ).filter(Invitation.created_at >= seven_days_ago).group_by(
+            sa_func.date(Invitation.created_at)
+        ).all()
+    }
     trend_7d = []
     for i in range(6, -1, -1):
-        day_start = (now - timedelta(days=i)).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        day_end = day_start + timedelta(days=1)
-        label = day_start.strftime('%m-%d')
+        day = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_str = day.strftime('%Y-%m-%d')
         trend_7d.append({
-            'date':        label,
-            'candidates':  Candidate.query.filter(
-                Candidate.created_at >= day_start,
-                Candidate.created_at < day_end,
-            ).count(),
-            'jobs':        Job.query.filter(
-                Job.created_at >= day_start,
-                Job.created_at < day_end,
-            ).count(),
-            'invitations': Invitation.query.filter(
-                Invitation.created_at >= day_start,
-                Invitation.created_at < day_end,
-            ).count(),
+            'date':        day.strftime('%m-%d'),
+            'candidates':  cand_by_day.get(day_str, 0),
+            'jobs':        job_by_day.get(day_str, 0),
+            'invitations': inv_by_day.get(day_str, 0),
         })
 
     return jsonify({

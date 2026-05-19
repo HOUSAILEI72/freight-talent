@@ -47,7 +47,7 @@ def list_candidates_with_filters(
     if job_type:
         query = query.filter(Candidate.job_type == job_type)
     if function_code:
-        query = query.filter(Candidate.business_type == function_code)
+        query = query.filter(Candidate.function_code == function_code)
     if business_area_code:
         query = query.filter(Candidate.business_area_code == business_area_code)
     if location_code_filter:
@@ -117,18 +117,18 @@ def list_candidates_with_filters(
             )
             query = query.filter(sub.exists())
 
+    total = query.count()
+    page = max(1, page)
+    page_size = max(1, min(page_size, 100))
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = min(page, total_pages)
+
     # MySQL 8 不支持 "ORDER BY ... DESC NULLS LAST" 语法。
     # 用 CASE WHEN 把 NULL 排到末尾，等价于 PostgreSQL 的 nullslast()。
     ordered = query.order_by(
         db.case((Candidate.profile_confirmed_at.is_(None), 0), else_=1).desc(),
         Candidate.profile_confirmed_at.desc(),
     )
-
-    total = ordered.count()
-    page = max(1, page)
-    page_size = max(1, min(page_size, 100))
-    total_pages = max(1, (total + page_size - 1) // page_size)
-    page = min(page, total_pages)
     items = ordered.offset((page - 1) * page_size).limit(page_size).all()
 
     # 如果是 applied 模式，顺带查一次 application 记录，方便路由层注入状态

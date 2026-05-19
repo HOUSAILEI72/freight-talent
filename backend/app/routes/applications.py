@@ -207,6 +207,14 @@ def apply_to_job(job_id):
     db.session.add(app_row)
     db.session.commit()
 
+    from app.utils.notifications import create_and_push_notification
+    create_and_push_notification(
+        user_id=job.company_id,
+        type='application_status_change',
+        title=f'收到新投递 — {job.title}',
+        data={'application_id': app_row.id, 'job_id': job.id},
+    )
+
     return jsonify({"success": True, "application": app_row.to_dict()}), 201
 
 
@@ -390,5 +398,24 @@ def update_application_status(application_id):
     app_row.status = new_status
     app_row.updated_at = datetime.now(timezone.utc)
     db.session.commit()
+
+    STATUS_LABELS = {
+        'viewed':      '已查看您的投递',
+        'shortlisted': '已将您加入候选名单',
+        'rejected':    '暂不匹配您的投递',
+    }
+    label = STATUS_LABELS.get(new_status)
+    if label and user.role == 'employer':
+        cand = db.session.get(Candidate, app_row.candidate_id)
+        if cand and cand.user_id:
+            from app.utils.notifications import create_and_push_notification
+            j = db.session.get(Job, app_row.job_id)
+            create_and_push_notification(
+                user_id=cand.user_id,
+                type='application_status_change',
+                title=label,
+                body=j.title if j else None,
+                data={'application_id': app_row.id},
+            )
 
     return jsonify({"success": True, "application": app_row.to_dict()})

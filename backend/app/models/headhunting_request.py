@@ -6,9 +6,14 @@ class HeadhuntingRequest(db.Model):
     __tablename__ = "headhunting_requests"
 
     id          = db.Column(db.Integer, primary_key=True)
-    employer_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    employer_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     service_type = db.Column(db.String(32), nullable=False, default="personal")
     status      = db.Column(db.String(32), nullable=False, default="submitted")
+
+    __table_args__ = (
+        db.Index('ix_headhunting_employer_id', 'employer_id'),
+        db.Index('ix_headhunting_status',      'status'),
+    )
 
     job_payload     = db.Column(db.JSON, nullable=True)
     terms_payload   = db.Column(db.JSON, nullable=True)

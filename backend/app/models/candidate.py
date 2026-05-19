@@ -84,12 +84,14 @@ class Candidate(db.Model):
     soft_skill_tags               = db.Column(db.JSON, nullable=True)
 
     # 当前薪酬结构（与 expected_salary_* 分离）
-    current_salary_min            = db.Column(db.Integer, nullable=True)
-    current_salary_max            = db.Column(db.Integer, nullable=True)
-    current_salary_months         = db.Column(db.Integer, nullable=True)
-    current_average_bonus_percent = db.Column(db.Float, nullable=True)
-    current_has_year_end_bonus    = db.Column(db.Boolean, nullable=True)
-    current_year_end_bonus_months = db.Column(db.Float, nullable=True)
+    current_salary_min               = db.Column(db.Integer, nullable=True)
+    current_salary_max               = db.Column(db.Integer, nullable=True)
+    current_salary_months            = db.Column(db.Integer, nullable=True)
+    current_average_bonus_percent    = db.Column(db.Float, nullable=True)   # legacy, kept for compat
+    current_commission_bonus_period  = db.Column(db.String(20), nullable=True)  # not_applicable / monthly / quarterly / semi_annual
+    current_commission_bonus_amount  = db.Column(db.Float, nullable=True)
+    current_has_year_end_bonus       = db.Column(db.Boolean, nullable=True)
+    current_year_end_bonus_months    = db.Column(db.Float, nullable=True)
 
     # 服务端计算的档案完整度状态
     profile_status                = db.Column(db.String(30), nullable=True, index=True)
@@ -108,6 +110,11 @@ class Candidate(db.Model):
         db.DateTime,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (
+        db.Index('ix_candidate_avail_func_area', 'availability_status', 'function_code', 'business_area_code'),
+        db.Index('ix_candidates_created_at',     'created_at'),
     )
 
     user = db.relationship("User", backref=db.backref("candidate_profile", uselist=False))
@@ -198,12 +205,13 @@ class Candidate(db.Model):
                 "certificates":         self.certificates or [],
                 # ── CAND-2A: current-company sensitive fields ──
                 "current_responsibilities":      self.current_responsibilities,
-                "current_salary_min":            self.current_salary_min,
-                "current_salary_max":            self.current_salary_max,
-                "current_salary_months":         self.current_salary_months,
-                "current_average_bonus_percent": self.current_average_bonus_percent,
-                "current_has_year_end_bonus":    self.current_has_year_end_bonus,
-                "current_year_end_bonus_months": self.current_year_end_bonus_months,
+                "current_salary_min":               self.current_salary_min,
+                "current_salary_max":               self.current_salary_max,
+                "current_salary_months":            self.current_salary_months,
+                "current_commission_bonus_period":  self.current_commission_bonus_period,
+                "current_commission_bonus_amount":  self.current_commission_bonus_amount,
+                "current_has_year_end_bonus":       self.current_has_year_end_bonus,
+                "current_year_end_bonus_months":    self.current_year_end_bonus_months,
                 "private_visible":      True,
             })
         else:
@@ -226,7 +234,8 @@ class Candidate(db.Model):
                 "current_salary_min":            None,
                 "current_salary_max":            None,
                 "current_salary_months":         None,
-                "current_average_bonus_percent": None,
+                "current_commission_bonus_period": None,
+                "current_commission_bonus_amount": None,
                 "current_has_year_end_bonus":    None,
                 "current_year_end_bonus_months": None,
                 "private_visible":      False,

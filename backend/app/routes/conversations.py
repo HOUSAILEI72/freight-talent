@@ -304,6 +304,25 @@ def send_message(thread_id):
         socketio.emit('conversation_updated', conversation_update,
                       room=f'user_{candidate.user_id}')
 
+    from app.utils.notifications import create_and_push_notification
+    sender_name = user.company_name or user.name or '对方'
+    if user.id != thread.employer_id:
+        create_and_push_notification(
+            user_id=thread.employer_id,
+            type='new_message',
+            title=f'新消息来自 {sender_name}',
+            body=content[:80],
+            data={'thread_id': thread_id},
+        )
+    elif candidate and candidate.user_id:
+        create_and_push_notification(
+            user_id=candidate.user_id,
+            type='new_message',
+            title=f'新消息来自 {sender_name}',
+            body=content[:80],
+            data={'thread_id': thread_id},
+        )
+
     return jsonify({'success': True, 'message': msg_dict}), 201
 
 
@@ -324,9 +343,10 @@ def open_conversation():
     if user.role not in ('employer', 'admin'):
         return _err('仅企业或管理员可发起在线沟通', 403)
 
+    _employer_sub = None
     if user.role == 'employer':
         from app.utils.subscription_access import subscription_gate
-        sub, sub_err = subscription_gate(user.id)
+        _employer_sub, sub_err = subscription_gate(user.id)
         if sub_err:
             return sub_err
 
@@ -354,10 +374,9 @@ def open_conversation():
     if candidate.availability_status == 'closed':
         return _err('该候选人当前不接受沟通（已关闭求职状态）', 422)
 
-    if user.role == 'employer':
-        from app.utils.subscription_access import _get_active_subscription
-        sub = _get_active_subscription(user.id)
-        if sub and not sub.covers_candidate(candidate.function_code, candidate.business_area_code):
+    # Reuse the subscription already fetched above — no second query needed
+    if user.role == 'employer' and _employer_sub:
+        if not _employer_sub.covers_candidate(candidate.function_code, candidate.business_area_code):
             return jsonify({
                 'success': False,
                 'message': '您的订阅范围不覆盖该候选人，无法发起沟通',

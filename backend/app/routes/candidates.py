@@ -281,10 +281,15 @@ def update_me():
     if e: return _err(e)
     if cs_months_val is not sentinel and cs_months_val is not None and cs_months_val not in (12, 13, 14):
         return _err("current_salary_months 只能是 12 / 13 / 14")
-    abp_val, e = _opt_float("current_average_bonus_percent")
+    VALID_COMMISSION_PERIODS = {'not_applicable', 'monthly', 'quarterly', 'semi_annual'}
+    cbp_val = sentinel
+    if "current_commission_bonus_period" in data:
+        v = data.get("current_commission_bonus_period")
+        if v is not None and v not in VALID_COMMISSION_PERIODS:
+            return _err("current_commission_bonus_period 只能是 not_applicable / monthly / quarterly / semi_annual")
+        cbp_val = v
+    cba_val, e = _opt_float("current_commission_bonus_amount")
     if e: return _err(e)
-    if abp_val is not sentinel and abp_val is not None and not (0 <= abp_val <= 100):
-        return _err("current_average_bonus_percent 必须在 0-100 之间")
     yebm_val, e = _opt_float("current_year_end_bonus_months")
     if e: return _err(e)
     if yebm_val is not sentinel and yebm_val is not None and not (0 <= yebm_val <= 24):
@@ -422,8 +427,10 @@ def update_me():
         profile.current_salary_max = csx_val
     if cs_months_val is not sentinel:
         profile.current_salary_months = cs_months_val
-    if abp_val is not sentinel:
-        profile.current_average_bonus_percent = abp_val
+    if cbp_val is not sentinel:
+        profile.current_commission_bonus_period = cbp_val
+    if cba_val is not sentinel:
+        profile.current_commission_bonus_amount = cba_val
     if has_yeb_val is not sentinel:
         profile.current_has_year_end_bonus = has_yeb_val
     if yebm_val is not sentinel:
@@ -695,8 +702,16 @@ def get_candidate_public(candidate_id):
     if is_own or user.role == "admin":
         include_private = True
     elif user.role == "employer":
-        from app.utils.candidate_privacy import employer_can_view_private_profile
-        include_private = employer_can_view_private_profile(user.id, profile.id)
+        # Single subscription load — covers both access check and quota increment.
+        from app.utils.subscription_access import _get_active_subscription
+        from app.models.subscription import Subscription
+        _sub = _get_active_subscription(user.id)
+        include_private = bool(
+            _sub and _sub.covers_candidate(profile.function_code, profile.business_area_code)
+        )
+        if include_private and _sub and _sub.resume_views_used < Subscription.RESUME_VIEW_LIMIT:
+            _sub.resume_views_used += 1
+            db.session.commit()
     else:
         include_private = False
 
@@ -741,13 +756,9 @@ def upload_resume():
     if not _allowed_file(f.filename):
         return _err("仅支持 PDF、DOC、DOCX 格式")
 
-    # 生成安全、唯一的存储文件名
+    # 读取文件内容（一次性，供 COS 上传或本地存储复用）
+    file_bytes = f.read()
     ext = f.filename.rsplit(".", 1)[-1].lower()
-    safe_name = f"{user.id}_{uuid.uuid4().hex}.{ext}"
-    upload_dir = current_app.config["UPLOAD_FOLDER"]
-    os.makedirs(upload_dir, exist_ok=True)
-    save_path = os.path.join(upload_dir, safe_name)
-    f.save(save_path)
 
     # 更新或创建 Candidate 记录中的简历字段
     now = datetime.now(timezone.utc)
@@ -764,12 +775,28 @@ def upload_resume():
         )
         db.session.add(profile)
 
-    # 删除旧文件（静默失败）
-    if profile.resume_file_path and os.path.exists(profile.resume_file_path):
-        try:
-            os.remove(profile.resume_file_path)
-        except OSError:
-            pass
+    # 删除旧简历（COS 对象或本地文件）
+    from app.utils.cos_storage import upload_resume as _cos_upload, delete_resume as _cos_delete
+    if profile.resume_file_path:
+        if profile.resume_file_path.startswith("https://"):
+            _cos_delete(profile.resume_file_path)
+        elif os.path.exists(profile.resume_file_path):
+            try:
+                os.remove(profile.resume_file_path)
+            except OSError:
+                pass
+
+    # 优先上传到 COS；未配置时降级到本地磁盘
+    cos_url = _cos_upload(file_bytes, user.id, f.filename)
+    if cos_url:
+        save_path = cos_url
+    else:
+        safe_name = f"{user.id}_{uuid.uuid4().hex}.{ext}"
+        upload_dir = current_app.config["UPLOAD_FOLDER"]
+        os.makedirs(upload_dir, exist_ok=True)
+        save_path = os.path.join(upload_dir, safe_name)
+        with open(save_path, "wb") as fh:
+            fh.write(file_bytes)
 
     profile.resume_file_path = save_path
     profile.resume_file_name = secure_filename(f.filename)
@@ -784,6 +811,61 @@ def upload_resume():
         "uploaded_at": profile.resume_uploaded_at.isoformat(),
         "profile": profile.to_dict(),
     }), 201
+
+
+# ── 附件简历查看 ─────────────────────────────────────────────────────────────
+
+@candidates_bp.get("/<int:candidate_id>/resume")
+@jwt_required()
+def view_candidate_resume(candidate_id):
+    """GET /api/candidates/:id/resume — 供 employer/admin 查看候选人附件简历。
+    PDF 内联显示，DOC/DOCX 触发下载。
+    """
+    from flask import send_file as _send_file
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+
+    profile = get_candidate_by_id(candidate_id)
+    if not profile:
+        return _err("候选人不存在", 404)
+
+    is_own = (user.role == "candidate" and profile.user_id == user.id)
+
+    if not is_own and user.role not in ("employer", "admin"):
+        return _err("仅企业或管理员账号可查看简历", 403)
+
+    if not profile.resume_file_path or not profile.resume_file_name:
+        return _err("该候选人暂未上传附件简历", 404)
+
+    if not is_own and user.role == "employer":
+        from app.utils.candidate_privacy import employer_can_view_private_profile
+        if not employer_can_view_private_profile(user.id, profile.id):
+            return _err("您的订阅暂不支持查看该候选人的简历", 403)
+
+    # ── COS 存储：生成 1 小时预签名 URL，302 重定向（不走 Flask 带宽） ──────────
+    if profile.resume_file_path.startswith("https://"):
+        from flask import redirect as _redirect
+        from app.utils.cos_storage import get_presigned_url
+        url = get_presigned_url(profile.resume_file_path, expires=3600)
+        return _redirect(url, code=302)
+
+    # ── 兼容旧本地文件 ────────────────────────────────────────────────────────
+    if not os.path.exists(profile.resume_file_path):
+        return _err("简历文件不存在，请联系候选人重新上传", 404)
+
+    ext = profile.resume_file_name.rsplit(".", 1)[-1].lower() if "." in profile.resume_file_name else ""
+    mimetype_map = {
+        "pdf":  "application/pdf",
+        "doc":  "application/msword",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    return _send_file(
+        profile.resume_file_path,
+        download_name=profile.resume_file_name,
+        as_attachment=ext != "pdf",
+        mimetype=mimetype_map.get(ext, "application/octet-stream"),
+    )
 
 
 # ── 收藏 toggle ───────────────────────────────────────────────────────────────

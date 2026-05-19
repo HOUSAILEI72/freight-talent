@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import logging
+from sqlalchemy import func as sa_func, case as sa_case
 from sqlalchemy.orm import joinedload
 from ..extensions import db
 from ..models.user import User
@@ -23,10 +24,11 @@ def create_invitation():
     if not user or user.role not in ('employer', 'admin'):
         return jsonify({'message': '无权限'}), 403
 
-    # Phase 8: subscription gate for employers
+    # Phase 8: subscription gate for employers — store sub for later scope check
+    _employer_sub = None
     if user.role == 'employer':
         from app.utils.subscription_access import subscription_gate
-        sub, sub_err = subscription_gate(user.id)
+        _employer_sub, sub_err = subscription_gate(user.id)
         if sub_err:
             return sub_err
 
@@ -56,11 +58,9 @@ def create_invitation():
     if candidate.availability_status == 'closed':
         return jsonify({'message': '该候选人当前不接受邀约（已关闭求职状态）'}), 422
 
-    # Phase 8: subscription must cover candidate's function+area
-    if user.role == 'employer':
-        from app.utils.subscription_access import _get_active_subscription
-        sub = _get_active_subscription(user.id)
-        if sub and not sub.covers_candidate(candidate.function_code, candidate.business_area_code):
+    # Phase 8: subscription must cover candidate's function+area (reuse sub from gate above)
+    if user.role == 'employer' and _employer_sub:
+        if not _employer_sub.covers_candidate(candidate.function_code, candidate.business_area_code):
             return jsonify({
                 'success': False,
                 'message': '您的订阅范围不覆盖该候选人，无法发起邀约',
@@ -114,6 +114,18 @@ def create_invitation():
     )
     db.session.add(thread)
     db.session.commit()
+
+    if candidate.user_id:
+        from app.utils.notifications import create_and_push_notification
+        job_title = job.title if job else '某岗位'
+        company = user.company_name or user.name or '某企业'
+        create_and_push_notification(
+            user_id=candidate.user_id,
+            type='invitation_status_change',
+            title=f'{company} 向您发出邀约',
+            body=job_title,
+            data={'invitation_id': inv.id, 'thread_id': thread.id},
+        )
 
     # 发送邀约邮件（新邀约才发送，existing pending/accepted 不重复发）
     email_sent = False
@@ -258,13 +270,27 @@ def company_summary():
         return jsonify({'message': '无权限'}), 403
 
     if user.role == 'employer':
-        total    = Invitation.query.filter_by(employer_id=current_user_id).count()
-        accepted = Invitation.query.filter_by(employer_id=current_user_id, status='accepted').count()
-        declined = Invitation.query.filter_by(employer_id=current_user_id, status='declined').count()
+        row = (
+            db.session.query(
+                sa_func.count(Invitation.id).label('total'),
+                sa_func.sum(sa_case((Invitation.status == 'accepted', 1), else_=0)).label('accepted'),
+                sa_func.sum(sa_case((Invitation.status == 'declined', 1), else_=0)).label('declined'),
+            )
+            .filter(Invitation.employer_id == current_user_id)
+            .first()
+        )
     else:
-        total    = Invitation.query.count()
-        accepted = Invitation.query.filter_by(status='accepted').count()
-        declined = Invitation.query.filter_by(status='declined').count()
+        row = (
+            db.session.query(
+                sa_func.count(Invitation.id).label('total'),
+                sa_func.sum(sa_case((Invitation.status == 'accepted', 1), else_=0)).label('accepted'),
+                sa_func.sum(sa_case((Invitation.status == 'declined', 1), else_=0)).label('declined'),
+            )
+            .first()
+        )
+    total    = int(row.total    or 0)
+    accepted = int(row.accepted or 0)
+    declined = int(row.declined or 0)
 
     replied = accepted + declined
 
@@ -309,6 +335,16 @@ def update_invitation_status(inv_id):
 
     inv.status = new_status
     db.session.commit()
+
+    from app.utils.notifications import create_and_push_notification
+    status_label = '接受了' if new_status == 'accepted' else '婉拒了'
+    cand_name = candidate.user.name if (candidate and candidate.user) else '候选人'
+    create_and_push_notification(
+        user_id=inv.employer_id,
+        type='invitation_status_change',
+        title=f'{cand_name} {status_label}您的邀约',
+        data={'invitation_id': inv.id},
+    )
 
     return jsonify({
         'message': '邀约状态已更新',

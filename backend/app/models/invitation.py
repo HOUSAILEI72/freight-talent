@@ -20,6 +20,14 @@ class Invitation(db.Model):
     updated_at   = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),
                              onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
+    __table_args__ = (
+        db.Index('ix_invitation_job_candidate',    'job_id', 'candidate_id'),
+        db.Index('ix_invitation_employer_status',  'employer_id', 'status'),
+        db.Index('ix_invitation_employer_created', 'employer_id', 'created_at'),
+        db.Index('ix_invitation_candidate_created','candidate_id', 'created_at'),
+        db.Index('ix_invitation_created_at',       'created_at'),
+    )
+
     job       = db.relationship('Job',       backref=db.backref('invitations', lazy='dynamic'))
     candidate = db.relationship('Candidate', backref=db.backref('invitations', lazy='dynamic'))
     employer  = db.relationship('User',      backref=db.backref('sent_invitations', lazy='dynamic'))
