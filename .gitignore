@@ -86,3 +86,4 @@ scripts/ai_backup_*/
 *.key
 *.pem
 .env
+.superpowers/
