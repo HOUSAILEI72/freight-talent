@@ -6,7 +6,7 @@ socket_events.py — 所有 Socket.IO 事件处理器
   user_{id}    — 某个用户的所有设备（用于会话列表推送）
 """
 from flask import request
-from flask_socketio import emit, join_room, leave_room
+from flask_socketio import emit, join_room, leave_room, ConnectionRefusedError
 from flask_jwt_extended import decode_token
 
 from ..extensions import db, blocklist_contains
@@ -77,7 +77,7 @@ def register_socket_events(socketio):
         token = (auth or {}).get('token') or request.args.get('token', '')
         user_id, role = _user_id_from_token(token)
         if not user_id:
-            return False   # socket.io 自动发 connect_error 并断开
+            raise ConnectionRefusedError('auth_failed')  # 让客户端区分认证失败与网络抖动
 
         _sid_to_user[request.sid] = user_id
         _sid_to_role[request.sid] = role or 'candidate'

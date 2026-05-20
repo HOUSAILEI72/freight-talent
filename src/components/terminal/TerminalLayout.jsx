@@ -13,6 +13,7 @@ import { getRoleHome } from '../../router/roleHome'
 import { EMPLOYER_ICON_NAV } from './navItems'
 import { useTerminalTheme } from '../../context/TerminalThemeContext'
 import { useSocket } from '../../hooks/useSocket'
+import { getSocket, disconnectSocket } from '../../lib/socket'
 import { useNotifications } from '../../context/NotificationContext'
 import { useNotificationSocket } from '../../hooks/useNotificationSocket'
 import NotificationPanel from '../notifications/NotificationPanel'
@@ -169,12 +170,87 @@ function ThemeToggleButton() {
   )
 }
 
+function AvatarModal({ user, onClose }) {
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const displayName = user?.company_name || user?.name || '?'
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.72)' }}
+      onClick={onClose}
+    >
+      <div
+        className="flex flex-col items-center gap-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {user?.avatar_url ? (
+          <img
+            src={user.avatar_url}
+            alt="头像"
+            style={{
+              width: 160,
+              height: 160,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '3px solid var(--t-border)',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 160,
+              height: 160,
+              borderRadius: '50%',
+              background: 'var(--t-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 64,
+              fontWeight: 700,
+              color: '#fff',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+            }}
+          >
+            {(user?.name?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
+          </div>
+        )}
+        <span style={{ color: 'var(--t-text)', fontSize: 16, fontWeight: 600 }}>{displayName}</span>
+        <span style={{ color: 'var(--t-text-muted)', fontSize: 12 }}>点击任意处关闭</span>
+      </div>
+    </div>
+  )
+}
+
 function TerminalHeader({ title = 'DASHBOARD' }) {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { socket } = useSocket(!!user)
   const { unreadCount, panelOpen, setPanelOpen } = useNotifications()
   useNotificationSocket(socket)
+
+  // 全局认证失败守卫：token 失效时立即停止 socket 重连，触发退出
+  useEffect(() => {
+    if (!user) return
+    const sock = getSocket()
+    if (!sock) return
+    const onConnectError = (err) => {
+      if (err?.message === 'auth_failed') {
+        sock.io.reconnection(false)
+        disconnectSocket()
+        window.dispatchEvent(new CustomEvent('auth:session-expired'))
+      }
+    }
+    sock.on('connect_error', onConnectError)
+    return () => sock.off('connect_error', onConnectError)
+  }, [!!user]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false)
 
   async function handleLogout() {
     await logout()
@@ -236,9 +312,19 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
 
         <div className="terminal-header-user flex items-center gap-2 rounded-[var(--t-radius)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] px-2.5 py-1">
           {user?.avatar_url ? (
-            <img src={user.avatar_url} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" />
+            <img
+              src={user.avatar_url}
+              alt=""
+              className="h-5 w-5 shrink-0 rounded-full object-cover cursor-pointer"
+              title="双击查看大图"
+              onDoubleClick={() => setAvatarModalOpen(true)}
+            />
           ) : (
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color:var(--t-primary)] text-[10px] font-bold text-white">
+            <div
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color:var(--t-primary)] text-[10px] font-bold text-white cursor-pointer"
+              title="双击查看大图"
+              onDoubleClick={() => setAvatarModalOpen(true)}
+            >
               {(user?.name?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
             </div>
           )}
@@ -261,6 +347,8 @@ function TerminalHeader({ title = 'DASHBOARD' }) {
           <LogOut size={14} />
         </button>
       </div>
+
+      {avatarModalOpen && <AvatarModal user={user} onClose={() => setAvatarModalOpen(false)} />}
     </header>
   )
 }
