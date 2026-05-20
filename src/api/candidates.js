@@ -39,6 +39,14 @@ export const candidatesApi = {
   },
 
   /**
+   * 调用 AI 解析已上传的简历，提取档案字段（DeepSeek）
+   * 超时设为 90s，DeepSeek 侧最长需要 60s
+   */
+  aiParseResume() {
+    return client.post('/v2/candidates/me/resume/ai-parse', null, { timeout: 90000 })
+  },
+
+  /**
    * 获取候选人公开档案（供 employer / admin 查看）
    * @param {number} candidateId
    */

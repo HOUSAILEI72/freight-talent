@@ -239,7 +239,7 @@ export function CandidateFilterBar({
               value={avail}
               onChange={setAvail}
               options={AVAIL_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
-              placeholder="开放状态"
+              placeholder="求职状态（全部）"
               hasValue={avail !== 'all'}
             />
           ) : (
@@ -258,11 +258,11 @@ export function CandidateFilterBar({
               value={gender ?? ''}
               onChange={setGender}
               options={[
-                { value: '', label: '性别（不限）' },
+                { value: '', label: '性别偏向（不限）' },
                 { value: 'male', label: '男' },
                 { value: 'female', label: '女' },
               ]}
-              placeholder="性别（不限）"
+              placeholder="性别偏向（不限）"
               hasValue={!!gender}
             />
           ) : (
@@ -271,7 +271,7 @@ export function CandidateFilterBar({
               onChange={e => setGender(e.target.value)}
               className={SEL_CLASS()}
             >
-              <option value="">性别（不限）</option>
+              <option value="">性别偏向（不限）</option>
               <option value="male">男</option>
               <option value="female">女</option>
             </select>

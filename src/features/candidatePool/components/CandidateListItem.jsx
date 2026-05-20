@@ -31,12 +31,15 @@ export function CandidateListItem({ c, isSelected, isInvited, isArchived, canInv
         <div
           className={
             terminal
-              ? 'w-11 h-11 rounded-lg flex items-center justify-center text-white font-bold text-base flex-shrink-0'
-              : 'w-11 h-11 rounded-lg flex items-center justify-center text-white font-bold text-base flex-shrink-0 bg-blue-500'
+              ? 'w-11 h-11 rounded-lg overflow-hidden flex items-center justify-center text-white font-bold text-base flex-shrink-0'
+              : 'w-11 h-11 rounded-lg overflow-hidden flex items-center justify-center text-white font-bold text-base flex-shrink-0 bg-blue-500'
           }
           style={terminal ? { background: 'var(--t-primary)' } : undefined}
         >
-          {c.full_name?.[0] ?? '?'}
+          {c.avatar_url
+            ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" />
+            : (c.full_name?.[0] ?? '?')
+          }
         </div>
 
         {/* 信息 */}

@@ -636,7 +636,7 @@ function CandidateDetailPanel({
             className={terminal ? 'font-sans text-[10px] uppercase tracking-[0.04em] mb-2' : 'text-sm font-semibold text-slate-800 mb-2'}
             style={terminal ? mutedColor : titleColor}
           >
-            {terminal ? 'SUMMARY' : '个人简介'}
+            {terminal ? 'ADVANTAGES' : '个人优势'}
           </p>
           <p
             className={terminal ? 'text-sm leading-relaxed whitespace-pre-line' : 'text-sm text-slate-600 leading-relaxed whitespace-pre-line'}

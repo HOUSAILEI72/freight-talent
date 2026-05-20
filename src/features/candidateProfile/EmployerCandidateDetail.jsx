@@ -505,7 +505,7 @@ export default function EmployerCandidateDetail() {
               {/* block 3: summary highlight */}
               {profile.summary && (
                 <div style={{ marginBottom: 12, paddingTop: 10, borderTop: '1px solid var(--t-border-subtle)' }}>
-                  <SectionLabel>候选人亮点</SectionLabel>
+                  <SectionLabel>个人优势</SectionLabel>
                   <p style={{ fontSize: 12, color: 'var(--t-text-secondary)', lineHeight: 1.7, margin: 0 }}>
                     {profile.summary.length > 120 ? profile.summary.slice(0, 120) + '…' : profile.summary}
                   </p>
@@ -609,6 +609,16 @@ export default function EmployerCandidateDetail() {
           <div style={{ flex: 1, minWidth: 0 }}>
             {unlocked ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                {/* personal advantages — full summary */}
+                {profile.summary && (
+                  <Panel>
+                    <SectionLabel>个人优势</SectionLabel>
+                    <p style={{ fontSize: 13, color: 'var(--t-text-secondary)', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-line' }}>
+                      {profile.summary}
+                    </p>
+                  </Panel>
+                )}
 
                 {/* full capability tags */}
                 {tagGroups.length > 0 && (

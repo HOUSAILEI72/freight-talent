@@ -4,7 +4,7 @@ import { Users, Inbox, Star, UserSearch, UsersRound, BriefcaseBusiness } from 'l
 export const FUNCTION_OPTIONS = DEFAULT_FUNCTIONS.filter(f => f.key !== 'ALL')
 
 export const AVAIL_OPTIONS = [
-  { value: 'all',         label: '全部' },
+  { value: 'all',         label: '求职状态（全部）' },
   { value: 'open',        label: '离职-随时到岗' },
   { value: 'passive_now', label: '在职-月内到岗' },
   { value: 'passive',     label: '在职-考虑机会' },

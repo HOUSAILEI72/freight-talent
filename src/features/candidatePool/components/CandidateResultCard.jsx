@@ -150,33 +150,36 @@ function Chip({ children, accent, chipType }) {
 
 function BossTimelineEntry({ Icon, iconColor, period, title }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, minWidth: 0 }}>
-      <Icon size={10} style={{ color: iconColor, flexShrink: 0, marginTop: 2 }} />
-      <span
-        style={{
-          fontFamily: 'var(--t-font-mono)',
-          fontSize: 10,
-          color: 'var(--t-text-muted)',
-          flexShrink: 0,
-          fontVariantNumeric: 'tabular-nums',
-          letterSpacing: '0.01em',
-          lineHeight: 1.45,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {period || '—'}
-      </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+      <Icon size={10} style={{ color: iconColor, flexShrink: 0 }} />
+      {period && (
+        <span
+          style={{
+            fontFamily: 'var(--t-font-mono)',
+            fontSize: 9.5,
+            color: 'var(--t-text-muted)',
+            flexShrink: 0,
+            fontVariantNumeric: 'tabular-nums',
+            letterSpacing: '0.02em',
+            lineHeight: 1.45,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {period}
+        </span>
+      )}
       <span
         style={{
           fontFamily: 'var(--t-font-cjk)',
-          fontSize: 11,
-          color: 'var(--t-text-secondary)',
+          fontSize: 11.5,
+          fontWeight: 500,
+          color: 'var(--t-text)',
           minWidth: 0,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
           lineHeight: 1.45,
-          flex: 1,
+          letterSpacing: '0.01em',
         }}
       >
         {title}
@@ -309,7 +312,7 @@ export function CandidateResultCard({
           {/* avatar */}
           <div className="relative flex-shrink-0">
             <div
-              className={`w-9 h-9 rounded flex items-center justify-center font-bold text-sm${c.freshness_days != null && c.freshness_days <= 1 ? ' terminal-avatar-fresh' : ''}`}
+              className={`w-9 h-9 rounded overflow-hidden flex items-center justify-center font-bold text-sm${c.freshness_days != null && c.freshness_days <= 1 ? ' terminal-avatar-fresh' : ''}`}
               style={{
                 background: isInvited
                   ? 'var(--t-success-muted)'
@@ -322,7 +325,10 @@ export function CandidateResultCard({
                   : isUnlocked ? 'var(--t-primary)' : 'var(--t-text-secondary)',
               }}
             >
-              {c.full_name?.[0] ?? '?'}
+              {c.avatar_url
+                ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" />
+                : (c.full_name?.[0] ?? '?')
+              }
             </div>
           </div>
 
@@ -358,10 +364,14 @@ export function CandidateResultCard({
             {/* row 3: 目标岗位 | 期望薪资 */}
             <div className="flex items-center flex-wrap" style={{ gap: '0 4px', lineHeight: 1.3 }}>
               {c.desired_position && (
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-secondary)' }}>{c.desired_position}</span>
+                <>
+                  <span style={{ fontSize: 10, color: 'var(--t-text-muted)', fontFamily: 'var(--t-font-cjk)', letterSpacing: '0.02em' }}>期望岗位</span>
+                  <span style={{ fontSize: 10, color: 'var(--t-border)', marginInline: 1 }}>·</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-secondary)' }}>{c.desired_position}</span>
+                </>
               )}
-              {c.desired_position && (c.expected_salary_min != null || c.expected_salary_label) && (
-                <span style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>|</span>
+              {(c.expected_salary_min != null || c.expected_salary_label) && (
+                <span style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>{c.desired_position ? ' |' : ''}</span>
               )}
               {formatExpectedSalary(c.expected_salary_min, c.expected_salary_max, c.expected_salary_period, c.expected_salary_label) && (
                 <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 11.5, fontWeight: 600, color: 'rgba(96,165,250,0.85)', letterSpacing: '0.02em', fontVariantNumeric: 'tabular-nums' }}>
@@ -407,7 +417,7 @@ export function CandidateResultCard({
                       key={i}
                       Icon={GraduationCap}
                       iconColor="var(--t-chart-purple)"
-                      period={edu.period || '—'}
+                      period={edu.period || null}
                       title={[edu.school, edu.major, edu.degree ?? edu.level].filter(Boolean).join(' · ') || '—'}
                     />
                   ))

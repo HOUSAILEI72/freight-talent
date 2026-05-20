@@ -498,7 +498,7 @@ export function CandidateDetailPanel({ candidate, isInvited, terminal = false, o
       {candidate.summary && (
         <div style={sectionDivider}>
           <SectionHeader terminal={terminal} mutedColor={mutedColor} titleColor={titleColor}>
-            {terminal ? 'SUMMARY' : '个人简介'}
+            {terminal ? 'ADVANTAGES' : '个人优势'}
           </SectionHeader>
           <p className={terminal ? 'text-sm leading-relaxed whitespace-pre-line' : 'text-sm text-slate-600 leading-relaxed whitespace-pre-line'} style={subColor}>
             {candidate.summary}
