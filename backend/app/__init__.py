@@ -76,7 +76,7 @@ def create_app(config_class=None):
         socketio.init_app(
             app,
             cors_allowed_origins=app.config["CORS_ORIGINS"],
-            async_mode='eventlet',
+            async_mode=app.config.get("SOCKETIO_ASYNC_MODE", "eventlet"),
             message_queue=_mq,
             logger=False,
             engineio_logger=False,

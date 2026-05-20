@@ -42,9 +42,10 @@ class _TestConfig:
     RATELIMIT_ENABLED = False
     SERVE_STATIC = False
     WTF_CSRF_ENABLED = False
-    # 启用 Socket.IO 但不连 Redis（单进程模式），让 socket 测试能正常运行
+    # 启用 Socket.IO，threading 模式避免 eventlet monkey-patch 干扰 pytest/MySQL
     ENABLE_SOCKETIO = True
     REDIS_URL = ""
+    SOCKETIO_ASYNC_MODE = "threading"
 
 
 @pytest.fixture(scope="session")
