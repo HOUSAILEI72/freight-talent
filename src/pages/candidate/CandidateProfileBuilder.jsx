@@ -806,7 +806,7 @@ export default function CandidateProfileBuilder({ terminal = false, onDone, save
     return {
       className: 'px-3 py-1.5 rounded-lg text-sm border transition-colors',
       style: active
-        ? { background: 'var(--t-chip-selected-bg)', color: 'var(--t-text)', borderColor: 'var(--t-chip-selected-border)' }
+        ? { background: 'var(--t-primary-muted)', color: 'var(--t-primary)', borderColor: 'var(--t-primary)', fontWeight: 600 }
         : { background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', borderColor: 'var(--t-border)' },
     }
   }

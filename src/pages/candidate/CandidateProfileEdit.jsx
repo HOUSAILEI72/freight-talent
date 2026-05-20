@@ -45,7 +45,7 @@ const BENEFIT_OPTIONS = [
 
 const DEGREE_OPTIONS = ['不限', '初中及以下', '高中', '大专', '本科', '硕士', '博士']
 
-const EMPTY_EDU = { school: '', major: '', degree: '', period_start: '', period_end: '' }
+const EMPTY_EDU = { school: '', major: '', degree: '', period_start: '', period_end: '', enrollment_type: '' }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function splitTokens(str) {
@@ -78,12 +78,18 @@ const EMPTY_WORK = {
   commission_bonus_period: 'not_applicable', commission_bonus_amount: '',
   has_year_end_bonus: '', year_end_bonus_quick: null, year_end_bonus_custom: '',
   benefits: [],
+  department: '', reporting_to: '', is_management: '', direct_reports_count: '', reason_for_leaving: '',
 }
 
 const EMPTY_PROJECT = {
   name: '', role: '', link: '', start: '', end: '',
   description: '', achievements: '',
 }
+
+const EMPTY_LANG        = { language: '', proficiency_level: '' }
+const EMPTY_TRAINING    = { course_name: '', institution: '', location: '', start_date: '', end_date: '' }
+const EMPTY_CERT_ENTRY  = { name: '', level: '', issue_date: '' }
+const EMPTY_DESIRED_POS = { title: '', salary_min: '', salary_max: '', salary_period: 'month', salary_months: '', industries: '' }
 
 function workExperienceToPayload(row) {
   const out = { company_name: (row.company_name || '').trim(), title: (row.title || '').trim() }
@@ -108,6 +114,14 @@ function workExperienceToPayload(row) {
     if (Number.isFinite(yebVal) && yebVal > 0) out.year_end_bonus_months = yebVal
   }
   if (Array.isArray(row.benefits) && row.benefits.length > 0) out.benefits = row.benefits
+  if ((row.department || '').trim()) out.department = row.department.trim()
+  if ((row.reporting_to || '').trim()) out.reporting_to = row.reporting_to.trim()
+  if (row.is_management === 'yes' || row.is_management === 'no') out.is_management = row.is_management === 'yes'
+  if (row.is_management === 'yes') {
+    const drc = parseInt(row.direct_reports_count, 10)
+    if (Number.isFinite(drc) && drc >= 0) out.direct_reports_count = drc
+  }
+  if ((row.reason_for_leaving || '').trim()) out.reason_for_leaving = row.reason_for_leaving.trim()
   return out
 }
 
@@ -259,15 +273,45 @@ function SelectedSkillTag({ skill, description, onMouseDown }) {
 }
 
 
-// ── Section header ────────────────────────────────────────────────────────────
-function SectionHeader({ title, subtitle }) {
+// ── SidebarNavItem ────────────────────────────────────────────────────────────
+function SidebarNavItem({ label, active, onClick }) {
+  const [hovered, setHovered] = useState(false)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, marginBottom: 12, borderBottom: '1px solid var(--t-border-subtle)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 3, height: 16, borderRadius: 2, background: 'var(--t-primary)', flexShrink: 0 }} />
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)', letterSpacing: '0.01em' }}>{title}</span>
+    <button type="button" onClick={onClick}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '7px 16px', gap: 8, background: active ? 'var(--t-bg-active)' : hovered ? 'var(--t-bg-hover)' : 'transparent', border: 'none', borderLeft: `2px solid ${active ? 'var(--t-primary)' : 'transparent'}`, cursor: 'pointer', transition: 'background 80ms' }}>
+      <span style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? 'var(--t-text)' : 'var(--t-text-secondary)', textAlign: 'left', lineHeight: 1.4 }}>{label}</span>
+    </button>
+  )
+}
+
+// ── DeleteButton ──────────────────────────────────────────────────────────────
+function DeleteButton({ onClick }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button type="button" onClick={onClick}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: hov ? 'var(--t-danger)' : 'var(--t-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 3, transition: 'color 120ms' }}>
+      <Trash2 size={11} />删除
+    </button>
+  )
+}
+
+// ── Section header ────────────────────────────────────────────────────────────
+function SectionHeader({ title, subtitle, aiHighlight }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, marginBottom: 14, borderBottom: '1px solid var(--t-border-subtle)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ width: 3, height: 18, borderRadius: 2, background: 'var(--t-primary)', flexShrink: 0 }} />
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)', letterSpacing: '0.01em' }}>{title}</span>
+        {subtitle && <span style={{ fontSize: 11, color: 'var(--t-text-muted)', fontWeight: 400 }}>{subtitle}</span>}
+        {aiHighlight && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: 'rgba(99,102,241,0.15)', color: 'var(--t-primary)', border: '1px solid rgba(99,102,241,0.3)' }}>
+            <Sparkles size={9} />AI 已填
+          </span>
+        )}
       </div>
-      {subtitle && <span style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>{subtitle}</span>}
+      {!subtitle && !aiHighlight && null}
     </div>
   )
 }
@@ -277,20 +321,88 @@ function chipStyle(active) {
   return {
     className: 'px-3 py-1.5 rounded-lg text-sm border transition-colors',
     style: active
-      ? { background: 'var(--t-chip-selected-bg)', color: 'var(--t-text)', borderColor: 'var(--t-chip-selected-border)' }
+      ? { background: 'var(--t-primary-muted)', color: 'var(--t-primary)', borderColor: 'var(--t-primary)', fontWeight: 600 }
       : { background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', borderColor: 'var(--t-border)' },
   }
 }
 
+// ── BenefitMultiSelect ────────────────────────────────────────────────────────
+function BenefitMultiSelect({ value = [], onChange }) {
+  const [open, setOpen] = useState(false)
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 })
+  const triggerRef = useRef(null)
+  const panelRef = useRef(null)
+
+  useEffect(() => {
+    function handle(e) {
+      if (open && !triggerRef.current?.contains(e.target) && !panelRef.current?.contains(e.target)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [open])
+
+  function openDrop() {
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const panelH = 240
+    const spaceBelow = window.innerHeight - rect.bottom - 4
+    const top = spaceBelow >= panelH ? rect.bottom + 4 : rect.top - panelH - 4
+    setDropPos({ top, left: rect.left, width: Math.max(rect.width, 200) })
+  }
+
+  function toggle(b) {
+    onChange(value.includes(b) ? value.filter(x => x !== b) : [...value, b])
+  }
+
+  return (
+    <div ref={triggerRef} style={{ position: 'relative' }}>
+      <div
+        onMouseDown={e => { e.preventDefault(); if (!open) openDrop(); setOpen(o => !o) }}
+        style={{ background: 'var(--t-bg-input)', color: 'var(--t-text)', border: `1px solid ${open ? 'var(--t-border-focus)' : 'var(--t-border)'}`, borderRadius: 'var(--t-radius-sm)', minHeight: 30, paddingLeft: 8, paddingRight: 28, paddingTop: value.length > 0 ? 4 : 0, paddingBottom: value.length > 0 ? 4 : 0, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', cursor: 'pointer', userSelect: 'none', fontSize: 12, transition: 'border-color 120ms', position: 'relative' }}
+      >
+        {value.length > 0
+          ? value.map(b => (
+              <span key={b} style={{ display: 'inline-flex', alignItems: 'center', fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'var(--t-chip-selected-bg)', color: 'var(--t-text)', border: '1px solid var(--t-chip-selected-border)', whiteSpace: 'nowrap' }}>{b}</span>
+            ))
+          : <span style={{ color: 'var(--t-text-muted)', fontSize: 12 }}>选择福利（可多选）</span>
+        }
+        <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-text-muted)', pointerEvents: 'none' }}>
+          <ChevronDown size={11} style={{ transition: 'transform 150ms', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+        </div>
+      </div>
+      {open && createPortal(
+        <div ref={panelRef} style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999, maxHeight: 240, overflowY: 'auto', borderRadius: 'var(--t-radius)', border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', boxShadow: 'var(--t-shadow-elevated)', padding: '4px 0' }}>
+          {BENEFIT_OPTIONS.map(b => {
+            const checked = value.includes(b)
+            return (
+              <div key={b} onMouseDown={e => { e.preventDefault(); toggle(b) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 13, color: checked ? 'var(--t-primary)' : 'var(--t-text)', background: checked ? 'var(--t-primary-muted)' : 'transparent' }}>
+                <div style={{ width: 14, height: 14, borderRadius: 3, flexShrink: 0, border: `1.5px solid ${checked ? 'var(--t-primary)' : 'var(--t-border)'}`, background: checked ? 'var(--t-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {checked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                </div>
+                {b}
+              </div>
+            )
+          })}
+        </div>,
+        document.body
+      )}
+    </div>
+  )
+}
+
 // ── SECTIONS config ───────────────────────────────────────────────────────────
 const SECTIONS = [
-  { id: 'basic-info',       label: '基础信息' },
-  { id: 'current-position', label: '当前任职' },
-  { id: 'salary',           label: '期望职位' },
-  { id: 'work-exp',         label: '工作经历' },
-  { id: 'project-exp',      label: '项目经历' },
-  { id: 'skills',           label: '能力标签' },
-  { id: 'education',        label: '教育证书' },
+  { id: 'basic-info',           label: '基础信息' },
+  { id: 'personal-advantages',  label: '个人优势' },
+  { id: 'current-position',     label: '当前任职' },
+  { id: 'salary',               label: '期望职位' },
+  { id: 'work-exp',             label: '工作经历' },
+  { id: 'project-exp',          label: '项目经历' },
+  { id: 'skills',               label: '能力标签' },
+  { id: 'education',            label: '教育证书' },
 ]
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -304,10 +416,14 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
   const [showLatestPrompt, setShowLatestPrompt] = useState(false)
   const [confirmingLatest, setConfirmingLatest] = useState(false)
   const [activeSection, setActiveSection] = useState('basic-info')
+  const [aiFilledSections, setAiFilledSections] = useState(new Set())
+  const [aiBannerDismissed, setAiBannerDismissed] = useState(false)
 
 
-  const sectionRefs = useRef({})
-  const scrollRef   = useRef(null)
+  const sectionRefs            = useRef({})
+  const scrollRef              = useRef(null)
+  const programmaticScrollRef  = useRef(false)
+  const programmaticScrollTimer = useRef(null)
 
   // ── Section 1: 基础信息 ─────────────────────────────────────────────────
   const [fullName,    setFullName]    = useState('')
@@ -364,6 +480,9 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
   const [customJobTagInput, setCustomJobTagInput] = useState('')
   const [customSkillInput,  setCustomSkillInput]  = useState('')
 
+  // ── Section: 个人优势 ─────────────────────────────────────────────────
+  const [summary, setSummary] = useState('')
+
   // ── Section 6: 教育与证书 ─────────────────────────────────────────────
   const [education,        setEducation]        = useState('')
   const [educationRows,    setEducationRows]    = useState([])
@@ -377,6 +496,14 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
   const [esMINFocused,         setEsMinFocused]         = useState(false)
   const [esMAXFocused,         setEsMaxFocused]         = useState(false)
   const [desiredPosition,      setDesiredPosition]      = useState('')
+
+  // ── 简历增强字段 ──────────────────────────────────────────────────────
+  const [hukouLocation,      setHukouLocation]      = useState(null)
+  const [languageRows,       setLanguageRows]       = useState([])
+  const [trainingRows,       setTrainingRows]       = useState([])
+  const [certificateEntries, setCertificateEntries] = useState([])
+  const [expectedSalaryMonths, setExpectedSalaryMonths] = useState('')
+  const [desiredPositions,   setDesiredPositions]   = useState([])
 
   // Desired position autocomplete
   const [posSugOpen,    setPosSugOpen]    = useState(false)
@@ -442,7 +569,7 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
     setCsCommissionPeriod(p.current_commission_bonus_period || 'not_applicable')
     setCsCommissionAmount(p.current_commission_bonus_amount != null ? String(p.current_commission_bonus_amount) : '')
     setCsHasYeb(p.current_has_year_end_bonus == null ? '' : String(p.current_has_year_end_bonus))
-    if (p.current_has_year_end_bonus && p.current_year_end_bonus_months != null) {
+    if (p.current_has_year_end_bonus && p.current_year_end_bonus_months != null && p.current_year_end_bonus_months > 0) {
       const m = p.current_year_end_bonus_months
       if ([1, 2, 3].includes(m)) { setCsYebQuickSelect(m); setCsYebCustom('') }
       else { setCsYebQuickSelect('custom'); setCsYebCustom(String(m)) }
@@ -462,9 +589,14 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
         commission_bonus_period: w.commission_bonus_period || 'not_applicable',
         commission_bonus_amount: w.commission_bonus_amount != null ? String(w.commission_bonus_amount) : '',
         has_year_end_bonus: w.has_year_end_bonus == null ? '' : String(w.has_year_end_bonus),
-        year_end_bonus_quick: (() => { if (!w.has_year_end_bonus || w.year_end_bonus_months == null) return null; return [1, 2, 3].includes(w.year_end_bonus_months) ? w.year_end_bonus_months : 'custom' })(),
-        year_end_bonus_custom: (() => { if (!w.has_year_end_bonus || w.year_end_bonus_months == null) return ''; return [1, 2, 3].includes(w.year_end_bonus_months) ? '' : String(w.year_end_bonus_months) })(),
+        year_end_bonus_quick: (() => { if (!w.has_year_end_bonus || w.year_end_bonus_months == null || w.year_end_bonus_months <= 0) return null; return [1, 2, 3].includes(w.year_end_bonus_months) ? w.year_end_bonus_months : 'custom' })(),
+        year_end_bonus_custom: (() => { if (!w.has_year_end_bonus || w.year_end_bonus_months == null || w.year_end_bonus_months <= 0) return ''; return [1, 2, 3].includes(w.year_end_bonus_months) ? '' : String(w.year_end_bonus_months) })(),
         benefits: w.benefits || [],
+        department: w.department || '',
+        reporting_to: w.reporting_to || '',
+        is_management: w.is_management === true ? 'yes' : w.is_management === false ? 'no' : '',
+        direct_reports_count: w.direct_reports_count != null ? String(w.direct_reports_count) : '',
+        reason_for_leaving: w.reason_for_leaving || '',
       })))
     }
 
@@ -478,40 +610,228 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
     setEducationRows(Array.isArray(p.education_experiences) && p.education_experiences.length > 0
       ? p.education_experiences.map(e => {
           const parts = (e.period || '').split(/\s*[-–]\s*/)
-          return { school: e.school || '', major: e.major || '', degree: e.degree || '', period_start: parts[0] || '', period_end: parts[1] || '' }
+          return { school: e.school || '', major: e.major || '', degree: e.degree || '', period_start: parts[0] || '', period_end: parts[1] || '', enrollment_type: e.enrollment_type || '' }
         })
       : [])
+    setSummary(p.summary || '')
     setEnglishLevel(p.english_level || '')
     setCertificatesText(tagsToText(p.certificates))
     setExpectedSalaryMin(p.expected_salary_min != null ? String(p.expected_salary_min) : '')
     setExpectedSalaryMax(p.expected_salary_max != null ? String(p.expected_salary_max) : '')
     setExpectedSalaryPeriod(p.expected_salary_period || 'month')
     setDesiredPosition(p.desired_position || '')
+    // 增强字段（户籍城市：后端只存 location_name 字符串，无法还原 location_code，保持 null 让用户重选）
+    setHukouLocation(null)
+    setLanguageRows(Array.isArray(p.language_abilities) && p.language_abilities.length > 0
+      ? p.language_abilities.map(l => ({ language: l.language || '', proficiency_level: l.proficiency_level || '' }))
+      : [])
+    setTrainingRows(Array.isArray(p.training_experiences) && p.training_experiences.length > 0
+      ? p.training_experiences.map(t => ({ course_name: t.course_name || '', institution: t.institution || '', location: t.location || '', start_date: t.start_date || '', end_date: t.end_date || '' }))
+      : [])
+    setCertificateEntries(Array.isArray(p.certificate_entries) && p.certificate_entries.length > 0
+      ? p.certificate_entries.map(c => ({ name: c.name || '', level: c.level || '', issue_date: c.issue_date || '' }))
+      : [])
+    setExpectedSalaryMonths(p.expected_salary_months != null ? String(p.expected_salary_months) : '')
+    setDesiredPositions(Array.isArray(p.desired_positions) && p.desired_positions.length > 0
+      ? p.desired_positions.map(d => ({
+          title: d.title || '',
+          salary_min: d.salary_min != null ? String(d.salary_min) : '',
+          salary_max: d.salary_max != null ? String(d.salary_max) : '',
+          salary_period: d.salary_period || 'month',
+          salary_months: d.salary_months != null ? String(d.salary_months) : '',
+          industries: Array.isArray(d.industries) ? d.industries.join('、') : (d.industries || ''),
+        }))
+      : [])
+  }, [])
+
+  const mergeAiData = useCallback((ai) => {
+    if (!ai) return
+    const filled = new Set()
+
+    // 规范化 YYYY.MM → YYYY-MM，简历中的点号/中文格式日期
+    function normalizeMonth(s) {
+      if (!s) return ''
+      const m = String(s).match(/^(\d{4})[.\-\/](\d{1,2})$/)
+      return m ? `${m[1]}-${String(m[2]).padStart(2, '0')}` : String(s)
+    }
+
+    // 基础信息
+    if (ai.full_name)       { setFullName(ai.full_name); filled.add('basic-info') }
+    if (ai.phone)           { setPhone(ai.phone); filled.add('basic-info') }
+    if (ai.email)           { setEmail(ai.email); filled.add('basic-info') }
+    if (ai.gender)          { setGender(ai.gender); filled.add('basic-info') }
+    if (ai.birth_year != null)  { setBirthYear(String(ai.birth_year)); filled.add('basic-info') }
+    if (ai.birth_month != null) { setBirthMonth(String(ai.birth_month)); filled.add('basic-info') }
+    if (ai.availability_status) { setAvailability(ai.availability_status); filled.add('basic-info') }
+
+    // 当前任职
+    if (ai.function_code) { setFunctionCode(ai.function_code); filled.add('current-position') }
+    if (ai.is_management_role != null) {
+      setIsManagementStr(ai.is_management_role ? 'yes' : 'no')
+      filled.add('current-position')
+    }
+    if (ai.management_headcount != null) {
+      setMgmtHeadcount(String(ai.management_headcount))
+      filled.add('current-position')
+    }
+    if (ai.current_responsibilities) {
+      setCurrentResponsibilities(ai.current_responsibilities)
+      filled.add('current-position')
+    }
+    if (ai.current_salary != null) {
+      setCsMin(String(ai.current_salary))
+      setCsMax(String(ai.current_salary))
+      filled.add('current-position')
+    }
+    if (ai.current_salary_months != null) {
+      setCsMonths(String(ai.current_salary_months))
+      filled.add('current-position')
+    }
+    if (ai.current_has_year_end_bonus != null) {
+      setCsHasYeb(String(ai.current_has_year_end_bonus))
+      filled.add('current-position')
+    }
+    // 当前公司/职位取第一段工作经历（end_month=null 即在职）
+    if (Array.isArray(ai.work_experiences) && ai.work_experiences.length > 0) {
+      const first = ai.work_experiences[0]
+      if (first.company_name) { setCurrentCompany(first.company_name); filled.add('current-position') }
+      if (first.title)        { setCurrentTitle(first.title); filled.add('current-position') }
+    }
+
+    // 期望职位
+    if (ai.desired_position)          { setDesiredPosition(ai.desired_position); filled.add('salary') }
+    if (ai.expected_salary_min != null) { setExpectedSalaryMin(String(ai.expected_salary_min)); filled.add('salary') }
+    if (ai.expected_salary_max != null) { setExpectedSalaryMax(String(ai.expected_salary_max)); filled.add('salary') }
+    if (ai.expected_salary_period)    { setExpectedSalaryPeriod(ai.expected_salary_period); filled.add('salary') }
+
+    // 工作经历
+    if (Array.isArray(ai.work_experiences) && ai.work_experiences.length > 0) {
+      setWorkRows(ai.work_experiences.map(w => ({
+        ...EMPTY_WORK,
+        company_name:  w.company_name || '',
+        industry:      w.industry || '',
+        title:         w.title || '',
+        start_month:   normalizeMonth(w.start_month),
+        end_month:     normalizeMonth(w.end_month),
+        responsibilities: w.responsibilities || '',
+        achievements:  w.achievements || '',
+        salary:        w.salary != null ? String(w.salary) : '',
+        salary_months: w.salary_months != null ? String(w.salary_months) : '',
+        has_year_end_bonus: w.has_year_end_bonus == null ? '' : String(w.has_year_end_bonus),
+        benefits:      Array.isArray(w.benefits) ? w.benefits : [],
+      })))
+      filled.add('work-exp')
+    }
+
+    // 项目经历
+    if (Array.isArray(ai.project_experiences) && ai.project_experiences.length > 0) {
+      setProjectRows(ai.project_experiences.map(p => ({
+        ...EMPTY_PROJECT,
+        name:         p.name || '',
+        role:         p.role || '',
+        start:        normalizeMonth(p.start),
+        end:          normalizeMonth(p.end),
+        description:  p.description || '',
+        achievements: p.achievements || '',
+      })))
+      filled.add('project-exp')
+    }
+
+    // 能力标签
+    if (Array.isArray(ai.hard_skill_tags) && ai.hard_skill_tags.length > 0) {
+      setSelectedJobTags(ai.hard_skill_tags); filled.add('skills')
+    }
+    if (Array.isArray(ai.soft_skill_tags) && ai.soft_skill_tags.length > 0) {
+      setSelectedSoftSkills(ai.soft_skill_tags); filled.add('skills')
+    }
+
+    // 个人优势
+    if (ai.summary) { setSummary(ai.summary); filled.add('personal-advantages') }
+
+    // 教育与证书
+    if (ai.education)     { setEducation(ai.education); filled.add('education') }
+    if (ai.english_level) { setEnglishLevel(ai.english_level); filled.add('education') }
+    if (Array.isArray(ai.certificates) && ai.certificates.length > 0) {
+      setCertificatesText(ai.certificates.join('、')); filled.add('education')
+    }
+    if (Array.isArray(ai.education_experiences) && ai.education_experiences.length > 0) {
+      setEducationRows(ai.education_experiences.map(e => {
+        // period can be "YYYY-YYYY" or "YYYY.YYYY" or "YYYY年-YYYY年"
+        const normalized = (e.period || '').replace(/年/g, '').replace(/[.\s]/g, '-')
+        const parts = normalized.split(/[-–]/).map(s => s.trim()).filter(Boolean)
+        return { school: e.school || '', major: e.major || '', degree: e.degree || '', period_start: parts[0] || '', period_end: parts[1] || '' }
+      }))
+      filled.add('education')
+    }
+
+    setAiFilledSections(filled)
   }, [])
 
   useEffect(() => {
     let cancelled = false
+    const aiPrefill = new URLSearchParams(window.location.search).get('ai_prefill') === '1'
     candidatesApi.getMyCandidateProfile()
-      .then(res => { if (!cancelled) hydrateProfile(res.data?.profile) })
+      .then(res => {
+        if (!cancelled) {
+          hydrateProfile(res.data?.profile)
+          if (aiPrefill) {
+            const raw = sessionStorage.getItem('ai_parse_result')
+            if (raw) {
+              try { mergeAiData(JSON.parse(raw)) } catch {}
+              sessionStorage.removeItem('ai_parse_result')
+            }
+            const params = new URLSearchParams(window.location.search)
+            params.delete('ai_prefill')
+            const q = params.toString()
+            window.history.replaceState(null, '', window.location.pathname + (q ? '?' + q : ''))
+          }
+        }
+      })
       .catch(err => { if (!cancelled) setLoadErr(err.response?.data?.message || '加载档案失败，请刷新重试') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [hydrateProfile])
+  }, [hydrateProfile, mergeAiData])
 
-  // ── IntersectionObserver for active section ────────────────────────────────
+  // ── Active section tracking via scroll ────────────────────────────────────
   useEffect(() => {
-    const observers = []
-    SECTIONS.forEach(s => {
-      const el = sectionRefs.current[s.id]
-      if (!el) return
-      const obs = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) setActiveSection(s.id) }, { root: scrollRef.current, threshold: 0.3 })
-      obs.observe(el); observers.push(obs)
-    })
-    return () => observers.forEach(o => o.disconnect())
+    const container = scrollRef.current
+    if (!container) return
+    function updateActive() {
+      if (programmaticScrollRef.current) return
+      // Near-bottom: select last rendered section
+      if (container.scrollTop + container.clientHeight >= container.scrollHeight - 8) {
+        for (let i = SECTIONS.length - 1; i >= 0; i--) {
+          if (sectionRefs.current[SECTIONS[i].id]) { setActiveSection(SECTIONS[i].id); return }
+        }
+      }
+      const containerRect = container.getBoundingClientRect()
+      const line = containerRect.top + 60
+      let best = SECTIONS[0].id
+      for (const s of SECTIONS) {
+        const el = sectionRefs.current[s.id]
+        if (!el) continue
+        if (el.getBoundingClientRect().top <= line) best = s.id
+      }
+      setActiveSection(best)
+    }
+    container.addEventListener('scroll', updateActive, { passive: true })
+    updateActive()
+    return () => container.removeEventListener('scroll', updateActive)
   }, [loading])
 
   function scrollToSection(id) {
-    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setActiveSection(id)
+    const el        = sectionRefs.current[id]
+    const container = scrollRef.current
+    if (!el || !container) return
+    // Suppress scroll-tracker during animation so it can't override the selection
+    programmaticScrollRef.current = true
+    clearTimeout(programmaticScrollTimer.current)
+    programmaticScrollTimer.current = setTimeout(() => { programmaticScrollRef.current = false }, 800)
+    // Calculate offset relative to container (not viewport) so sections near the
+    // bottom that can't reach the top still land in the right place
+    const top = container.scrollTop + el.getBoundingClientRect().top - container.getBoundingClientRect().top
+    container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
   }
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -531,7 +851,7 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
     if (!phone.trim())    return '请填写手机号码'
     if (!email.trim())    return '请填写邮箱'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return '邮箱格式不正确'
-    if (!location?.location_code || !location?.location_name || !location?.location_path || !location?.location_type) return '请选择所在地区'
+    if (!location?.location_code || !location?.location_name || !location?.location_path || !location?.location_type) return '请选择当前住址'
     if (availability !== 'open') {
       if (!currentCompany.trim())          return '请填写当前公司'
       if (!currentTitle.trim())            return '请填写当前职位'
@@ -616,19 +936,54 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
         if (r.major.trim()) e.major = r.major.trim()
         if (r.degree) e.degree = r.degree
         if (r.period_start || r.period_end) e.period = `${r.period_start || '?'}-${r.period_end || '至今'}`
+        if (r.enrollment_type) e.enrollment_type = r.enrollment_type
         return e
       }),
       english_level: englishLevel.trim() || null,
       certificates: certsArr,
       ...(expectedSalaryMin.replace(/,/g, '') !== '' ? { expected_salary_min: Number(expectedSalaryMin.replace(/,/g, '')) } : { expected_salary_min: null }),
       ...(expectedSalaryMax.replace(/,/g, '') !== '' ? { expected_salary_max: Number(expectedSalaryMax.replace(/,/g, '')) } : { expected_salary_max: null }),
-      expected_salary_period: expectedSalaryPeriod || 'month',
+      expected_salary_period: 'month',
+      summary: summary.trim() || null,
       desired_position: desiredPosition.trim() || null,
       availability_status: availability,
       ...(gender !== '' ? { gender } : {}),
       ...(birthYear !== '' ? { birth_year: Number(birthYear) } : {}),
       ...(birthMonth !== '' ? { birth_month: Number(birthMonth) } : {}),
       confirm_latest: false,
+      // 增强字段
+      hukou_city: hukouLocation?.location_name || null,
+      ...(expectedSalaryMonths !== '' ? { expected_salary_months: Number(expectedSalaryMonths) } : { expected_salary_months: null }),
+      desired_positions: desiredPositions.filter(d => d.title.trim()).map(d => {
+        const entry = { title: d.title.trim(), salary_period: d.salary_period || 'month' }
+        const sMin = String(d.salary_min).replace(/,/g, '')
+        const sMax = String(d.salary_max).replace(/,/g, '')
+        if (sMin !== '') entry.salary_min = Number(sMin)
+        if (sMax !== '') entry.salary_max = Number(sMax)
+        if (d.salary_months !== '') entry.salary_months = Number(d.salary_months)
+        const inds = String(d.industries).split(/[,，、]+/).map(s => s.trim()).filter(Boolean)
+        if (inds.length > 0) entry.industries = inds
+        return entry
+      }),
+      language_abilities: languageRows.filter(l => l.language.trim()).map(l => {
+        const entry = { language: l.language.trim() }
+        if (l.proficiency_level.trim()) entry.proficiency_level = l.proficiency_level.trim()
+        return entry
+      }),
+      training_experiences: trainingRows.filter(t => t.course_name.trim()).map(t => {
+        const entry = { course_name: t.course_name.trim() }
+        if (t.institution.trim()) entry.institution = t.institution.trim()
+        if (t.location.trim()) entry.location = t.location.trim()
+        if (t.start_date.trim()) entry.start_date = t.start_date.trim()
+        if (t.end_date.trim()) entry.end_date = t.end_date.trim()
+        return entry
+      }),
+      certificate_entries: certificateEntries.filter(c => c.name.trim()).map(c => {
+        const entry = { name: c.name.trim() }
+        if (c.level.trim()) entry.level = c.level.trim()
+        if (c.issue_date.trim()) entry.issue_date = c.issue_date.trim()
+        return entry
+      }),
     }
     setSaving(true)
     try {
@@ -692,12 +1047,12 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
   }, [jobTagScrollTarget, jobTagOpen, jobTagCategory])
 
   // ── Style tokens ───────────────────────────────────────────────────────────
-  const IS  = { background: 'var(--t-bg-input)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }
-  const IC  = 'w-full px-2.5 py-1.5 rounded border text-[12px] focus:outline-none'
+  const IS  = { background: 'var(--t-bg-input)', borderColor: 'var(--t-border)', color: 'var(--t-text)', transition: 'border-color 120ms' }
+  const IC  = 'w-full px-3 py-2 rounded border text-[12px] focus:outline-none'
   const TC  = IC + ' resize-none'
-  const LC  = 'block text-[11px] font-medium mb-1'
+  const LC  = 'block text-[11px] font-medium mb-1.5'
   const LS  = { color: 'var(--t-text-secondary)' }
-  const HS  = { color: 'var(--t-text-muted)', fontSize: 11 }
+  const HS  = { color: 'var(--t-text-secondary)', fontSize: 11, marginBottom: 4, display: 'block' }
 
   function multiTriggerStyle(isOpen, hasItems) {
     return { background: 'var(--t-bg-input)', color: 'var(--t-text)', border: `1px solid ${isOpen ? 'var(--t-border-focus)' : 'var(--t-border)'}`, borderRadius: 'var(--t-radius-sm)', minHeight: 30, paddingLeft: 8, paddingRight: 28, paddingTop: hasItems ? 4 : 0, paddingBottom: hasItems ? 4 : 0, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', cursor: 'pointer', userSelect: 'none', fontSize: 12, transition: 'border-color 120ms' }
@@ -726,8 +1081,8 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
 
   // 基础信息
   const sBasicInfo = (
-    <div ref={el => sectionRefs.current['basic-info'] = el} style={{ marginBottom: 24 }}>
-      <SectionHeader title="基础信息" />
+    <div ref={el => sectionRefs.current['basic-info'] = el} style={{ marginBottom: 32 }}>
+      <SectionHeader title="基础信息" aiHighlight={aiFilledSections.has('basic-info')} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
         <div><label className={LC} style={LS}>姓名 *</label><input className={IC} style={IS} value={fullName} onChange={e => setFullName(e.target.value)} placeholder="真实姓名" /></div>
         <div><label className={LC} style={LS}>手机号码 *</label><input className={IC} style={IS} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+86 138..." /></div>
@@ -742,18 +1097,47 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
           <div><label className={LC} style={LS}>性别</label><TerminalSelect value={gender} onChange={setGender} options={[{ value: '', label: '性别' }, { value: 'male', label: '男' }, { value: 'female', label: '女' }]} placeholder="性别" hasValue={!!gender} /></div>
         </div>
       </div>
-      <div style={{ marginTop: 10 }}>
-        <label className={LC} style={LS}>所在地区 *</label>
-        <RegionSelector value={location} onChange={setLocation} terminal placeholder="请选择所在地区" />
-        {location?.location_path && <p style={{ ...HS, marginTop: 4 }}>已选：{location.location_path}{location.business_area_name ? `（${location.business_area_name}）` : ''}</p>}
+      <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div>
+          <label className={LC} style={LS}>当前住址 *</label>
+          <RegionSelector value={location} onChange={setLocation} terminal placeholder="请选择当前住址" />
+          {location?.location_path && <p style={{ ...HS, marginTop: 4 }}>已选：{location.location_path}{location.business_area_name ? `（${location.business_area_name}）` : ''}</p>}
+        </div>
+        <div>
+          <label className={LC} style={LS}>户籍城市</label>
+          <RegionSelector value={hukouLocation} onChange={setHukouLocation} terminal placeholder="请选择户籍城市（户口所在地）" />
+          {hukouLocation?.location_name && <p style={{ ...HS, marginTop: 4 }}>已选：{hukouLocation.location_path || hukouLocation.location_name}</p>}
+        </div>
+      </div>
+    </div>
+  )
+
+  // 个人优势
+  const sPersonalAdvantages = (
+    <div ref={el => sectionRefs.current['personal-advantages'] = el} style={{ marginBottom: 32 }}>
+      <SectionHeader title="个人优势" aiHighlight={aiFilledSections.has('personal-advantages')} />
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <label className={LC} style={LS}>个人优势描述</label>
+          <AiPolishButton field="summary" content={summary} context={{}} onResult={setSummary} />
+        </div>
+        <AutoTextarea
+          className={TC}
+          style={IS}
+          rows={1}
+          value={summary}
+          onChange={e => setSummary(e.target.value)}
+          placeholder="深耕行业背景与核心竞争力：如多年货代经验、擅长海运/空运操作、具备客户开发能力、熟悉 Cargowise 系统等..."
+        />
+        <p style={{ ...HS, marginTop: 4 }}>展示你的核心竞争力，企业端可直接看到此内容</p>
       </div>
     </div>
   )
 
   // 当前任职
   const sCurrentPosition = (
-    <div ref={el => sectionRefs.current['current-position'] = el} style={{ marginBottom: 24 }}>
-      <SectionHeader title="当前任职" />
+    <div ref={el => sectionRefs.current['current-position'] = el} style={{ marginBottom: 32 }}>
+      <SectionHeader title="当前任职" aiHighlight={aiFilledSections.has('current-position')} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
         <div><label className={LC} style={LS}>当前公司 *</label><input className={IC} style={IS} value={currentCompany} onChange={e => setCurrentCompany(e.target.value)} placeholder="公司名称" /></div>
         <div><label className={LC} style={LS}>当前职位 *</label><input className={IC} style={IS} value={currentTitle} onChange={e => setCurrentTitle(e.target.value)} placeholder="如：海运操作主管" /></div>
@@ -795,39 +1179,40 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
 
   // 工作经历
   const sWorkExp = (
-    <div ref={el => sectionRefs.current['work-exp'] = el} style={{ marginBottom: 24 }}>
-      <SectionHeader title="工作经历" subtitle={`${workRows.length} 段`} />
+    <div ref={el => sectionRefs.current['work-exp'] = el} style={{ marginBottom: 32 }}>
+      <SectionHeader title="工作经历" subtitle={`${workRows.length} 段`} aiHighlight={aiFilledSections.has('work-exp')} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {workRows.map((r, i) => (
-          <div key={i} style={{ borderRadius: 6, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', padding: '10px 12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-muted)', letterSpacing: '0.02em' }}>工作经历 #{i + 1}</span>
-              {workRows.length > 1 && <button type="button" onClick={() => removeWorkRow(i)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--t-danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><Trash2 size={11} />删除</button>}
+          <div key={i} style={{ borderRadius: 8, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: 'var(--t-bg-panel)', borderBottom: '1px solid var(--t-border-subtle)' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-secondary)', letterSpacing: '0.03em', textTransform: 'uppercase' }}>工作经历 #{i + 1}</span>
+              {workRows.length > 1 && <DeleteButton onClick={() => removeWorkRow(i)} />}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+            <div style={{ padding: '12px 14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
               <div><label style={HS}>公司 *</label><input className={IC} style={IS} value={r.company_name} onChange={e => updateWorkRow(i, { company_name: e.target.value })} /></div>
               <div><label style={HS}>所属行业</label><input className={IC} style={IS} value={r.industry || ''} onChange={e => updateWorkRow(i, { industry: e.target.value })} placeholder="如：国际物流" /></div>
               <div><label style={HS}>职位 *</label><input className={IC} style={IS} value={r.title} onChange={e => updateWorkRow(i, { title: e.target.value })} /></div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
               <div><label style={HS}>起始</label><MonthYearPicker value={r.start_month} onChange={val => updateWorkRow(i, { start_month: val })} /></div>
               <div><label style={HS}>结束（留空=至今）</label><MonthYearPicker value={r.end_month} onChange={val => updateWorkRow(i, { end_month: val })} allowEmpty /></div>
             </div>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <label style={HS}>工作内容</label>
                 <AiPolishButton field="responsibilities" content={r.responsibilities} context={{ title: r.title, company: r.company_name }} onResult={v => updateWorkRow(i, { responsibilities: v })} />
               </div>
               <AutoTextarea className={TC} style={IS} rows={1} value={r.responsibilities} onChange={e => updateWorkRow(i, { responsibilities: e.target.value })} placeholder="主要职责..." />
             </div>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <label style={HS}>工作业绩（选填）</label>
                 <AiPolishButton field="achievements" content={r.achievements} context={{ title: r.title, company: r.company_name }} onResult={v => updateWorkRow(i, { achievements: v })} />
               </div>
               <AutoTextarea className={TC} style={IS} rows={1} value={r.achievements} onChange={e => updateWorkRow(i, { achievements: e.target.value })} placeholder="量化成果、荣誉..." />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
               <div><label style={HS}>月薪（元）</label><input className={IC} style={IS} inputMode="numeric" placeholder="20,000" value={salaryFocusIdx === i ? r.salary : formatThousand(r.salary)} onFocus={() => setSalaryFocusIdx(i)} onBlur={() => setSalaryFocusIdx(null)} onChange={e => updateWorkRow(i, { salary: e.target.value.replace(/[^\d]/g, '') })} /></div>
               <div><label style={HS}>薪资月数</label><TerminalSelect value={r.salary_months} onChange={val => updateWorkRow(i, { salary_months: val })} options={[{ value: '', label: '未填' }, { value: '12', label: '12' }, { value: '13', label: '13' }, { value: '14', label: '14' }]} placeholder="未填" hasValue={!!r.salary_months} /></div>
               <div><label style={HS}>是否有年终奖</label><TerminalSelect value={r.has_year_end_bonus} onChange={val => updateWorkRow(i, { has_year_end_bonus: val, ...(val !== 'true' ? { year_end_bonus_quick: null, year_end_bonus_custom: '' } : {}) })} options={[{ value: '', label: '请选择' }, { value: 'true', label: '是' }, { value: 'false', label: '否' }]} placeholder="请选择" hasValue={r.has_year_end_bonus === 'true' || r.has_year_end_bonus === 'false'} /></div>
@@ -841,16 +1226,39 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
                 {r.year_end_bonus_quick === 'custom' && <input type="text" inputMode="decimal" className={IC} style={{ ...IS, marginTop: 6 }} placeholder="月数，如 2" value={r.year_end_bonus_custom} onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) updateWorkRow(i, { year_end_bonus_custom: v }) }} />}
               </div>
             )}
-            <div style={{ marginTop: 8 }}>
+            <div style={{ marginTop: 10 }}>
               <label style={HS}>福利列表</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 4 }}>
-                {BENEFIT_OPTIONS.map(b => { const on = (r.benefits || []).includes(b); const cs = chipStyle(on); return <button key={b} type="button" className={cs.className} style={{ ...cs.style, fontSize: 12, padding: '3px 10px' }} onClick={() => updateWorkRow(i, { benefits: on ? (r.benefits || []).filter(x => x !== b) : [...(r.benefits || []), b] })}>{b}</button> })}
+              <div style={{ marginTop: 4 }}>
+                <BenefitMultiSelect
+                  value={r.benefits || []}
+                  onChange={benefits => updateWorkRow(i, { benefits })}
+                />
               </div>
             </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--t-border-subtle)' }}>
+              <div><label style={HS}>所在部门</label><input className={IC} style={IS} value={r.department || ''} onChange={e => updateWorkRow(i, { department: e.target.value })} placeholder="如：人力资源板块" /></div>
+              <div><label style={HS}>汇报对象（职位）</label><input className={IC} style={IS} value={r.reporting_to || ''} onChange={e => updateWorkRow(i, { reporting_to: e.target.value })} placeholder="如：总经理、HRD" /></div>
+              <div>
+                <label style={HS}>是否带团队</label>
+                <TerminalSelect
+                  value={r.is_management}
+                  onChange={val => updateWorkRow(i, { is_management: val, ...(val !== 'yes' ? { direct_reports_count: '' } : {}) })}
+                  options={[{ value: '', label: '请选择' }, { value: 'yes', label: '是' }, { value: 'no', label: '否' }]}
+                  placeholder="请选择"
+                  hasValue={r.is_management === 'yes' || r.is_management === 'no'}
+                  style={{ height: 32 }}
+                />
+              </div>
+              {r.is_management === 'yes' && (
+                <div><label style={HS}>直属下属人数</label><input className={IC} style={IS} inputMode="numeric" value={r.direct_reports_count || ''} onChange={e => updateWorkRow(i, { direct_reports_count: e.target.value.replace(/\D/g, '') })} placeholder="如：10" /></div>
+              )}
+              <div style={{ gridColumn: 'span 3' }}><label style={HS}>离职原因（选填）</label><input className={IC} style={IS} value={r.reason_for_leaving || ''} onChange={e => updateWorkRow(i, { reason_for_leaving: e.target.value })} placeholder="如：寻求更好发展" /></div>
+            </div>
+            </div>{/* end padding wrapper */}
           </div>
         ))}
       </div>
-      <button type="button" onClick={addWorkRow} style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: '1px dashed var(--t-border)', background: 'transparent', color: 'var(--t-text-muted)', fontSize: 12, cursor: 'pointer' }}>
+      <button type="button" onClick={addWorkRow} style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 6, border: '1px dashed var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontSize: 12, cursor: 'pointer' }}>
         <Plus size={12} />新增一段工作经历
       </button>
     </div>
@@ -858,18 +1266,19 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
 
   // 项目经历
   const sProjectExp = (
-    <div ref={el => sectionRefs.current['project-exp'] = el} style={{ marginBottom: 24 }}>
-      <SectionHeader title="项目经历" subtitle={projectRows.length > 0 ? `${projectRows.length} 个` : '选填'} />
+    <div ref={el => sectionRefs.current['project-exp'] = el} style={{ marginBottom: 32 }}>
+      <SectionHeader title="项目经历" subtitle={projectRows.length > 0 ? `${projectRows.length} 个` : '选填'} aiHighlight={aiFilledSections.has('project-exp')} />
       {projectRows.length === 0 && (
         <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 10 }}>添加参与过的项目，有助于展示你的实战能力</p>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {projectRows.map((r, i) => (
-          <div key={i} style={{ borderRadius: 6, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', padding: '10px 12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-muted)', letterSpacing: '0.02em' }}>项目经历 #{i + 1}</span>
-              <button type="button" onClick={() => removeProjectRow(i)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--t-danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><Trash2 size={11} />删除</button>
+          <div key={i} style={{ borderRadius: 8, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: 'var(--t-bg-panel)', borderBottom: '1px solid var(--t-border-subtle)' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-secondary)', letterSpacing: '0.03em', textTransform: 'uppercase' }}>项目经历 #{i + 1}</span>
+              <DeleteButton onClick={() => removeProjectRow(i)} />
             </div>
+            <div style={{ padding: '12px 14px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
               <div style={{ gridColumn: 'span 2' }}><label style={HS}>项目名称</label><input className={IC} style={IS} value={r.name} onChange={e => updateProjectRow(i, { name: e.target.value })} placeholder="项目名称" /></div>
               <div><label style={HS}>担任角色</label><input className={IC} style={IS} value={r.role} onChange={e => updateProjectRow(i, { role: e.target.value })} placeholder="如：负责人" /></div>
@@ -893,10 +1302,11 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
               </div>
               <AutoTextarea className={TC} style={IS} rows={1} value={r.achievements} onChange={e => updateProjectRow(i, { achievements: e.target.value })} placeholder="量化成果..." />
             </div>
+            </div>{/* end padding wrapper */}
           </div>
         ))}
       </div>
-      <button type="button" onClick={addProjectRow} style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: '1px dashed var(--t-border)', background: 'transparent', color: 'var(--t-text-muted)', fontSize: 12, cursor: 'pointer' }}>
+      <button type="button" onClick={addProjectRow} style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 6, border: '1px dashed var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontSize: 12, cursor: 'pointer' }}>
         <Plus size={12} />新增一段项目经历
       </button>
     </div>
@@ -939,12 +1349,12 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
   )
 
   const sSkills = (
-    <div ref={el => sectionRefs.current['skills'] = el} style={{ marginBottom: 24 }}>
-      <SectionHeader title="能力标签" />
+    <div ref={el => sectionRefs.current['skills'] = el} style={{ marginBottom: 32 }}>
+      <SectionHeader title="能力标签" aiHighlight={aiFilledSections.has('skills')} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* 岗位标签 */}
         <div ref={jobTagWrapRef} style={{ position: 'relative' }}>
-          <label className={LC} style={LS}>岗位标签 * （已选 {selectedJobTags.length} 项）</label>
+          <label className={LC} style={LS}>岗位标签 *{selectedJobTags.length > 0 ? ` · 已选 ${selectedJobTags.length} 项` : ' · 请点击下方选择'}</label>
           <div style={{ position: 'relative' }} ref={jobTagTriggerRef}>
             <div onMouseDown={e => { e.preventDefault(); if (!jobTagOpen) openJobTagDrop(); setJobTagOpen(o => !o) }} style={multiTriggerStyle(jobTagOpen, selectedJobTags.length > 0)}>
               {selectedJobTags.length > 0 ? selectedJobTags.map(tag => <SelectedSkillTag key={tag} skill={tag} description={null} onMouseDown={e => { e.preventDefault(); e.stopPropagation(); const cat = JOB_TAGS_DATA.find(d => d.tags.includes(tag))?.category ?? null; if (cat) setJobTagCategory(cat); setJobTagScrollTarget(tag); if (!jobTagOpen) openJobTagDrop(); setJobTagOpen(true) }} />) : <span style={{ color: 'var(--t-text-muted)', fontSize: 12 }}>从下拉框中选择岗位标签</span>}
@@ -957,7 +1367,7 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
         </div>
         {/* 软技能 */}
         <div ref={softSkillWrapRef} style={{ position: 'relative' }}>
-          <label className={LC} style={LS}>岗位所需软技能 * （已选 {selectedSoftSkills.length} 项）</label>
+          <label className={LC} style={LS}>岗位所需软技能 *{selectedSoftSkills.length > 0 ? ` · 已选 ${selectedSoftSkills.length} 项` : ' · 请点击下方选择'}</label>
           <div style={{ position: 'relative' }} ref={softSkillTriggerRef}>
             <div onMouseDown={e => { e.preventDefault(); if (!softSkillOpen) openSoftSkillDrop(); setSoftSkillOpen(o => !o) }} style={multiTriggerStyle(softSkillOpen, selectedSoftSkills.length > 0)}>
               {selectedSoftSkills.length > 0 ? selectedSoftSkills.map(skill => <SelectedSkillTag key={skill} skill={skill} description={SOFT_SKILL_DESCRIPTIONS[skill]} />) : <span style={{ color: 'var(--t-text-muted)', fontSize: 12 }}>从下拉框中选择软技能标签</span>}
@@ -984,8 +1394,8 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
   // 教育与证书
   const eduYearOptions = [{ value: '', label: '年份' }, ...Array.from({ length: new Date().getFullYear() - 1980 + 1 }, (_, i) => { const y = String(new Date().getFullYear() - i); return { value: y, label: y } })]
   const sEducation = (
-    <div ref={el => sectionRefs.current['education'] = el} style={{ marginBottom: 24 }}>
-      <SectionHeader title="教育与证书" />
+    <div ref={el => sectionRefs.current['education'] = el} style={{ marginBottom: 32 }}>
+      <SectionHeader title="教育与证书" aiHighlight={aiFilledSections.has('education')} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
         <div><label className={LC} style={LS}>学历摘要</label><input className={IC} style={IS} value={education} onChange={e => setEducation(e.target.value)} placeholder="如：本科 · 国际贸易" /></div>
         <div><label className={LC} style={LS}>英语水平</label><input className={IC} style={IS} value={englishLevel} onChange={e => setEnglishLevel(e.target.value)} placeholder="如：CET-6 / 流利 / 一般" /></div>
@@ -1000,25 +1410,97 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {educationRows.map((r, i) => (
-            <div key={i} style={{ borderRadius: 6, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', padding: '10px 12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-muted)', letterSpacing: '0.02em' }}>教育经历 #{i + 1}</span>
-                <button type="button" onClick={() => setEducationRows(rows => rows.filter((_, idx) => idx !== i))} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--t-danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><Trash2 size={11} />删除</button>
+            <div key={i} style={{ borderRadius: 8, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: 'var(--t-bg-panel)', borderBottom: '1px solid var(--t-border-subtle)' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-secondary)', letterSpacing: '0.03em', textTransform: 'uppercase' }}>教育经历 #{i + 1}</span>
+                <DeleteButton onClick={() => setEducationRows(rows => rows.filter((_, idx) => idx !== i))} />
               </div>
+              <div style={{ padding: '12px 14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
                 <div><label style={HS}>院校 *</label><input className={IC} style={IS} value={r.school} onChange={e => setEducationRows(rows => rows.map((row, idx) => idx === i ? { ...row, school: e.target.value } : row))} placeholder="如：上海海事大学" /></div>
                 <div><label style={HS}>专业</label><input className={IC} style={IS} value={r.major} onChange={e => setEducationRows(rows => rows.map((row, idx) => idx === i ? { ...row, major: e.target.value } : row))} placeholder="如：国际贸易" /></div>
                 <div><label style={HS}>学历</label><TerminalSelect value={r.degree} onChange={val => setEducationRows(rows => rows.map((row, idx) => idx === i ? { ...row, degree: val } : row))} options={[{ value: '', label: '请选择' }, ...DEGREE_OPTIONS.map(d => ({ value: d, label: d }))]} placeholder="请选择" hasValue={!!r.degree} /></div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 <div><label style={HS}>入学年份</label><TerminalSelect value={r.period_start} onChange={val => setEducationRows(rows => rows.map((row, idx) => idx === i ? { ...row, period_start: val } : row))} options={eduYearOptions} placeholder="年份" hasValue={!!r.period_start} /></div>
                 <div><label style={HS}>毕业年份</label><TerminalSelect value={r.period_end} onChange={val => setEducationRows(rows => rows.map((row, idx) => idx === i ? { ...row, period_end: val } : row))} options={[{ value: '', label: '至今' }, ...Array.from({ length: new Date().getFullYear() + 6 - 1980 + 1 }, (_, i2) => { const y = String(new Date().getFullYear() + 6 - i2); return { value: y, label: y } })]} placeholder="至今" hasValue={!!r.period_end} /></div>
+                <div><label style={HS}>就读类型</label><TerminalSelect value={r.enrollment_type} onChange={val => setEducationRows(rows => rows.map((row, idx) => idx === i ? { ...row, enrollment_type: val } : row))} options={[{ value: '', label: '未选' }, { value: '统招', label: '统招' }, { value: '非统招', label: '非统招（成考/自考/网教）' }]} placeholder="未选" hasValue={!!r.enrollment_type} /></div>
+              </div>
+              </div>{/* end padding wrapper */}
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={() => setEducationRows(rows => [...rows, { ...EMPTY_EDU }])} style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 6, border: '1px dashed var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontSize: 12, cursor: 'pointer' }}>
+          <Plus size={12} />新增一段教育经历
+        </button>
+      </div>
+
+      {/* 语言能力 */}
+      <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--t-border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <label className={LC} style={{ ...LS, marginBottom: 0 }}>语言能力{languageRows.length > 0 ? ` · ${languageRows.length} 项` : '（选填）'}</label>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {languageRows.map((r, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, alignItems: 'center' }}>
+              <input className={IC} style={IS} value={r.language} onChange={e => setLanguageRows(rows => rows.map((row, idx) => idx === i ? { ...row, language: e.target.value } : row))} placeholder="语言（如：英语、法语）" />
+              <input className={IC} style={IS} value={r.proficiency_level} onChange={e => setLanguageRows(rows => rows.map((row, idx) => idx === i ? { ...row, proficiency_level: e.target.value } : row))} placeholder="熟练程度（如：商务洽谈、基础沟通）" />
+              <DeleteButton onClick={() => setLanguageRows(rows => rows.filter((_, idx) => idx !== i))} />
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={() => setLanguageRows(rows => [...rows, { ...EMPTY_LANG }])} style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 6, border: '1px dashed var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontSize: 12, cursor: 'pointer' }}>
+          <Plus size={12} />新增语言
+        </button>
+      </div>
+
+      {/* 培训经历 */}
+      <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--t-border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <label className={LC} style={{ ...LS, marginBottom: 0 }}>培训经历{trainingRows.length > 0 ? ` · ${trainingRows.length} 条` : '（选填）'}</label>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {trainingRows.map((r, i) => (
+            <div key={i} style={{ borderRadius: 8, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px', background: 'var(--t-bg-panel)', borderBottom: '1px solid var(--t-border-subtle)' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-secondary)' }}>培训经历 #{i + 1}</span>
+                <DeleteButton onClick={() => setTrainingRows(rows => rows.filter((_, idx) => idx !== i))} />
+              </div>
+              <div style={{ padding: '10px 14px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                <div style={{ gridColumn: 'span 2' }}><label style={HS}>课程名称 *</label><input className={IC} style={IS} value={r.course_name} onChange={e => setTrainingRows(rows => rows.map((row, idx) => idx === i ? { ...row, course_name: e.target.value } : row))} placeholder="培训课程名称" /></div>
+                <div><label style={HS}>培训机构</label><input className={IC} style={IS} value={r.institution} onChange={e => setTrainingRows(rows => rows.map((row, idx) => idx === i ? { ...row, institution: e.target.value } : row))} placeholder="如：清华大学、XX机构" /></div>
+                <div><label style={HS}>培训地点</label><input className={IC} style={IS} value={r.location} onChange={e => setTrainingRows(rows => rows.map((row, idx) => idx === i ? { ...row, location: e.target.value } : row))} placeholder="如：上海" /></div>
+                <div><label style={HS}>开始时间</label><MonthYearPicker value={r.start_date} onChange={val => setTrainingRows(rows => rows.map((row, idx) => idx === i ? { ...row, start_date: val } : row))} /></div>
+                <div><label style={HS}>结束时间（留空=至今）</label><MonthYearPicker value={r.end_date} onChange={val => setTrainingRows(rows => rows.map((row, idx) => idx === i ? { ...row, end_date: val } : row))} allowEmpty /></div>
               </div>
             </div>
           ))}
         </div>
-        <button type="button" onClick={() => setEducationRows(rows => [...rows, { ...EMPTY_EDU }])} style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: '1px dashed var(--t-border)', background: 'transparent', color: 'var(--t-text-muted)', fontSize: 12, cursor: 'pointer' }}>
-          <Plus size={12} />新增一段教育经历
+        <button type="button" onClick={() => setTrainingRows(rows => [...rows, { ...EMPTY_TRAINING }])} style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 6, border: '1px dashed var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontSize: 12, cursor: 'pointer' }}>
+          <Plus size={12} />新增培训经历
+        </button>
+      </div>
+
+      {/* 结构化证书 */}
+      <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--t-border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <label className={LC} style={{ ...LS, marginBottom: 0 }}>结构化证书{certificateEntries.length > 0 ? ` · ${certificateEntries.length} 个` : '（选填，含等级和日期）'}</label>
+        </div>
+        <p style={{ ...HS, marginBottom: 8 }}>与上方"资格证书"文本框并行，此处可补录证书等级和签发日期</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {certificateEntries.map((c, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'center' }}>
+              <input className={IC} style={IS} value={c.name} onChange={e => setCertificateEntries(rows => rows.map((row, idx) => idx === i ? { ...row, name: e.target.value } : row))} placeholder="证书名称" />
+              <input className={IC} style={IS} value={c.level} onChange={e => setCertificateEntries(rows => rows.map((row, idx) => idx === i ? { ...row, level: e.target.value } : row))} placeholder="等级（如：一级）" />
+              <div>
+                <MonthYearPicker value={c.issue_date} onChange={val => setCertificateEntries(rows => rows.map((row, idx) => idx === i ? { ...row, issue_date: val } : row))} />
+              </div>
+              <DeleteButton onClick={() => setCertificateEntries(rows => rows.filter((_, idx) => idx !== i))} />
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={() => setCertificateEntries(rows => [...rows, { ...EMPTY_CERT_ENTRY }])} style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 6, border: '1px dashed var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontSize: 12, cursor: 'pointer' }}>
+          <Plus size={12} />新增证书
         </button>
       </div>
     </div>
@@ -1026,8 +1508,8 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
 
   // 期望职位
   const sSalary = (
-    <div ref={el => sectionRefs.current['salary'] = el} style={{ marginBottom: 24 }}>
-      <SectionHeader title="期望职位" />
+    <div ref={el => sectionRefs.current['salary'] = el} style={{ marginBottom: 32 }}>
+      <SectionHeader title="期望职位" aiHighlight={aiFilledSections.has('salary')} />
       {/* Row 1: 期望岗位 — full width */}
       <div ref={posWrapRef} style={{ position: 'relative', marginBottom: 10 }}>
         <label className={LC} style={LS}>期望岗位</label>
@@ -1039,17 +1521,47 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
           document.body
         )}
       </div>
-      {/* Row 2: 期望薪资 range */}
+      {/* Row 2: 期望薪资 range + 年包月数 */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-          <label className={LC} style={{ ...LS, marginBottom: 0 }}>期望薪资</label>
-          <button type="button" onClick={() => setExpectedSalaryPeriod(p => p === 'month' ? 'year' : 'month')} style={{ fontSize: 11, padding: '1px 6px', borderRadius: 4, border: '1px solid var(--t-primary)', color: 'var(--t-primary)', background: 'transparent', cursor: 'pointer' }}>{expectedSalaryPeriod === 'month' ? '/月' : '/年'}</button>
+        <div style={{ marginBottom: 3 }}>
+          <label className={LC} style={{ ...LS, marginBottom: 0 }}>期望薪资（元/月）</label>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input className={IC} style={{ ...IS, flex: 1 }} placeholder="最低" value={esMINFocused ? expectedSalaryMin.replace(/,/g, '') : formatThousand(expectedSalaryMin.replace(/,/g, ''))} onFocus={() => { setEsMinFocused(true); setExpectedSalaryMin(expectedSalaryMin.replace(/,/g, '')) }} onBlur={() => setEsMinFocused(false)} onChange={e => setExpectedSalaryMin(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" />
           <span style={{ color: 'var(--t-text-muted)', fontSize: 12, flexShrink: 0 }}>—</span>
           <input className={IC} style={{ ...IS, flex: 1 }} placeholder="最高" value={esMAXFocused ? expectedSalaryMax.replace(/,/g, '') : formatThousand(expectedSalaryMax.replace(/,/g, ''))} onFocus={() => { setEsMaxFocused(true); setExpectedSalaryMax(expectedSalaryMax.replace(/,/g, '')) }} onBlur={() => setEsMaxFocused(false)} onChange={e => setExpectedSalaryMax(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" />
+          <div style={{ flexShrink: 0, width: 100 }}>
+            <TerminalSelect value={expectedSalaryMonths} onChange={setExpectedSalaryMonths} options={[{ value: '', label: '年包薪' }, { value: '12', label: '×12薪' }, { value: '13', label: '×13薪' }, { value: '14', label: '×14薪' }, { value: '15', label: '×15薪' }, { value: '16', label: '×16薪' }]} placeholder="年包薪" hasValue={!!expectedSalaryMonths} />
+          </div>
         </div>
+      </div>
+
+      {/* 多求职意向 */}
+      <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--t-border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <label className={LC} style={{ ...LS, marginBottom: 0 }}>其他求职意向{desiredPositions.length > 0 ? ` · ${desiredPositions.length} 个` : '（选填，可添加多个平行意向）'}</label>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {desiredPositions.map((d, i) => (
+            <div key={i} style={{ borderRadius: 8, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px', background: 'var(--t-bg-panel)', borderBottom: '1px solid var(--t-border-subtle)' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-text-secondary)' }}>求职意向 #{i + 1}</span>
+                <DeleteButton onClick={() => setDesiredPositions(rows => rows.filter((_, idx) => idx !== i))} />
+              </div>
+              <div style={{ padding: '10px 14px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                <div style={{ gridColumn: 'span 2' }}><label style={HS}>期望岗位</label><input className={IC} style={IS} value={d.title} onChange={e => setDesiredPositions(rows => rows.map((row, idx) => idx === i ? { ...row, title: e.target.value } : row))} placeholder="如：招聘经理、HRBP" /></div>
+                <div><label style={HS}>年包月数</label><TerminalSelect value={d.salary_months} onChange={val => setDesiredPositions(rows => rows.map((row, idx) => idx === i ? { ...row, salary_months: val } : row))} options={[{ value: '', label: '未填' }, { value: '12', label: '×12薪' }, { value: '13', label: '×13薪' }, { value: '14', label: '×14薪' }, { value: '15', label: '×15薪' }, { value: '16', label: '×16薪' }]} placeholder="未填" hasValue={!!d.salary_months} /></div>
+                <div><label style={HS}>薪资最低（元）</label><input className={IC} style={IS} inputMode="numeric" value={d.salary_min} onChange={e => setDesiredPositions(rows => rows.map((row, idx) => idx === i ? { ...row, salary_min: e.target.value.replace(/\D/g, '') } : row))} placeholder="15,000" /></div>
+                <div><label style={HS}>薪资最高（元）</label><input className={IC} style={IS} inputMode="numeric" value={d.salary_max} onChange={e => setDesiredPositions(rows => rows.map((row, idx) => idx === i ? { ...row, salary_max: e.target.value.replace(/\D/g, '') } : row))} placeholder="20,000" /></div>
+                <div><label style={HS}>薪资周期</label><TerminalSelect value={d.salary_period} onChange={val => setDesiredPositions(rows => rows.map((row, idx) => idx === i ? { ...row, salary_period: val } : row))} options={[{ value: 'month', label: '/月' }, { value: 'year', label: '/年' }]} placeholder="/月" hasValue={true} /></div>
+                <div style={{ gridColumn: 'span 3' }}><label style={HS}>目标行业（逗号分隔）</label><input className={IC} style={IS} value={d.industries} onChange={e => setDesiredPositions(rows => rows.map((row, idx) => idx === i ? { ...row, industries: e.target.value } : row))} placeholder="如：货运/物流/仓储，贸易/进出口" /></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={() => setDesiredPositions(rows => [...rows, { ...EMPTY_DESIRED_POS }])} style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 6, border: '1px dashed var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', fontSize: 12, cursor: 'pointer' }}>
+          <Plus size={12} />新增求职意向
+        </button>
       </div>
     </div>
   )
@@ -1065,34 +1577,44 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
         </div>
       )}
 
+      {/* AI prefill banner */}
+      {aiFilledSections.size > 0 && !aiBannerDismissed && (
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 16px', borderBottom: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.1)', color: 'var(--t-primary)', fontSize: 12, lineHeight: 1.5 }}>
+          <Sparkles size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span style={{ flex: 1 }}>
+            <strong>AI 已根据简历预填：</strong>
+            {Array.from(aiFilledSections).map(id => SECTIONS.find(s => s.id === id)?.label).filter(Boolean).join('、')}
+            。请确认内容并补充<strong>手机号、邮箱、当前住址</strong>等必填信息。
+          </span>
+          <button type="button" onClick={() => setAiBannerDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t-primary)', padding: 2, flexShrink: 0, lineHeight: 0 }}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Body: sidebar + content */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
         {/* Left sidebar nav */}
-        <div style={{ width: 164, flexShrink: 0, borderRight: '1px solid var(--t-border-subtle)', overflowY: 'auto', padding: '16px 0', background: 'var(--t-bg-panel)' }}>
-          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--t-text-muted)', padding: '0 16px 8px' }}>SECTIONS</p>
-          {SECTIONS.filter(s => s.id !== 'current-position' || availability !== 'open').map(s => {
-            const active = activeSection === s.id
-            return (
-              <button key={s.id} type="button" onClick={() => scrollToSection(s.id)}
-                style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '6px 16px', gap: 8, background: active ? 'var(--t-bg-active)' : 'transparent', border: 'none', borderLeft: `2px solid ${active ? 'var(--t-primary)' : 'transparent'}`, cursor: 'pointer', transition: 'background 100ms' }}>
-                <span style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? 'var(--t-text)' : 'var(--t-text-secondary)', textAlign: 'left', lineHeight: 1.4 }}>{s.label}</span>
-              </button>
-            )
-          })}
+        <div style={{ width: 180, flexShrink: 0, borderRight: '1px solid var(--t-border-subtle)', overflowY: 'auto', padding: '16px 0', background: 'var(--t-bg-panel)' }}>
+          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--t-text-muted)', padding: '0 16px 10px' }}>SECTIONS</p>
+          {SECTIONS.filter(s => s.id !== 'current-position' || availability !== 'open').map(s => (
+            <SidebarNavItem key={s.id} label={s.label} active={activeSection === s.id} onClick={() => scrollToSection(s.id)} />
+          ))}
         </div>
 
         {/* Scrollable content */}
-        <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
-          <div style={{ maxWidth: 860, margin: '0 auto' }}>
+        <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
+          <div style={{ maxWidth: 840, margin: '0 auto' }}>
             {sBasicInfo}
+            {sPersonalAdvantages}
             {availability !== 'open' && sCurrentPosition}
             {sSalary}
             {sWorkExp}
             {sProjectExp}
             {sSkills}
             {sEducation}
-            <div style={{ height: 40 }} />
+            <div style={{ height: 280 }} />
           </div>
         </div>
       </div>

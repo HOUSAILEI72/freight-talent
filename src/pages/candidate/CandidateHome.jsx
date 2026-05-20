@@ -268,27 +268,30 @@ export default function CandidateHome() {
           <div className="terminal-platform-count-grid shrink-0">
             <MetricCard
               compact
+              highlight
               label="PLATFORM CANDIDATES"
               value={trendLoading ? '—' : (platformTotals.candidates ?? 0)}
               icon={<Users size={14} />}
             />
             <MetricCard
               compact
+              highlight
               label="PLATFORM JOBS"
               value={trendLoading ? '—' : (platformTotals.jobs ?? 0)}
               icon={<Briefcase size={14} />}
             />
             <MetricCard
               compact
+              highlight
               label="PLATFORM TEAMS"
               value={trendLoading ? '—' : (platformTotals.teams ?? 0)}
               icon={<UsersRound size={14} />}
             />
             <MetricCard
               compact
+              highlight
               label="TO BE SOON"
               value="—"
-              helper="COMING SOON"
               icon={<Wrench size={14} />}
             />
           </div>

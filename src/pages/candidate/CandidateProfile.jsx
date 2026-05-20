@@ -138,15 +138,63 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
   const [diagnosisResult, setDiagnosisResult] = useState(null) // DiagnoseResponse | null
   const [diagnosisError, setDiagnosisError] = useState('')
 
+  // ── 删除附件 ─────────────────────────────────────────────────────────────
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDeleteResume() {
+    setDeleting(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/candidates/me/resume', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert(err.message || '删除失败，请重试')
+        return
+      }
+      setProfile(prev => ({ ...prev, resume_file_name: null, resume_file_path: null, resume_uploaded_at: null }))
+      setDeleteConfirm(false)
+    } catch {
+      alert('网络错误，请重试')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // ── 简历预览 ─────────────────────────────────────────────────────────────
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [previewFilename, setPreviewFilename] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+
+  async function handleOpenPreview() {
+    setPreviewLoading(true)
+    setPreviewOpen(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/v2/candidates/me/resume-preview', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setPreviewUrl(''); return }
+      setPreviewUrl(json.url)
+      setPreviewFilename(json.filename)
+    } catch {
+      setPreviewUrl('')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
   // ── AI 解析简历 ───────────────────────────────────────────────────────────
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState('')
   const [parsedData, setParsedData] = useState(null)
-  const [applyingParse, setApplyingParse] = useState(false)
-  const [applySuccess, setApplySuccess] = useState(false)
-
   async function handleAIParse() {
-    setParsing(true); setParseError(''); setParsedData(null); setApplySuccess(false)
+    setParsing(true); setParseError(''); setParsedData(null)
     try {
       const token = localStorage.getItem('token') || ''
       const res = await fetch('/api/v2/candidates/me/resume/ai-parse', {
@@ -163,38 +211,12 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
     }
   }
 
-  async function handleApplyParsed() {
+  function handleApplyParsed() {
     if (!parsedData) return
-    setApplyingParse(true)
     try {
-      const token = localStorage.getItem('token') || ''
-      const payload = {}
-      const strFields = ['full_name', 'education', 'english_level', 'expected_city',
-        'desired_position', 'expected_salary_period', 'summary']
-      strFields.forEach(k => { if (parsedData[k] != null) payload[k] = parsedData[k] })
-      const numFields = ['age', 'experience_years', 'expected_salary_min', 'expected_salary_max']
-      numFields.forEach(k => { if (parsedData[k] != null) payload[k] = parsedData[k] })
-      const arrFields = ['work_experiences', 'education_experiences', 'project_experiences',
-        'certificates', 'hard_skill_tags', 'soft_skill_tags']
-      arrFields.forEach(k => { if (Array.isArray(parsedData[k]) && parsedData[k].length) payload[k] = parsedData[k] })
-      const res = await fetch('/api/candidates/profile', {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        setParseError(err.message || '保存失败，请重试'); return
-      }
-      const updated = await res.json()
-      setProfile(p => ({ ...p, ...updated.profile }))
-      setApplySuccess(true)
-      setTimeout(() => { setParsedData(null); setApplySuccess(false) }, 1500)
-    } catch {
-      setParseError('保存失败，请重试')
-    } finally {
-      setApplyingParse(false)
-    }
+      sessionStorage.setItem('ai_parse_result', JSON.stringify(parsedData))
+    } catch {}
+    navigate('/candidate/profile/me?tab=edit&ai_prefill=1')
   }
 
   // ── 屏蔽公司 ─────────────────────────────────────────────────────────────
@@ -378,31 +400,51 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
   return (
     <div
       className={
-        terminal
-          ? `terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar py-8 ${isOwnProfile ? 'pl-6' : 'px-6'}`
+        terminal && isOwnProfile
+          ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-hidden flex flex-col'
+          : terminal
+          ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar px-6 py-8'
           : 'max-w-5xl mx-auto px-6 py-10'
       }
       style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
     >
-      <div className={terminal ? (isOwnProfile ? 'w-full' : 'mx-auto w-full max-w-5xl') : ''}>
+      <div className={
+        terminal && isOwnProfile ? 'flex-1 min-h-0 flex flex-col' :
+        terminal ? 'mx-auto w-full max-w-5xl' : ''
+      }>
 
-      <div className={terminal ? 'flex gap-4 items-start' : 'grid lg:grid-cols-3 gap-6'}>
+      <div
+        className={terminal && isOwnProfile ? 'flex gap-4 flex-1 min-h-0' : terminal ? 'flex gap-4 items-start' : 'grid lg:grid-cols-3 gap-6'}
+        style={terminal && isOwnProfile ? { paddingLeft: 24 } : undefined}
+      >
 
         {/* ── 左栏：简介卡 ── */}
-        <div className={terminal ? '' : 'lg:col-span-1 space-y-4'} style={terminal ? { width: 248, flexShrink: 0 } : undefined}>
+        <div
+          className={terminal ? (isOwnProfile ? 'terminal-scrollbar' : '') : 'lg:col-span-1 space-y-4'}
+          style={terminal ? { width: 248, flexShrink: 0, overflowY: 'auto', paddingTop: 32, paddingBottom: 32 } : undefined}
+        >
           <div
             className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border text-center' : 'card p-6 text-center'}
             style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
           >
-            <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center font-bold text-3xl mx-auto mb-4"
-              style={terminal
-                ? { background: 'var(--t-primary-muted)', color: 'var(--t-primary)', border: '1px solid var(--t-border)', fontFamily: 'var(--t-font-sans)' }
-                : { background: 'linear-gradient(135deg, #60a5fa, #2563eb)', color: '#fff' }
-              }
-            >
-              {profile.full_name?.[0] ?? '?'}
-            </div>
+            {profile.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt="头像"
+                className="w-20 h-20 rounded-2xl object-cover mx-auto mb-4"
+                style={terminal ? { border: '1px solid var(--t-border)' } : undefined}
+              />
+            ) : (
+              <div
+                className="w-20 h-20 rounded-2xl flex items-center justify-center font-bold text-3xl mx-auto mb-4"
+                style={terminal
+                  ? { background: 'var(--t-primary-muted)', color: 'var(--t-primary)', border: '1px solid var(--t-border)', fontFamily: 'var(--t-font-sans)' }
+                  : { background: 'linear-gradient(135deg, #60a5fa, #2563eb)', color: '#fff' }
+                }
+              >
+                {profile.full_name?.[0] ?? '?'}
+              </div>
+            )}
             <h1
               className="text-xl font-bold"
               style={terminal
@@ -526,7 +568,10 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
         </div>
 
         {/* ── 中栏：主内容 ── */}
-        <div className={terminal ? '' : 'lg:col-span-2 space-y-4'} style={terminal ? { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 } : undefined}>
+        <div
+          className={terminal ? (isOwnProfile ? 'terminal-scrollbar' : '') : 'lg:col-span-2 space-y-4'}
+          style={terminal ? { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', paddingTop: 32, paddingBottom: 32 } : undefined}
+        >
 
           {/* 个人简介 */}
           {profile.summary && (
@@ -534,7 +579,7 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
               className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border' : 'card p-6'}
               style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
             >
-              <SectionTitle terminal={terminal} mb={3}>个人简介</SectionTitle>
+              <SectionTitle terminal={terminal} mb={3}>个人优势</SectionTitle>
               <p
                 className="text-sm leading-relaxed"
                 style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}
@@ -597,8 +642,8 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
             </div>
           )}
 
-          {/* 简历文件 */}
-          {profile.resume_file_name && (
+          {/* 简历文件（仅在非 terminal 或企业/admin 查看时显示） */}
+          {profile.resume_file_name && !(terminal && isOwnProfile) && (
             <div
               className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border' : 'card p-6'}
               style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
@@ -938,7 +983,7 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
 
         {/* ── 右侧管理面板（terminal + 自己查看） ── */}
         {terminal && isOwnProfile && (
-          <div style={{ width: 256, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="terminal-scrollbar" style={{ width: 256, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', paddingTop: 32, paddingBottom: 32, paddingRight: 24 }}>
 
             {/* ── 附件管理 ── */}
             <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 18px' }}>
@@ -951,10 +996,16 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
               </div>
               {profile.resume_file_name ? (
                 <>
-                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 8 }}>文件（1/1）</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', marginBottom: 10 }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 8 }}>文件（1/1）· 双击预览</p>
+                  <div
+                    onDoubleClick={handleOpenPreview}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', marginBottom: 10, cursor: 'pointer' }}
+                    title="双击预览简历"
+                  >
                     <div style={{ width: 38, height: 46, borderRadius: 6, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: 9, fontWeight: 800, color: '#fff', letterSpacing: '0.05em' }}>PDF</span>
+                      <span style={{ fontSize: 9, fontWeight: 800, color: '#fff', letterSpacing: '0.05em' }}>
+                        {profile.resume_file_name.split('.').pop().toUpperCase()}
+                      </span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--t-text)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile.resume_file_name}</p>
@@ -962,6 +1013,30 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
                         更新于 {profile.resume_uploaded_at ? profile.resume_uploaded_at.slice(0, 10).replace(/-/g, '.') : '—'}
                       </p>
                     </div>
+                    {/* 删除按钮 */}
+                    {deleteConfirm ? (
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                        <button type="button" onClick={() => setDeleteConfirm(false)}
+                          style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'var(--t-bg)', color: 'var(--t-text-muted)', cursor: 'pointer' }}>
+                          取消
+                        </button>
+                        <button type="button" onClick={handleDeleteResume} disabled={deleting}
+                          style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: 'none', background: 'var(--t-danger)', color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}>
+                          {deleting ? '...' : '确认'}
+                        </button>
+                      </div>
+                    ) : (
+                      <button type="button"
+                        onClick={e => { e.stopPropagation(); setDeleteConfirm(true) }}
+                        style={{ flexShrink: 0, padding: 4, borderRadius: 4, border: 'none', background: 'none', color: 'var(--t-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--t-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--t-text-muted)'}
+                        title="删除简历">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
+                    )}
                   </div>
                   {/* AI 解析按钮 */}
                   <button type="button" onClick={handleAIParse} disabled={parsing}
@@ -1136,6 +1211,49 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
 
       {noteTag && <TagNoteModal tag={noteTag} onClose={() => setNoteTag(null)} />}
 
+      {/* ── 简历预览弹窗 ── */}
+      {previewOpen && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9600, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          onClick={e => { if (e.target === e.currentTarget) { setPreviewOpen(false); setPreviewUrl('') } }}
+        >
+          <div style={{ width: '100%', maxWidth: 880, height: '85vh', display: 'flex', flexDirection: 'column', borderRadius: 'var(--t-radius-lg)', border: '1px solid var(--t-border)', background: 'var(--t-bg-panel)', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--t-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FileText size={14} style={{ color: 'var(--t-primary)' }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>{previewFilename || '简历预览'}</span>
+              </div>
+              <button type="button" onClick={() => { setPreviewOpen(false); setPreviewUrl('') }}
+                style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'transparent', color: 'var(--t-text-muted)', cursor: 'pointer', fontSize: 13 }}>
+                关闭
+              </button>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--t-bg)' }}>
+              {previewLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                  <Loader2 size={24} className="animate-spin" style={{ color: 'var(--t-primary)' }} />
+                  <p style={{ fontSize: 13, color: 'var(--t-text-muted)' }}>加载中...</p>
+                </div>
+              ) : previewUrl ? (
+                <iframe
+                  src={previewUrl}
+                  title="简历预览"
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                />
+              ) : (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: 13, color: 'var(--t-danger)', marginBottom: 8 }}>预览加载失败</p>
+                  <button type="button" onClick={handleOpenPreview}
+                    style={{ fontSize: 12, color: 'var(--t-primary)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    重试
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── AI 解析确认弹窗 ── */}
       {parsedData && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9500, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
@@ -1149,37 +1267,42 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
               <button type="button" onClick={() => setParsedData(null)} style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--t-text-muted)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 4 }}>以下字段将覆盖写入你的档案，请确认无误后点击「应用到档案」。</p>
+              <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 4 }}>AI 已从简历中提取以下内容，点击「进入编辑页确认」后可逐项核对。</p>
               {[
                 ['姓名', parsedData.full_name],
-                ['年龄', parsedData.age],
-                ['工作年限', parsedData.experience_years != null ? `${parsedData.experience_years} 年` : null],
+                ['手机', parsedData.phone],
+                ['邮箱', parsedData.email],
+                ['性别', parsedData.gender === 'male' ? '男' : parsedData.gender === 'female' ? '女' : null],
+                ['出生年月', parsedData.birth_year != null ? `${parsedData.birth_year}年${parsedData.birth_month != null ? parsedData.birth_month + '月' : ''}` : null],
+                ['城市', parsedData.current_city],
+                ['求职状态', parsedData.availability_status === 'open' ? '离职-随时到岗' : parsedData.availability_status === 'passive_now' ? '在职-月内到岗' : parsedData.availability_status === 'passive' ? '在职-考虑机会' : null],
+                ['业务方向', parsedData.function_code],
                 ['学历', parsedData.education],
                 ['英语水平', parsedData.english_level],
-                ['期望城市', parsedData.expected_city],
                 ['期望岗位', parsedData.desired_position],
                 ['期望薪资', parsedData.expected_salary_min != null
                   ? `${parsedData.expected_salary_min?.toLocaleString()}—${parsedData.expected_salary_max?.toLocaleString()} /${parsedData.expected_salary_period === 'year' ? '年' : '月'}`
                   : null],
+                ['当前月薪', parsedData.current_salary != null ? `${parsedData.current_salary.toLocaleString()} 元` : null],
               ].filter(([, v]) => v != null).map(([label, value]) => (
                 <div key={label} style={{ display: 'flex', gap: 12, padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
                   <span style={{ fontSize: 11, color: 'var(--t-text-muted)', width: 64, flexShrink: 0 }}>{label}</span>
                   <span style={{ fontSize: 12, color: 'var(--t-text)', fontWeight: 500 }}>{String(value)}</span>
                 </div>
               ))}
-              {parsedData.summary && (
-                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
-                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 4 }}>个人优势</p>
-                  <p style={{ fontSize: 12, color: 'var(--t-text)', lineHeight: 1.7 }}>{parsedData.summary.slice(0, 200)}{parsedData.summary.length > 200 ? '…' : ''}</p>
-                </div>
-              )}
               {parsedData.work_experiences?.length > 0 && (
                 <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
                   <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 6 }}>工作经历（{parsedData.work_experiences.length} 条）</p>
-                  {parsedData.work_experiences.slice(0, 3).map((w, i) => (
-                    <p key={i} style={{ fontSize: 12, color: 'var(--t-text)', marginBottom: 2 }}>{w.company_name} · {w.title}　{w.start_month}—{w.end_month}</p>
+                  {parsedData.work_experiences.map((w, i) => (
+                    <div key={i} style={{ marginBottom: i < parsedData.work_experiences.length - 1 ? 6 : 0 }}>
+                      <p style={{ fontSize: 12, color: 'var(--t-text)', marginBottom: w.responsibilities ? 2 : 0 }}>{w.company_name} · {w.title}　{w.start_month || ''}—{w.end_month || '至今'}</p>
+                      {w.responsibilities && (
+                        <p style={{ fontSize: 11, color: 'var(--t-text-secondary)', lineHeight: 1.5, paddingLeft: 8 }}>
+                          {w.responsibilities.length > 80 ? w.responsibilities.slice(0, 80) + '…' : w.responsibilities}
+                        </p>
+                      )}
+                    </div>
                   ))}
-                  {parsedData.work_experiences.length > 3 && <p style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>……共 {parsedData.work_experiences.length} 条</p>}
                 </div>
               )}
               {parsedData.education_experiences?.length > 0 && (
@@ -1188,6 +1311,24 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
                   {parsedData.education_experiences.map((e, i) => (
                     <p key={i} style={{ fontSize: 12, color: 'var(--t-text)', marginBottom: 2 }}>{e.school} · {e.major} · {e.degree}</p>
                   ))}
+                </div>
+              )}
+              {(parsedData.hard_skill_tags?.length > 0 || parsedData.soft_skill_tags?.length > 0) && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 6 }}>能力标签</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {[...(parsedData.hard_skill_tags || []), ...(parsedData.soft_skill_tags || [])].map((tag, i) => (
+                      <span key={i} style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'var(--t-primary-muted)', color: 'var(--t-primary)', border: '1px solid var(--t-border)' }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {parsedData.summary && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 4 }}>个人优势</p>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-secondary)', lineHeight: 1.6 }}>
+                    {parsedData.summary.length > 120 ? parsedData.summary.slice(0, 120) + '…' : parsedData.summary}
+                  </p>
                 </div>
               )}
               {parsedData.certificates?.length > 0 && (
@@ -1203,10 +1344,9 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
                 style={{ flex: 1, padding: '8px 0', borderRadius: 6, border: '1px solid var(--t-border)', background: 'transparent', color: 'var(--t-text-secondary)', fontSize: 13, cursor: 'pointer' }}>
                 取消
               </button>
-              <button type="button" onClick={handleApplyParsed} disabled={applyingParse || applySuccess}
-                style={{ flex: 2, padding: '8px 0', borderRadius: 6, border: 'none', background: applySuccess ? 'var(--t-success)' : 'var(--t-primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: applyingParse ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                {applyingParse ? <Loader2 size={13} className="animate-spin" /> : null}
-                {applySuccess ? '已应用 ✓' : applyingParse ? '保存中...' : '应用到档案'}
+              <button type="button" onClick={handleApplyParsed}
+                style={{ flex: 2, padding: '8px 0', borderRadius: 6, border: 'none', background: 'var(--t-primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                进入编辑页确认
               </button>
             </div>
           </div>
