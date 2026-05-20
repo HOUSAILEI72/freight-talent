@@ -11,11 +11,12 @@ export default function MetricCard({
   trend,
   icon,
   compact = false,
+  highlight = false,
   light = false,
   className = '',
 }) {
   const trendStyle = trend ? TREND_STYLES[trend.direction ?? 'neutral'] : null
-  const pad = compact ? 'px-4 py-2.5' : 'px-5 py-4'
+  const pad = compact && highlight ? 'px-4 py-4' : compact ? 'px-4 py-2.5' : 'px-5 py-4'
 
   const cardStyle = light ? {
     background: '#ffffff',
@@ -25,13 +26,13 @@ export default function MetricCard({
 
   const labelColor  = light ? '#7390c2' : 'var(--t-text-muted)'
   const iconColor   = light ? '#7390c2' : 'var(--t-text-muted)'
-  const valueColor  = light ? '#073b8e' : 'var(--t-text)'
+  const valueColor  = highlight ? 'var(--t-primary)' : light ? '#073b8e' : 'var(--t-text)'
   const helperColor = light ? '#7390c2' : 'var(--t-text-secondary)'
   const hoverClass  = light ? 'hover:bg-[#f0f6ff]' : 'hover:bg-[var(--t-bg-hover)]'
 
   return (
     <div
-      className={`relative flex flex-col ${compact ? 'gap-1.5' : 'gap-2'} rounded-[var(--t-radius-lg)] transition-colors duration-[var(--t-transition)] ${hoverClass} ${pad} ${className}`}
+      className={`relative flex flex-col ${compact ? 'gap-1' : 'gap-2'} rounded-[var(--t-radius-lg)] transition-colors duration-[var(--t-transition)] ${hoverClass} ${pad} ${className}`}
       style={light ? cardStyle : {
         background: 'var(--t-bg-panel)',
         border: '1px solid var(--t-border)',
@@ -56,7 +57,7 @@ export default function MetricCard({
       {/* value + helper */}
       <div>
         <span
-          className={`block font-extrabold leading-tight terminal-tabular-num ${compact ? 'text-[length:var(--t-text-lg)]' : 'text-[length:var(--t-text-xl)]'}`}
+          className={`block font-extrabold leading-none terminal-tabular-num ${compact && highlight ? 'text-[clamp(32px,4.5vh,48px)]' : compact ? 'text-[length:var(--t-text-lg)]' : 'text-[length:var(--t-text-xl)]'}`}
           style={{ color: valueColor }}
         >
           {value ?? '—'}

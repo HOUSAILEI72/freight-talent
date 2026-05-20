@@ -110,8 +110,11 @@ export function Navbar() {
                     onClick={() => setShowUserMenu((v) => !v)}
                     className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
                   >
-                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-[10px] font-bold">{avatarChar(user)}</span>
+                    <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center bg-blue-600">
+                      {user.avatar_url
+                        ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                        : <span className="text-white text-[10px] font-bold">{avatarChar(user)}</span>
+                      }
                     </div>
                     <span className="text-sm font-medium text-slate-700 max-w-[90px] truncate">
                       {user.company_name ?? user.name}

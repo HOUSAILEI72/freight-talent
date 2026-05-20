@@ -42,7 +42,7 @@ export default function TrendSummaryCard({ type, data, loading }) {
           </strong>
         </div>
         <div className="terminal-growth-row">
-          <span>THIS WEEK</span>
+          <span>BY WEEK</span>
           <strong className="terminal-growth-row-value terminal-growth-row-value--sm" style={{ color: weekUp ? 'var(--t-trend-up)' : 'var(--t-trend-neutral)' }}>
             {loading ? '—' : formatPercent(weekPct)}
           </strong>
