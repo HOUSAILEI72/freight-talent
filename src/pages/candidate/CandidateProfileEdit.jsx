@@ -651,7 +651,7 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
     // 规范化 YYYY.MM → YYYY-MM，简历中的点号/中文格式日期
     function normalizeMonth(s) {
       if (!s) return ''
-      const m = String(s).match(/^(\d{4})[.\-\/](\d{1,2})$/)
+      const m = String(s).match(/^(\d{4})[.\-/](\d{1,2})$/)
       return m ? `${m[1]}-${String(m[2]).padStart(2, '0')}` : String(s)
     }
 
@@ -777,7 +777,7 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
           if (aiPrefill) {
             const raw = sessionStorage.getItem('ai_parse_result')
             if (raw) {
-              try { mergeAiData(JSON.parse(raw)) } catch {}
+              try { mergeAiData(JSON.parse(raw)) } catch { /* ignore parse error */ }
               sessionStorage.removeItem('ai_parse_result')
             }
             const params = new URLSearchParams(window.location.search)

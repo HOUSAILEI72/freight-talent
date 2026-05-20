@@ -13,7 +13,8 @@ VALID_DEGREE_REQUIREMENTS = {"不限", "初中及以下", "高中", "大专", "�
 
 
 def _err(msg, code=400):
-    import logging; logging.getLogger(__name__).warning("job validation error [%s]: %s", code, msg)
+    import logging
+    logging.getLogger(__name__).warning("job validation error [%s]: %s", code, msg)
     return jsonify({"success": False, "message": msg}), code
 
 
