@@ -136,8 +136,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # SSL 证书放 CVM 的 /etc/ssl/cert/ 目录：fullchain.pem + privkey.pem
       - /etc/ssl/cert:/etc/ssl/cert:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
       - app_net
     mem_limit: 128M
