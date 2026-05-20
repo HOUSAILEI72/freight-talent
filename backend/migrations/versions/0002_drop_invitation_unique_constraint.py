@@ -18,13 +18,12 @@ depends_on = None
 
 
 def upgrade():
-    # MySQL 1553: 删除 unique 约束前需先建立替代索引（支撑 job_id FK）。
-    # 使用原生 SQL 在同一 DDL 语句中完成两步操作，避免 Alembic batch 模式
-    # 多次往返导致中间状态下 MySQL 校验失败。
+    # 全新库中 uq_invitation_job_candidate 不存在，需先检查再删除
     op.execute(
-        "ALTER TABLE invitations "
-        "ADD INDEX ix_invitations_job_id (job_id), "
-        "DROP INDEX uq_invitation_job_candidate"
+        "CREATE INDEX IF NOT EXISTS ix_invitations_job_id ON invitations (job_id)"
+    )
+    op.execute(
+        "ALTER TABLE invitations DROP INDEX IF EXISTS uq_invitation_job_candidate"
     )
 
 

@@ -22,8 +22,13 @@ export default defineConfig({
     sourcemap: hasAuthToken,
   },
   server: {
+    host: true,
     proxy: {
       '/api/v2': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/uploads': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
