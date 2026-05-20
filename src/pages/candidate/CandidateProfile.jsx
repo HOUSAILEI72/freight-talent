@@ -127,7 +127,7 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [inviting, setInviting] = useState(false)
-  const [inviteSuccess, setInviteSuccess] = useState(false)
+  const [inviteSuccess, _setInviteSuccess] = useState(false)
 
   const [noteTag, setNoteTag] = useState(null)
   const [allTagObjects, setAllTagObjects] = useState([])
@@ -215,7 +215,7 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
     if (!parsedData) return
     try {
       sessionStorage.setItem('ai_parse_result', JSON.stringify(parsedData))
-    } catch {}
+    } catch { /* ignore storage error */ }
     navigate('/candidate/profile/me?tab=edit&ai_prefill=1')
   }
 
@@ -1295,7 +1295,7 @@ export default function CandidateProfile({ viewMode, onEdit, terminal = false })
                   <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 6 }}>工作经历（{parsedData.work_experiences.length} 条）</p>
                   {parsedData.work_experiences.map((w, i) => (
                     <div key={i} style={{ marginBottom: i < parsedData.work_experiences.length - 1 ? 6 : 0 }}>
-                      <p style={{ fontSize: 12, color: 'var(--t-text)', marginBottom: w.responsibilities ? 2 : 0 }}>{w.company_name} · {w.title}　{w.start_month || ''}—{w.end_month || '至今'}</p>
+                      <p style={{ fontSize: 12, color: 'var(--t-text)', marginBottom: w.responsibilities ? 2 : 0 }}>{w.company_name} · {w.title} {w.start_month || ''}—{w.end_month || '至今'}</p>
                       {w.responsibilities && (
                         <p style={{ fontSize: 11, color: 'var(--t-text-secondary)', lineHeight: 1.5, paddingLeft: 8 }}>
                           {w.responsibilities.length > 80 ? w.responsibilities.slice(0, 80) + '…' : w.responsibilities}

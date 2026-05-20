@@ -492,7 +492,7 @@ export default function CandidateProfileEdit({ terminal: _terminal = false, onDo
   // ── Section 7: 期望薪资 ───────────────────────────────────────────────
   const [expectedSalaryMin,    setExpectedSalaryMin]    = useState('')
   const [expectedSalaryMax,    setExpectedSalaryMax]    = useState('')
-  const [expectedSalaryPeriod, setExpectedSalaryPeriod] = useState('month')
+  const [_expectedSalaryPeriod, setExpectedSalaryPeriod] = useState('month')
   const [esMINFocused,         setEsMinFocused]         = useState(false)
   const [esMAXFocused,         setEsMaxFocused]         = useState(false)
   const [desiredPosition,      setDesiredPosition]      = useState('')
