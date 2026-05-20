@@ -29,13 +29,29 @@ jobs:
       - name: Build
         run: npm run build
 
-  # ── 后端 lint + 单元测试（骨架）──────────────────────────────────────────────
+  # ── 后端 lint + 单元测试 ────────────────────────────────────────────────────
   backend:
     name: Backend — lint & test
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ""
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_DATABASE: freight_talent_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -57,6 +73,10 @@ jobs:
             --ignore=E501,W503
 
       - name: Test
+        env:
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_USER: root
+          TEST_DB_PASSWORD: ""
         run: python -m pytest tests/ -x -q
 
   # ── Docker build 验证 ─────────────────────────────────────────────────────────
