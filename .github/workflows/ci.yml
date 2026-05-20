@@ -77,7 +77,7 @@ jobs:
           TEST_DB_HOST: 127.0.0.1
           TEST_DB_USER: root
           TEST_DB_PASSWORD: ""
-        run: python -m pytest tests/ -x -q
+        run: python -m pytest tests/ -x -q --timeout=60
 
   # ── Docker build 验证 ─────────────────────────────────────────────────────────
   docker-build:

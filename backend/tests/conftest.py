@@ -42,6 +42,9 @@ class _TestConfig:
     RATELIMIT_ENABLED = False
     SERVE_STATIC = False
     WTF_CSRF_ENABLED = False
+    # 启用 Socket.IO 但不连 Redis（单进程模式），让 socket 测试能正常运行
+    ENABLE_SOCKETIO = True
+    REDIS_URL = ""
 
 
 @pytest.fixture(scope="session")
