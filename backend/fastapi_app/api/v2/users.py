@@ -86,15 +86,12 @@ async def upload_avatar(db: DB, user_id: UserID, avatar: UploadFile = File(...))
     row = _get_user_row(db, user_id)
     old_url = row.avatar_url
 
-    # 5. 上传到 COS
+    # 5. 上传（COS 已配置走 COS，否则自动 fallback 到本地 uploads/）
     try:
         from fastapi_app.core.cos import upload_avatar as cos_upload, delete_avatar as cos_delete
         new_url = await cos_upload(user_id, data, ext)
-    except RuntimeError as e:
-        _log.error("COS 配置错误：%s", e)
-        raise HTTPException(status_code=503, detail="头像服务暂时不可用，请联系管理员")
     except Exception as e:
-        _log.error("COS 上传失败 user_id=%d：%s", user_id, e)
+        _log.error("头像上传失败 user_id=%d：%s", user_id, e)
         raise HTTPException(status_code=502, detail="头像上传失败，请稍后重试")
 
     # 6. 更新数据库

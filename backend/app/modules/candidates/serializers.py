@@ -25,6 +25,7 @@ def build_public_dict(profile: Candidate, include_contact: bool = False,
     """
     data = {
         "id": profile.id,
+        "avatar_url": profile.user.avatar_url if profile.user else None,
         # 公开字段（永远返回）
         "current_title": profile.current_title,
         "desired_position": profile.desired_position,

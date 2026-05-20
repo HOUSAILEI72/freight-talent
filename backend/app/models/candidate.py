@@ -94,6 +94,20 @@ class Candidate(db.Model):
     current_has_year_end_bonus = db.Column(db.Boolean, nullable=True)
     current_year_end_bonus_months = db.Column(db.Float, nullable=True)
 
+    # ── 简历增强字段 ──────────────────────────────────────────────────────────
+    # 户籍城市
+    hukou_city = db.Column(db.String(50), nullable=True)
+    # 多求职意向（JSON 数组）：[{title, salary_min, salary_max, salary_period, salary_months, industries:[]}]
+    desired_positions = db.Column(db.JSON, nullable=True)
+    # 期望年包月数（配合 expected_salary_* 使用）
+    expected_salary_months = db.Column(db.Integer, nullable=True)
+    # 多语言能力：[{language, proficiency_level}]
+    language_abilities = db.Column(db.JSON, nullable=True)
+    # 培训经历：[{course_name, institution, location, start_date, end_date}]
+    training_experiences = db.Column(db.JSON, nullable=True)
+    # 结构化证书：[{name, level, issue_date}]（与 legacy certificates 字符串数组并存）
+    certificate_entries = db.Column(db.JSON, nullable=True)
+
     # 服务端计算的档案完整度状态
     profile_status = db.Column(db.String(30), nullable=True, index=True)
     profile_completed_at = db.Column(db.DateTime, nullable=True)
@@ -151,6 +165,9 @@ class Candidate(db.Model):
             "expected_salary_period": self.expected_salary_period,
             "expected_salary_label": self.expected_salary_label,
             "english_level": self.english_level,
+            "language_abilities": self.language_abilities or [],
+            "desired_positions": self.desired_positions or [],
+            "expected_salary_months": self.expected_salary_months,
             "summary": self.summary,
             "gender": self.gender,
             "business_type": self.business_type,
@@ -205,6 +222,9 @@ class Candidate(db.Model):
                 "project_experiences": self.project_experiences or [],
                 "education_experiences": self.education_experiences or [],
                 "certificates": self.certificates or [],
+                "certificate_entries": self.certificate_entries or [],
+                "hukou_city": self.hukou_city,
+                "training_experiences": self.training_experiences or [],
                 # ── CAND-2A: current-company sensitive fields ──
                 "current_responsibilities": self.current_responsibilities,
                 "current_salary_min": self.current_salary_min,
@@ -233,6 +253,9 @@ class Candidate(db.Model):
                 "project_experiences": [],
                 "education_experiences": [],
                 "certificates": [],
+                "certificate_entries": [],
+                "hukou_city": None,
+                "training_experiences": [],
                 "current_responsibilities": None,
                 "current_salary_min": None,
                 "current_salary_max": None,

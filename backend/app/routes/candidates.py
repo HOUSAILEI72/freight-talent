@@ -307,7 +307,7 @@ def update_me():
     yebm_val, e = _opt_float("current_year_end_bonus_months")
     if e:
         return _err(e)
-    if yebm_val is not sentinel and yebm_val is not None and not (0 <= yebm_val <= 24):
+    if yebm_val is not sentinel and yebm_val is not None and not (0 < yebm_val <= 24):
         return _err("current_year_end_bonus_months 必须在 0-24 之间")
 
     has_yeb_val = sentinel
@@ -470,6 +470,136 @@ def update_me():
         profile.education_experiences = edu_exp_val
     if certificates_val is not sentinel:
         profile.certificates = certificates_val
+
+    # ── 简历增强字段 ─────────────────────────────────────────────────────────
+
+    # hukou_city
+    hukou_city_val = sentinel
+    if "hukou_city" in data:
+        hukou_city_val = (data.get("hukou_city") or "").strip() or None
+
+    # expected_salary_months
+    esm_val, e = _opt_int("expected_salary_months")
+    if e:
+        return _err(e)
+
+    # desired_positions: [{title, salary_min, salary_max, salary_period, salary_months, industries:[]}]
+    dp_val = sentinel
+    if "desired_positions" in data:
+        dp_raw = data.get("desired_positions")
+        if dp_raw is None:
+            dp_val = []
+        elif not isinstance(dp_raw, list):
+            return _err("desired_positions 必须为数组")
+        else:
+            out = []
+            for idx, item in enumerate(dp_raw):
+                if not isinstance(item, dict):
+                    return _err(f"desired_positions[{idx}] 必须为对象")
+                t = (item.get("title") or "").strip()
+                if not t:
+                    continue
+                entry = {"title": t}
+                for k in ("salary_min", "salary_max", "salary_months"):
+                    v = item.get(k)
+                    if v is not None and v != "":
+                        try:
+                            entry[k] = int(v)
+                        except (ValueError, TypeError):
+                            return _err(f"desired_positions[{idx}].{k} 必须为整数")
+                sp = item.get("salary_period")
+                if sp in ("month", "year"):
+                    entry["salary_period"] = sp
+                inds = item.get("industries")
+                if isinstance(inds, list):
+                    entry["industries"] = [str(x) for x in inds if x]
+                out.append(entry)
+            dp_val = out
+
+    # language_abilities: [{language, proficiency_level}]
+    lang_val = sentinel
+    if "language_abilities" in data:
+        lang_raw = data.get("language_abilities")
+        if lang_raw is None:
+            lang_val = []
+        elif not isinstance(lang_raw, list):
+            return _err("language_abilities 必须为数组")
+        else:
+            out = []
+            for idx, item in enumerate(lang_raw):
+                if not isinstance(item, dict):
+                    return _err(f"language_abilities[{idx}] 必须为对象")
+                lang = (item.get("language") or "").strip()
+                if not lang:
+                    continue
+                entry = {"language": lang}
+                pl = (item.get("proficiency_level") or "").strip()
+                if pl:
+                    entry["proficiency_level"] = pl
+                out.append(entry)
+            lang_val = out
+
+    # training_experiences: [{course_name, institution, location, start_date, end_date}]
+    train_val = sentinel
+    if "training_experiences" in data:
+        tr_raw = data.get("training_experiences")
+        if tr_raw is None:
+            train_val = []
+        elif not isinstance(tr_raw, list):
+            return _err("training_experiences 必须为数组")
+        else:
+            out = []
+            for idx, item in enumerate(tr_raw):
+                if not isinstance(item, dict):
+                    return _err(f"training_experiences[{idx}] 必须为对象")
+                cn = (item.get("course_name") or "").strip()
+                if not cn:
+                    continue
+                entry = {"course_name": cn}
+                for k in ("institution", "location", "start_date", "end_date"):
+                    v = (item.get(k) or "").strip()
+                    if v:
+                        entry[k] = v
+                out.append(entry)
+            train_val = out
+
+    # certificate_entries: [{name, level, issue_date}]
+    cert_entries_val = sentinel
+    if "certificate_entries" in data:
+        ce_raw = data.get("certificate_entries")
+        if ce_raw is None:
+            cert_entries_val = []
+        elif not isinstance(ce_raw, list):
+            return _err("certificate_entries 必须为数组")
+        else:
+            out = []
+            for idx, item in enumerate(ce_raw):
+                if not isinstance(item, dict):
+                    return _err(f"certificate_entries[{idx}] 必须为对象")
+                name = (item.get("name") or "").strip()
+                if not name:
+                    continue
+                entry = {"name": name}
+                for k in ("level", "issue_date"):
+                    v = (item.get(k) or "").strip()
+                    if v:
+                        entry[k] = v
+                out.append(entry)
+            cert_entries_val = out
+
+    # 持久化增强字段
+    if hukou_city_val is not sentinel:
+        profile.hukou_city = hukou_city_val
+    if esm_val is not sentinel:
+        profile.expected_salary_months = esm_val
+    if dp_val is not sentinel:
+        profile.desired_positions = dp_val
+    if lang_val is not sentinel:
+        profile.language_abilities = lang_val
+    if train_val is not sentinel:
+        profile.training_experiences = train_val
+    if cert_entries_val is not sentinel:
+        profile.certificate_entries = cert_entries_val
 
     # ── CAND-2A: server-computed profile_status (mirrors front-end gate) ───
     def _is_nonempty_str(v):
@@ -930,6 +1060,39 @@ def upload_resume():
         "uploaded_at": profile.resume_uploaded_at.isoformat(),
         "profile": profile.to_dict(),
     }), 201
+
+
+@candidates_bp.delete("/me/resume")
+@jwt_required()
+def delete_my_resume():
+    """DELETE /api/candidates/me/resume — 候选人删除自己的附件简历。"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("candidate", "admin"):
+        return _err("仅候选人账号可删除简历", 403)
+
+    profile = get_candidate_by_user_id(user.id)
+    if not profile:
+        return _err("候选人档案不存在", 404)
+    if not profile.resume_file_path:
+        return _err("暂无附件可删除", 404)
+
+    from app.utils.cos_storage import delete_resume as _cos_delete
+    if profile.resume_file_path.startswith("https://"):
+        _cos_delete(profile.resume_file_path)
+    elif os.path.exists(profile.resume_file_path):
+        try:
+            os.remove(profile.resume_file_path)
+        except OSError:
+            pass
+
+    profile.resume_file_path = None
+    profile.resume_file_name = None
+    profile.resume_uploaded_at = None
+    db.session.commit()
+
+    return jsonify({"success": True})
 
 
 # ── 附件简历查看 ─────────────────────────────────────────────────────────────

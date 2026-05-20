@@ -18,8 +18,10 @@ import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
+import pathlib
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import httpx
 
 from logging_config import setup_logging
@@ -161,6 +163,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── 本地开发静态文件（uploads/）— 生产由 Nginx/CDN 接管 ─────────────────────
+_uploads_dir = pathlib.Path(__file__).parent.parent / "uploads"
+_uploads_dir.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 
 # ── 路由注册（/api/v2 前缀） ──────────────────────────────────────────────────
 app.include_router(health.router,          prefix="/api/v2")
