@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, release/ace-talent-mvp]
   pull_request:
-    branches: [main]
+    branches: [main, release/ace-talent-mvp]
 
 jobs:
   # ── 前端 lint + build ─────────────────────────────────────────────────────────
@@ -21,7 +21,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci --frozen-lockfile
+        run: npm ci --legacy-peer-deps
 
       - name: Lint
         run: npm run lint
@@ -29,13 +29,29 @@ jobs:
       - name: Build
         run: npm run build
 
-  # ── 后端 lint + 单元测试（骨架）──────────────────────────────────────────────
+  # ── 后端 lint + 单元测试 ────────────────────────────────────────────────────
   backend:
     name: Backend — lint & test
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ""
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_DATABASE: freight_talent_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -48,7 +64,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
           pip install flake8
 
       - name: Lint (flake8)
@@ -56,17 +72,19 @@ jobs:
           flake8 app/ --max-line-length=120 --exclude=migrations \
             --ignore=E501,W503
 
-      - name: Test (placeholder — add pytest when tests exist)
-        run: |
-          echo "⚠️  No tests yet. Add pytest + fixtures before going live."
-          # python -m pytest tests/ -v
+      - name: Test
+        env:
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_USER: root
+          TEST_DB_PASSWORD: ""
+        run: python -m pytest tests/ -x -q --timeout=60
 
   # ── Docker build 验证 ─────────────────────────────────────────────────────────
   docker-build:
     name: Docker — build images
     runs-on: ubuntu-latest
     needs: [frontend, backend]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release/ace-talent-mvp'
     steps:
       - uses: actions/checkout@v4
 
@@ -74,4 +92,31 @@ jobs:
         run: docker build -t freight-talent-backend ./backend
 
       - name: Build frontend image
-        run: docker build -t freight-talent-frontend .
+        run: |
+          docker build \
+            --build-arg VITE_SENTRY_DSN="" \
+            --build-arg SENTRY_AUTH_TOKEN="" \
+            --build-arg SENTRY_ORG="" \
+            --build-arg SENTRY_PROJECT="" \
+            -t freight-talent-frontend .
+
+  # ── 部署到 CVM（仅 main 分支 push） ──────────────────────────────────────────
+  deploy:
+    name: Deploy to CVM
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, docker-build]
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release/ace-talent-mvp') && github.event_name == 'push'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/freight-talent
+            git pull origin ${{ github.ref_name }}
+            docker compose up -d --build --remove-orphans
+            docker compose exec -T backend flask db upgrade
+            docker compose ps

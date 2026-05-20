@@ -10,12 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
+    "@fontsource/inter": "^5.2.8",
     "@province-city-china/data": "^8.5.8",
+    "@sentry/react": "^8.0.0",
     "@tailwindcss/vite": "^4.2.2",
     "axios": "^1.15.0",
+    "emoji-mart": "^5.6.0",
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-is": "^19.2.6",
     "react-router-dom": "^7.14.0",
     "recharts": "^3.8.1",
     "socket.io-client": "^4.7.5",
@@ -23,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@sentry/vite-plugin": "^2.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

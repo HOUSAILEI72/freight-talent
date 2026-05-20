@@ -52,7 +52,7 @@ function JobDetailPanel({ job }) {
           { icon: MapPin,        label: '工作城市', value: job.city ?? '—' },
           { icon: Briefcase,     label: '薪资范围', value: job.salary_label ?? '面议' },
           { icon: Clock,         label: '经验要求', value: job.experience_required ?? '不限' },
-          { icon: GraduationCap, label: '学历要求', value: job.degree_required ?? '不限' },
+          { icon: GraduationCap, label: '最低学历', value: job.degree_required ?? '不限' },
           { icon: Users,         label: '招聘人数', value: job.headcount ? `${job.headcount} 人` : '—' },
           { icon: Zap,           label: '紧急程度', value: job.urgency_level === 1 ? '紧急' : job.urgency_level === 3 ? '不急' : '正常' },
         ].map(item => (
@@ -80,7 +80,7 @@ function JobDetailPanel({ job }) {
 
       {job.description && (
         <div>
-          <p className="text-sm font-semibold text-slate-800 mb-2">岗位职责</p>
+          <p className="text-sm font-semibold text-slate-800 mb-2">岗位描述</p>
           <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{job.description}</p>
         </div>
       )}
@@ -112,9 +112,8 @@ export default function AdminJobs() {
   const [jobType, setJobType]           = useState('')
 
   function fetchJobs(filters) {
-    setLoading(true)
-    setError('')
-    jobsApi.getPublicJobs(filters)
+    Promise.resolve()
+      .then(() => { setLoading(true); setError(''); return jobsApi.getPublicJobs({ ...filters, page_size: 500 }) })
       .then(res => {
         const list = res.data.jobs
         setJobs(list)

@@ -1,18 +1,3 @@
-/**
- * MetricCard
- * Phase 1 · Freightos Terminal style KPI card — no business logic.
- *
- * Props
- * ─────
- * label     string            Metric label (e.g. "Active Jobs")
- * value     string | number   Primary display value
- * helper    string            Optional sub-text beneath value
- * trend     { value: string | number, direction: 'up' | 'down' | 'neutral' }
- *           Optional trend indicator shown bottom-left
- * icon      ReactNode         Optional icon rendered top-right
- * className string            Extra utility classes
- */
-
 const TREND_STYLES = {
   up:      { color: 'var(--t-trend-up)',      arrow: '↑' },
   down:    { color: 'var(--t-trend-down)',     arrow: '↓' },
@@ -25,39 +10,69 @@ export default function MetricCard({
   helper,
   trend,
   icon,
+  compact = false,
+  highlight = false,
+  light = false,
   className = '',
 }) {
   const trendStyle = trend ? TREND_STYLES[trend.direction ?? 'neutral'] : null
+  const pad = compact && highlight ? 'px-4 py-4' : compact ? 'px-4 py-2.5' : 'px-5 py-4'
+
+  const cardStyle = light ? {
+    background: '#ffffff',
+    border: '1px solid rgba(7,59,142,0.10)',
+    boxShadow: '0 2px 8px rgba(7,59,142,0.07)',
+  } : {}
+
+  const labelColor  = light ? '#7390c2' : 'var(--t-text-muted)'
+  const iconColor   = light ? '#7390c2' : 'var(--t-text-muted)'
+  const valueColor  = highlight ? 'var(--t-primary)' : light ? '#073b8e' : 'var(--t-text)'
+  const helperColor = light ? '#7390c2' : 'var(--t-text-secondary)'
+  const hoverClass  = light ? 'hover:bg-[#f0f6ff]' : 'hover:bg-[var(--t-bg-hover)]'
 
   return (
     <div
-      className={`relative flex flex-col justify-between gap-3 rounded-[var(--t-radius-lg)] border border-[var(--t-border)] bg-[var(--t-bg-panel)] px-5 py-4 shadow-[var(--t-shadow-panel)] transition-colors duration-[var(--t-transition)] hover:bg-[var(--t-bg-hover)] ${className}`}
+      className={`relative flex flex-col ${compact ? 'gap-1' : 'gap-2'} rounded-[var(--t-radius-lg)] transition-colors duration-[var(--t-transition)] ${hoverClass} ${pad} ${className}`}
+      style={light ? cardStyle : {
+        background: 'var(--t-bg-panel)',
+        border: '1px solid var(--t-border)',
+        boxShadow: 'var(--t-shadow-panel)',
+      }}
     >
-      {/* ── Top row: label + icon ── */}
+      {/* label + icon */}
       <div className="flex items-start justify-between gap-2">
-        <span className="text-[length:var(--t-text-xs)] font-medium uppercase tracking-widest text-[color:var(--t-text-muted)]">
+        <span
+          className="text-[11px] font-medium tracking-[0.04em] leading-snug"
+          style={{ color: labelColor }}
+        >
           {label}
         </span>
         {icon && (
-          <span className="shrink-0 text-[color:var(--t-text-muted)]">
+          <span className="shrink-0" style={{ color: iconColor }}>
             {icon}
           </span>
         )}
       </div>
 
-      {/* ── Primary value ── */}
+      {/* value + helper */}
       <div>
-        <span className="block font-[var(--t-font-mono)] text-[length:var(--t-text-xl)] font-bold leading-none text-[color:var(--t-text)]">
+        <span
+          className={`block font-extrabold leading-none terminal-tabular-num ${compact && highlight ? 'text-[clamp(32px,4.5vh,48px)]' : compact ? 'text-[length:var(--t-text-lg)]' : 'text-[length:var(--t-text-xl)]'}`}
+          style={{ color: valueColor }}
+        >
           {value ?? '—'}
         </span>
         {helper && (
-          <span className="mt-1 block text-[length:var(--t-text-xs)] text-[color:var(--t-text-secondary)]">
+          <span
+            className="mt-1 block text-[length:var(--t-text-xs)] leading-snug"
+            style={{ color: helperColor }}
+          >
             {helper}
           </span>
         )}
       </div>
 
-      {/* ── Trend indicator ── */}
+      {/* trend */}
       {trendStyle && trend && (
         <div
           className="flex items-center gap-1 text-[length:var(--t-text-xs)] font-medium"

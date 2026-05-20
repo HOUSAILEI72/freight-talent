@@ -11,19 +11,20 @@ class JobApplication(db.Model):
     """
     __tablename__ = "job_applications"
 
-    id           = db.Column(db.Integer, primary_key=True)
-    job_id       = db.Column(db.Integer, db.ForeignKey("jobs.id",       ondelete="CASCADE"), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.Integer, db.ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False)
     candidate_id = db.Column(db.Integer, db.ForeignKey("candidates.id", ondelete="CASCADE"), nullable=False)
-    employer_id  = db.Column(db.Integer, db.ForeignKey("users.id",      ondelete="CASCADE"), nullable=False)
+    employer_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     status = db.Column(
         db.Enum(
-            "submitted", "viewed", "shortlisted", "rejected", "withdrawn",
+            "saved", "submitted", "viewed", "shortlisted", "rejected", "withdrawn",
             name="job_application_status",
         ),
         nullable=False,
         default="submitted",
     )
+    is_saved = db.Column(db.Boolean, nullable=False, default=False)
     message = db.Column(db.Text, nullable=True)
 
     created_at = db.Column(
@@ -38,24 +39,27 @@ class JobApplication(db.Model):
 
     __table_args__ = (
         db.UniqueConstraint("job_id", "candidate_id", name="uq_job_application_job_candidate"),
-        db.Index("idx_job_application_job_id",       "job_id"),
+        db.Index("idx_job_application_job_id", "job_id"),
         db.Index("idx_job_application_candidate_id", "candidate_id"),
-        db.Index("idx_job_application_employer_id",  "employer_id"),
-        db.Index("idx_job_application_status",       "status"),
+        db.Index("idx_job_application_employer_id", "employer_id"),
+        db.Index("idx_job_application_status", "status"),
+        db.Index("ix_job_app_employer_status", "employer_id", "status"),
+        db.Index("ix_job_app_candidate_created", "candidate_id", "created_at"),
     )
 
-    job       = db.relationship("Job",       backref=db.backref("applications", lazy="dynamic"))
+    job = db.relationship("Job", backref=db.backref("applications", lazy="dynamic"))
     candidate = db.relationship("Candidate", backref=db.backref("applications", lazy="dynamic"))
-    employer  = db.relationship("User",      backref=db.backref("received_applications", lazy="dynamic"))
+    employer = db.relationship("User", backref=db.backref("received_applications", lazy="dynamic"))
 
     def to_dict(self):
         return {
-            "id":           self.id,
-            "job_id":       self.job_id,
+            "id": self.id,
+            "job_id": self.job_id,
             "candidate_id": self.candidate_id,
-            "employer_id":  self.employer_id,
-            "status":       self.status,
-            "message":      self.message,
-            "created_at":   self.created_at.isoformat() + "Z" if self.created_at else None,
-            "updated_at":   self.updated_at.isoformat() + "Z" if self.updated_at else None,
+            "employer_id": self.employer_id,
+            "status": self.status,
+            "is_saved": self.is_saved,
+            "message": self.message,
+            "created_at": self.created_at.isoformat() + "Z" if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() + "Z" if self.updated_at else None,
         }

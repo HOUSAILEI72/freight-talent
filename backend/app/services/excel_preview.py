@@ -31,7 +31,7 @@ from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 
 # ── 颜色常量 ────────────────────────────────────────────────────────────────
-_FILL_RED    = PatternFill("solid", fgColor="FFCCCC")   # 类型冲突
+_FILL_RED = PatternFill("solid", fgColor="FFCCCC")   # 类型冲突
 _FILL_ORANGE = PatternFill("solid", fgColor="FFD966")   # 纯文本全局重复（橙黄）
 _FILL_YELLOW = PatternFill("solid", fgColor="FFFF99")   # 整行重复
 _FILL_PURPLE = PatternFill("solid", fgColor="E0AAFF")   # 重复列名（表头级错误）
@@ -48,42 +48,40 @@ _CN_ALIAS: dict[str, str] = {
     # ── 岗位字段 ──────────────────────────────────────────────────────────────
     "职位名称": "title",
     "岗位名称": "title",
-    "职位":     "title",
-    "岗位":     "title",
-    "城市":     "city",
+    "职位": "title",
+    "岗位": "title",
+    "城市": "city",
     "工作城市": "city",
     "所在城市": "city",
     "职位描述": "description",
     "岗位描述": "description",
     "工作描述": "description",
     "职位详情": "description",
-    "描述":     "description",
+    "描述": "description",
     "业务类型": "business_type",
     "岗位类型": "job_type",
     "职位类型": "job_type",
-    "薪资":     "salary_label",
+    "薪资": "salary_label",
     "薪资范围": "salary_label",
-    "薪酬":     "salary_label",
-    "工资":     "salary_label",
+    "薪酬": "salary_label",
+    "工资": "salary_label",
     "经验要求": "experience_required",
-    "工作年限": "experience_required",
     "学历要求": "degree_required",
-    "学历":     "degree_required",
     "招聘人数": "headcount",
-    "人数":     "headcount",
+    "人数": "headcount",
     "职位要求": "requirements",
     "任职要求": "requirements",
     "航线标签": "route_tags",
-    "航线":     "route_tags",
+    "航线": "route_tags",
     "技能标签": "skill_tags",
     "技能要求": "skill_tags",
-    "技能":     "skill_tags",
+    "技能": "skill_tags",
     "紧急程度": "urgency_level",
-    "状态":     "status",
+    "状态": "status",
     "企业邮箱": "company_email",
     # ── 简历字段 ──────────────────────────────────────────────────────────────
-    "姓名":     "full_name",
-    "全名":     "full_name",
+    "姓名": "full_name",
+    "全名": "full_name",
     "候选人姓名": "full_name",
     "当前职位": "current_title",
     "现任职位": "current_title",
@@ -93,7 +91,7 @@ _CN_ALIAS: dict[str, str] = {
     "常住城市": "current_city",
     "当前公司": "current_company",
     "现任公司": "current_company",
-    "公司":     "current_company",
+    "公司": "current_company",
     "期望城市": "expected_city",
     "意向城市": "expected_city",
     "期望薪资": "expected_salary_label",
@@ -101,24 +99,23 @@ _CN_ALIAS: dict[str, str] = {
     "工作年限": "experience_years",
     "工作经验": "experience_years",
     "经验年限": "experience_years",
-    "学历":     "education",
+    "学历": "education",
     "最高学历": "education",
     "英语水平": "english_level",
     "英文水平": "english_level",
     "个人简介": "summary",
     "自我介绍": "summary",
-    "简介":     "summary",
+    "简介": "summary",
     "求职状态": "availability_status",
     "在职状态": "availability_status",
-    "邮箱":     "email",
+    "邮箱": "email",
     "联系邮箱": "email",
-    "电话":     "phone",
-    "手机":     "phone",
+    "电话": "phone",
+    "手机": "phone",
     "联系电话": "phone",
-    "地址":     "address",
+    "地址": "address",
     "常住地址": "address",
 }
-
 
 
 # ===========================================================================
@@ -264,9 +261,11 @@ def run_preview(
     try:
         wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
     except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Excel parse failed: %s", exc)
         result.errors.append({
             "issue_type": "file_parse_error",
-            "suggestion": f"无法解析 Excel 文件：{exc}",
+            "suggestion": "无法解析 Excel 文件，请检查文件格式是否正确",
         })
         return result
 

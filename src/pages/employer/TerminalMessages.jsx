@@ -1,10 +1,10 @@
 import TerminalLayout from '../../components/terminal/TerminalLayout'
-import Messages from '../messages/Messages'
+import Messages from '../../features/messages'
 
 export default function TerminalMessages() {
   return (
     <TerminalLayout title="MESSAGES" activeIconId="messages">
-      <Messages terminal basePath="/employer/messages" backPath="/employer/dashboard" />
+      <Messages terminal basePath="/employer/messages" />
     </TerminalLayout>
   )
 }

@@ -2,8 +2,55 @@ import os
 from flask import Flask, jsonify, send_from_directory
 from app.config import get_config
 from app.extensions import db, jwt, bcrypt, cors, migrate, limiter, socketio, blocklist_contains
-from app.logging_config import setup_logging
+from logging_config import setup_logging
 from app.request_logging import init_request_logging
+
+_SENSITIVE = {
+    "authorization", "cookie", "set-cookie",
+    "password", "token", "access_token", "refresh_token",
+    "phone", "email", "resume", "file", "attachment", "id_card",
+    "身份证", "手机号", "邮箱",
+}
+
+
+def _strip_sensitive(d):
+    if not isinstance(d, dict):
+        return d
+    result = {}
+    for k, v in d.items():
+        if k.lower() in _SENSITIVE:
+            result[k] = "[FILTERED]"
+        elif isinstance(v, dict):
+            result[k] = _strip_sensitive(v)
+        else:
+            result[k] = v
+    return result
+
+
+def _before_send(event, hint):
+    if "request" in event:
+        req = event["request"]
+        if "headers" in req:
+            req["headers"] = _strip_sensitive(req["headers"])
+        req["data"] = None
+    if "extra" in event:
+        event["extra"] = _strip_sensitive(event["extra"])
+    return event
+
+
+_sentry_dsn = os.getenv("SENTRY_DSN")
+if _sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.flask import FlaskIntegration
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        integrations=[FlaskIntegration()],
+        send_default_pii=False,
+        max_request_body_size="never",
+        environment="production",
+        traces_sample_rate=0.05,
+        before_send=_before_send,
+    )
 
 
 def create_app(config_class=None):
@@ -22,17 +69,20 @@ def create_app(config_class=None):
     limiter.init_app(app)
 
     # message_queue: Redis URL — 空字符串或 None 时单进程模式，多实例需要设置
-    _mq = app.config.get("SOCKETIO_MESSAGE_QUEUE") or None
-    socketio.init_app(
-        app,
-        cors_allowed_origins='*',
-        async_mode='eventlet',
-        message_queue=_mq,
-        logger=False,
-        engineio_logger=False,
-        ping_timeout=20,
-        ping_interval=10,
-    )
+    # MESSAGES FEATURE DISABLED: socketio 初始化已跳过，不占用 eventlet 连接
+    _enable_socketio = app.config.get("ENABLE_SOCKETIO", False)
+    if _enable_socketio:
+        _mq = app.config.get("SOCKETIO_MESSAGE_QUEUE") or None
+        socketio.init_app(
+            app,
+            cors_allowed_origins=app.config["CORS_ORIGINS"],
+            async_mode=app.config.get("SOCKETIO_ASYNC_MODE", "eventlet"),
+            message_queue=_mq,
+            logger=False,
+            engineio_logger=False,
+            ping_timeout=20,
+            ping_interval=10,
+        )
 
     # JWT blocklist callback — 拦截已撤销的 token（Redis 优先，降级到内存 set）
     @jwt.token_in_blocklist_loader
@@ -62,6 +112,11 @@ def create_app(config_class=None):
     from app.routes.conversations import conversations_bp
     from app.routes.admin_import import admin_import_bp
     from app.routes.employer_dashboard import employer_dashboard_bp
+    from app.routes.subscriptions import subscriptions_bp
+    from app.routes.public_market import public_market_bp
+    from app.routes.headhunting import headhunting_bp
+    from app.routes.candidate_dashboard import candidate_dashboard_bp
+    from app.routes.companies import companies_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(jobs_bp)
     app.register_blueprint(candidates_bp)
@@ -71,26 +126,39 @@ def create_app(config_class=None):
     app.register_blueprint(conversations_bp, url_prefix='/api/conversations')
     app.register_blueprint(admin_import_bp, url_prefix='/api/admin/import')
     app.register_blueprint(employer_dashboard_bp)
+    app.register_blueprint(subscriptions_bp)
+    app.register_blueprint(public_market_bp)
+    app.register_blueprint(headhunting_bp)
+    app.register_blueprint(candidate_dashboard_bp)
+    app.register_blueprint(companies_bp)
 
     # 安装请求日志中间件（每个请求的方法、路径、状态、耗时、user_id、IP）
     init_request_logging(app)
 
-    # Socket.IO 事件处理器
-    from app.routes.socket_events import register_socket_events
-    register_socket_events(socketio)
+    # Socket.IO 事件处理器 — HIDDEN: 消息功能已禁用，随 ENABLE_SOCKETIO 一起跳过
+    if _enable_socketio:
+        from app.routes.socket_events import register_socket_events
+        register_socket_events(socketio)
 
     # Ensure all models are imported so Flask-Migrate can detect them
     with app.app_context():
         from app.models import user         # noqa: F401
         from app.models import job          # noqa: F401
         from app.models import candidate    # noqa: F401
-        from app.models import match_result # noqa: F401
+        from app.models import match_result  # noqa: F401
         from app.models import invitation   # noqa: F401
         from app.models import job_application  # noqa: F401
-        from app.models import conversation # noqa: F401
+        from app.models import conversation  # noqa: F401
         from app.models import import_models  # noqa: F401
         from app.models import tag          # noqa: F401
         from app.models import junction_tags  # noqa: F401
+        from app.models import subscription   # noqa: F401
+        from app.models import employer_candidate_favorite  # noqa: F401
+        from app.models import headhunting_request  # noqa: F401
+        from app.models import candidate_email_action  # noqa: F401
+        from app.models import notification  # noqa: F401
+        from app.models import company  # noqa: F401
+        from app.models import candidate_blocked_company  # noqa: F401
 
     @app.get("/api/health")
     def health():

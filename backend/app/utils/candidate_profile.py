@@ -6,8 +6,6 @@ may apply to jobs (CAND-4) and subscribe to tag feeds (CAND-1 gate). The
 `src/utils/candidateProfile.js` so the two never disagree.
 """
 
-from typing import Iterable, Optional
-
 
 def _is_nonempty_str(v) -> bool:
     return isinstance(v, str) and v.strip() != ""

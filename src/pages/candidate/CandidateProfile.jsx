@@ -1,36 +1,124 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { MapPin, Briefcase, GraduationCap, Clock, Star, Send, ChevronLeft, CheckCircle, Edit, Loader2, AlertCircle, Mail, Phone, Home, MessageSquare } from 'lucide-react'
+import {
+  MapPin, Briefcase, GraduationCap, Clock, Star, Send,
+  CheckCircle, Edit, Loader2, AlertCircle, Mail, Phone,
+  Home, MessageSquare, Languages, Target, Award, Navigation,
+  FileText, Plus, ChevronRight, Eye, EyeOff, ShieldAlert,
+} from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
-import { TagList } from '../../components/ui/TagList'
-import { MatchScore } from '../../components/ui/MatchScore'
 import { TagNoteModal } from '../../components/ui/TagNoteModal'
 import { useAuth } from '../../context/AuthContext'
 import { candidatesApi } from '../../api/candidates'
-import { invitationsApi } from '../../api/invitations'
 import { getTags } from '../../api/tagsV2'
+import { subscriptionsApi } from '../../api/subscriptions'
 
-function FreshnessIndicator({ days }) {
+function FreshnessIndicator({ days, terminal }) {
   const color = days <= 3 ? 'emerald' : days <= 7 ? 'blue' : 'gray'
-  const label = days <= 1 ? '今日更新' : `${days}天内更新`
+  const label = days <= 1 ? '今日更新' : `${days} 天内更新`
+
+  if (terminal) {
+    const dotColor =
+      color === 'emerald' ? 'var(--t-success)' :
+      color === 'blue'    ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
+    const textColor =
+      color === 'emerald' ? 'var(--t-success)' :
+      color === 'blue'    ? 'var(--t-chart-blue)' : 'var(--t-text-muted)'
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '2px 10px', borderRadius: 9999, fontSize: 11, fontWeight: 500,
+        background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)',
+        color: textColor,
+      }}>
+        <span style={{
+          width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+          background: dotColor,
+          animation: color === 'emerald' ? 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' : undefined,
+        }} />
+        {label}
+      </span>
+    )
+  }
+
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
       color === 'emerald' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-      color === 'blue' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-      'bg-slate-100 text-slate-500'
+      color === 'blue'    ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                            'bg-slate-100 text-slate-500'
     }`}>
       <span className={`w-1.5 h-1.5 rounded-full ${
         color === 'emerald' ? 'bg-emerald-500 animate-pulse' :
-        color === 'blue' ? 'bg-blue-500' : 'bg-slate-400'
+        color === 'blue'    ? 'bg-blue-500' : 'bg-slate-400'
       }`} />
       {label}
     </span>
   )
 }
 
-// viewMode="self" 由 /candidate/profile/me 路由传入
-export default function CandidateProfile({ viewMode }) {
+// 合并所有能力标签，按组分类展示
+function buildTagGroups(profile) {
+  const groups = []
+  if (profile.knowledge_tags?.length)   groups.push({ label: '知识领域', tags: profile.knowledge_tags,  color: 'blue' })
+  if (profile.hard_skill_tags?.length)  groups.push({ label: '硬技能',   tags: profile.hard_skill_tags, color: 'purple' })
+  if (profile.soft_skill_tags?.length)  groups.push({ label: '岗位所需软技能',   tags: profile.soft_skill_tags, color: 'green' })
+  // 如果新三组都为空，回退到旧 all_tags
+  if (groups.length === 0 && profile.all_tags?.length) {
+    groups.push({ label: '技能标签', tags: profile.all_tags, color: 'blue' })
+  }
+  return groups
+}
+
+const TAG_COLORS = {
+  blue:   'bg-blue-50 text-blue-700 border-blue-100',
+  purple: 'bg-purple-50 text-purple-700 border-purple-100',
+  green:  'bg-emerald-50 text-emerald-700 border-emerald-100',
+  orange: 'bg-orange-50 text-orange-700 border-orange-100',
+}
+
+const TAG_STYLES_TERMINAL = {
+  blue:   { background: 'rgba(96,165,250,0.12)',  color: 'var(--t-chart-blue)',   border: '1px solid rgba(96,165,250,0.25)' },
+  purple: { background: 'rgba(167,139,250,0.12)', color: 'var(--t-chart-purple)', border: '1px solid rgba(167,139,250,0.25)' },
+  green:  { background: 'rgba(74,222,128,0.12)',  color: 'var(--t-chart-green)',  border: '1px solid rgba(74,222,128,0.25)' },
+  orange: { background: 'rgba(251,191,36,0.12)',  color: 'var(--t-chart-amber)',  border: '1px solid rgba(251,191,36,0.25)' },
+}
+
+// Section header: mono uppercase label in terminal, semibold h2 in light
+function SectionTitle({ icon: Icon, iconColor, children, terminal, action, mb }) {
+  if (terminal) {
+    return (
+      <div className="flex items-center justify-between pb-2.5 mb-3" style={{ borderBottom: '1px solid var(--t-border-subtle)' }}>
+        <div className="flex items-center gap-1.5">
+          {Icon && <Icon size={12} style={{ color: 'var(--t-text-muted)' }} />}
+          <span className="font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em]" style={{ color: 'var(--t-text-muted)' }}>
+            {children}
+          </span>
+        </div>
+        {action}
+      </div>
+    )
+  }
+  const defaultMb = (Icon || action) ? 4 : 3
+  const mbClass = (mb ?? defaultMb) === 4 ? 'mb-4' : 'mb-3'
+  if (Icon) {
+    return (
+      <div className={`flex items-center gap-2 ${mbClass}`}>
+        <Icon size={16} style={{ color: iconColor }} />
+        <h2 className="font-semibold" style={{ color: '#1e293b' }}>{children}</h2>
+        {action}
+      </div>
+    )
+  }
+  return (
+    <div className={`flex items-center justify-between ${mbClass}`}>
+      <h2 className="font-semibold" style={{ color: '#1e293b' }}>{children}</h2>
+      {action}
+    </div>
+  )
+}
+
+export default function CandidateProfile({ viewMode, onEdit, terminal = false }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -39,69 +127,234 @@ export default function CandidateProfile({ viewMode }) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [inviting, setInviting] = useState(false)
-  const [inviteError, setInviteError] = useState('')
-  const [inviteSuccess, setInviteSuccess] = useState(false)
+  const [inviteSuccess, _setInviteSuccess] = useState(false)
 
-  // 标签描述弹窗
-  const [noteTag, setNoteTag] = useState(null)   // { id, name, category } | null
-  const [allTagObjects, setAllTagObjects] = useState([]) // active 标签完整对象（含 id）
+  const [noteTag, setNoteTag] = useState(null)
+  const [allTagObjects, setAllTagObjects] = useState([])
+  const [hasSubscription, setHasSubscription] = useState(null)
 
-  // viewMode="self" → 候选人从 /candidate/profile/me 进入，直接调 /candidates/me
-  // 数字 id 路由 → 调公开档案接口，后端会对候选人本人豁免角色限制
+  // ── 简历诊断（DeepSeek） ───────────────────────────────────────────────────
+  const [diagnosing, setDiagnosing] = useState(false)
+  const [diagnosisResult, setDiagnosisResult] = useState(null) // DiagnoseResponse | null
+  const [diagnosisError, setDiagnosisError] = useState('')
+
+  // ── 删除附件 ─────────────────────────────────────────────────────────────
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDeleteResume() {
+    setDeleting(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/candidates/me/resume', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert(err.message || '删除失败，请重试')
+        return
+      }
+      setProfile(prev => ({ ...prev, resume_file_name: null, resume_file_path: null, resume_uploaded_at: null }))
+      setDeleteConfirm(false)
+    } catch {
+      alert('网络错误，请重试')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // ── 简历预览 ─────────────────────────────────────────────────────────────
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [previewFilename, setPreviewFilename] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+
+  async function handleOpenPreview() {
+    setPreviewLoading(true)
+    setPreviewOpen(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/v2/candidates/me/resume-preview', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setPreviewUrl(''); return }
+      setPreviewUrl(json.url)
+      setPreviewFilename(json.filename)
+    } catch {
+      setPreviewUrl('')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  // ── AI 解析简历 ───────────────────────────────────────────────────────────
+  const [parsing, setParsing] = useState(false)
+  const [parseError, setParseError] = useState('')
+  const [parsedData, setParsedData] = useState(null)
+  async function handleAIParse() {
+    setParsing(true); setParseError(''); setParsedData(null)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/v2/candidates/me/resume/ai-parse', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setParseError(json.detail || `解析失败 (${res.status})`); return }
+      setParsedData(json.data)
+    } catch {
+      setParseError('网络错误，请重试')
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  function handleApplyParsed() {
+    if (!parsedData) return
+    try {
+      sessionStorage.setItem('ai_parse_result', JSON.stringify(parsedData))
+    } catch { /* ignore storage error */ }
+    navigate('/candidate/profile/me?tab=edit&ai_prefill=1')
+  }
+
+  // ── 屏蔽公司 ─────────────────────────────────────────────────────────────
+  const [blockedCompanies, setBlockedCompanies] = useState([]) // [{id, name}]
+  const [blockSearchQ, setBlockSearchQ] = useState('')
+  const [blockSuggestions, setBlockSuggestions] = useState([])
+  const [blockSearching, setBlockSearching] = useState(false)
+  const [blockSaving, setBlockSaving] = useState(false)
+
+  async function handleDiagnose() {
+    setDiagnosing(true); setDiagnosisError(''); setDiagnosisResult(null)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/v2/ai/diagnose-resume', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setDiagnosisError(err.detail || `AI 诊断失败 (${res.status})`)
+        return
+      }
+      const data = await res.json()
+      setDiagnosisResult(data)
+    } catch {
+      setDiagnosisError('网络错误，请重试')
+    } finally {
+      setDiagnosing(false)
+    }
+  }
+
   const isOwnProfile = viewMode === 'self'
 
   useEffect(() => {
     setLoadError('')
     if (isOwnProfile) {
       candidatesApi.getMyCandidateProfile()
-        .then(res => {
-          const p = res.data.profile ?? null
-          setProfile(p)
-        })
-        .catch(() => {
-          setLoadError('加载档案失败，请刷新重试')
-        })
+        .then(res => setProfile(res.data.profile ?? null))
+        .catch(() => setLoadError('加载档案失败，请刷新重试'))
         .finally(() => setLoading(false))
     } else {
-      // employer / admin 看候选人公开档案（只接受数字 id）
       const isNumericId = /^\d+$/.test(String(id))
-      if (!isNumericId) {
-        setLoadError('无效的候选人 ID')
-        setLoading(false)
-        return
-      }
+      if (!isNumericId) { setLoadError('无效的候选人 ID'); setLoading(false); return }
       candidatesApi.getCandidatePublicProfile(id)
-        .then(res => {
-          setProfile(res.data.candidate)
-        })
-        .catch(err => {
-          const msg = err.response?.data?.message ?? '加载档案失败，请刷新重试'
-          setLoadError(msg)
-        })
+        .then(res => setProfile(res.data.candidate))
+        .catch(err => setLoadError(err.response?.data?.message ?? '加载档案失败，请刷新重试'))
         .finally(() => setLoading(false))
     }
   }, [id, isOwnProfile, viewMode])
 
-  // 加载 active 标签完整对象（用于 note 弹窗）
   useEffect(() => {
     getTags().then(data => setAllTagObjects(data.tags || [])).catch(() => {})
   }, [])
 
-  // 发起邀约（企业端：需要先选岗位，此处简化为提示去候选人池选岗位后发邀）
-  async function handleInvite() {
-    setInviteError('')
-    setInviting(true)
-    try {
-      // 调用邀约 API —— 实际需要 job_id，此处跳转到候选人池让用户选岗位
-      navigate('/employer/candidates')
-    } finally {
-      setInviting(false)
+  // Fetch subscription status for employer gating
+  useEffect(() => {
+    if (user?.role === 'employer') {
+      subscriptionsApi.getMySubscription()
+        .then(res => setHasSubscription(res.data.has_active))
+        .catch(() => setHasSubscription(false))
     }
+  }, [user?.role])
+
+  // Load blocked companies for own profile
+  useEffect(() => {
+    if (!isOwnProfile) return
+    const token = localStorage.getItem('token') || ''
+    fetch('/api/candidates/me/blocked-companies', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.success) setBlockedCompanies(d.companies || []) })
+      .catch(() => {})
+  }, [isOwnProfile])
+
+  async function searchCompanies(q) {
+    if (!q.trim()) { setBlockSuggestions([]); return }
+    setBlockSearching(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      const r = await fetch(`/api/companies?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const d = await r.json()
+      const already = new Set(blockedCompanies.map(c => c.id))
+      setBlockSuggestions((d.companies || []).filter(c => !already.has(c.id)).slice(0, 6))
+    } catch { setBlockSuggestions([]) }
+    finally { setBlockSearching(false) }
+  }
+
+  async function addBlockedCompany(company) {
+    const updated = [...blockedCompanies, company]
+    setBlockedCompanies(updated)
+    setBlockSearchQ('')
+    setBlockSuggestions([])
+    setBlockSaving(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      await fetch('/api/candidates/me/blocked-companies', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_ids: updated.map(c => c.id) }),
+      })
+    } catch { /* silent */ }
+    finally { setBlockSaving(false) }
+  }
+
+  async function removeBlockedCompany(companyId) {
+    const updated = blockedCompanies.filter(c => c.id !== companyId)
+    setBlockedCompanies(updated)
+    setBlockSaving(true)
+    try {
+      const token = localStorage.getItem('token') || ''
+      await fetch('/api/candidates/me/blocked-companies', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_ids: updated.map(c => c.id) }),
+      })
+    } catch { /* silent */ }
+    finally { setBlockSaving(false) }
+  }
+
+  async function handleInvite() {
+    if (user?.role === 'employer' && !hasSubscription) {
+      navigate('/employer/pricing')
+      return
+    }
+    setInviting(true)
+    try { navigate('/employer/candidates') }
+    finally { setInviting(false) }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-32 text-slate-400">
+      <div
+        className={terminal ? 'terminal-mode flex-1 w-full min-w-0 flex items-center justify-center gap-2 py-32' : 'flex items-center justify-center gap-2 py-32 text-slate-400'}
+        style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text-muted)' } : undefined}
+      >
         <Loader2 size={20} className="animate-spin" />
         <span className="text-sm">加载档案...</span>
       </div>
@@ -110,248 +363,311 @@ export default function CandidateProfile({ viewMode }) {
 
   if (loadError) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-slate-400">
-        <AlertCircle size={32} className="mb-3 text-red-300" />
-        <p className="text-sm text-red-500">{loadError}</p>
-        <Button size="sm" variant="secondary" className="mt-4" onClick={() => navigate(-1)}>
-          返回
-        </Button>
+      <div
+        className={terminal ? 'terminal-mode flex-1 w-full min-w-0 flex flex-col items-center justify-center py-32' : 'flex flex-col items-center justify-center py-32 text-slate-400'}
+        style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text-muted)' } : undefined}
+      >
+        <AlertCircle size={32} className="mb-3" style={terminal ? { color: 'var(--t-danger)' } : { color: '#fca5a5' }} />
+        <p className="text-sm" style={terminal ? { color: 'var(--t-danger)' } : { color: '#ef4444' }}>{loadError}</p>
       </div>
     )
   }
 
-  // 候选人自己但还没有档案
   if (isOwnProfile && !profile) {
     return (
-      <div className="max-w-lg mx-auto px-6 py-24 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-          <Edit size={28} className="text-blue-500" />
+      <div
+        className={terminal ? 'terminal-mode flex-1 w-full min-w-0 flex flex-col items-center justify-center px-6 py-24 text-center' : 'max-w-lg mx-auto px-6 py-24 text-center'}
+        style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
+      >
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+          style={terminal ? { background: 'var(--t-primary-muted)' } : { background: '#eff6ff' }}
+        >
+          <Edit size={28} style={terminal ? { color: 'var(--t-primary)' } : { color: '#3b82f6' }} />
         </div>
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">还没有档案</h2>
-        <p className="text-slate-500 mb-6">上传简历后系统将为你生成结构化候选人档案</p>
-        <Button onClick={() => navigate('/candidate/upload')}>
-          立即上传简历
-        </Button>
+        <h2 className="text-2xl font-bold mb-2" style={terminal ? { color: 'var(--t-text)' } : { color: '#1e293b' }}>还没有档案</h2>
+        <p className="mb-6" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#64748b' }}>上传简历后系统将为你生成结构化候选人档案</p>
+        <Button terminal={terminal} onClick={() => navigate('/candidate/upload')}>立即上传简历</Button>
       </div>
     )
   }
 
-  // 统一从真实 profile 字段提取展示字段
-  const display = {
-    name: profile.full_name,
-    title: profile.current_title,
-    city: profile.current_city,
-    experience: profile.experience_years,
-    education: profile.education,
-    salary: profile.expected_salary_label,
-    summary: profile.summary,
-    tags: profile.all_tags || [],
-    freshness: profile.freshness_days,
-    available: profile.availability_status === 'open',
-    score: null,
-    updatedAt: profile.updated_at?.slice(0, 10) ?? '—',
-  }
-
-  // CAND-8A: gate the new richer sections on "owner OR employer that the
-  // backend has unlocked". Front-end never tries to compute the unlock — we
-  // trust profile.private_visible from /api/candidates/<id>. /me always
-  // returns private_visible=true.
   const unlockedDetails = isOwnProfile || !!profile.private_visible
+  const tagGroups = buildTagGroups(profile)
+  const locationDisplay = profile.location_path || profile.location_name || profile.current_city
 
-  // Terminal mode is enabled only for the candidate viewing their own profile
-  // (`viewMode="self"`). Employer / admin viewing /candidate/profile/:id stays
-  // in the original light layout.
-  const terminal = isOwnProfile
 
   return (
     <div
       className={
-        terminal
+        terminal && isOwnProfile
+          ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-hidden flex flex-col'
+          : terminal
           ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar px-6 py-8'
           : 'max-w-5xl mx-auto px-6 py-10'
       }
       style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
     >
-      <div className={terminal ? 'mx-auto w-full max-w-5xl' : ''}>
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6"
+      <div className={
+        terminal && isOwnProfile ? 'flex-1 min-h-0 flex flex-col' :
+        terminal ? 'mx-auto w-full max-w-5xl' : ''
+      }>
+
+      <div
+        className={terminal && isOwnProfile ? 'flex gap-4 flex-1 min-h-0' : terminal ? 'flex gap-4 items-start' : 'grid lg:grid-cols-3 gap-6'}
+        style={terminal && isOwnProfile ? { paddingLeft: 24 } : undefined}
       >
-        <ChevronLeft size={16} />
-        返回
-      </button>
 
-      {/* 真实数据提示条 */}
-      <div className="mb-4 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2">
-        <CheckCircle size={14} className="text-emerald-600 flex-shrink-0" />
-        <span className="text-xs text-emerald-700">
-          {isOwnProfile
-            ? `正在显示你的真实档案 · 最近确认于 ${profile.profile_confirmed_at?.slice(0, 10) ?? '—'}`
-            : `真实候选人档案 · 最近更新于 ${profile.updated_at?.slice(0, 10) ?? '—'}`
-          }
-        </span>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left: Profile card */}
-        <div className="lg:col-span-1 space-y-4">
-          <div className="card p-6 text-center">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-3xl mx-auto mb-4">
-              {display.name?.[0] ?? '?'}
-            </div>
-            <h1 className="text-xl font-bold text-slate-800">{display.name}</h1>
-            <p className="text-slate-500 text-sm mt-1">{display.title}</p>
-
-            <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-              {display.freshness != null && (
-                <FreshnessIndicator days={display.freshness} />
-              )}
-              {display.available ? (
-                <Badge color="green">开放机会</Badge>
-              ) : (
-                <Badge color="gray">暂不考虑</Badge>
-              )}
-            </div>
-
-            {display.score != null && (
-              <div className="mt-6 flex justify-center">
-                <MatchScore score={display.score} size="lg" />
+        {/* ── 左栏：简介卡 ── */}
+        <div
+          className={terminal ? (isOwnProfile ? 'terminal-scrollbar' : '') : 'lg:col-span-1 space-y-4'}
+          style={terminal ? { width: 248, flexShrink: 0, overflowY: 'auto', paddingTop: 32, paddingBottom: 32 } : undefined}
+        >
+          <div
+            className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border text-center' : 'card p-6 text-center'}
+            style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
+          >
+            {profile.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt="头像"
+                className="w-20 h-20 rounded-2xl object-cover mx-auto mb-4"
+                style={terminal ? { border: '1px solid var(--t-border)' } : undefined}
+              />
+            ) : (
+              <div
+                className="w-20 h-20 rounded-2xl flex items-center justify-center font-bold text-3xl mx-auto mb-4"
+                style={terminal
+                  ? { background: 'var(--t-primary-muted)', color: 'var(--t-primary)', border: '1px solid var(--t-border)', fontFamily: 'var(--t-font-sans)' }
+                  : { background: 'linear-gradient(135deg, #60a5fa, #2563eb)', color: '#fff' }
+                }
+              >
+                {profile.full_name?.[0] ?? '?'}
               </div>
             )}
-            {display.score != null && (
-              <p className="text-xs text-slate-400 mt-2">综合匹配评分</p>
+            <h1
+              className="text-xl font-bold"
+              style={terminal
+                ? { color: 'var(--t-text)', fontFamily: 'var(--t-font-sans)', letterSpacing: '0.02em' }
+                : { color: '#1e293b' }
+              }
+            >
+              {profile.full_name}
+            </h1>
+            <p
+              className="text-sm mt-1"
+              style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#64748b' }}
+            >
+              {profile.current_title}
+            </p>
+
+            {profile.freshness_days != null && (
+              <div className="flex items-center justify-center mt-3">
+                <FreshnessIndicator days={profile.freshness_days} terminal={terminal} />
+              </div>
             )}
 
+            {/* 核心属性列表 */}
             <div className="mt-6 space-y-2 text-sm text-left">
-              {display.city && (
-                <div className="flex items-center gap-2.5 text-slate-600">
-                  <MapPin size={14} className="text-slate-400 flex-shrink-0" />
-                  {display.city}
+              {locationDisplay && (
+                <div className="flex items-start gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                  <MapPin size={14} className="flex-shrink-0 mt-0.5" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  <span className="leading-snug">{locationDisplay}</span>
                 </div>
               )}
-              {display.experience != null && (
-                <div className="flex items-center gap-2.5 text-slate-600">
-                  <Briefcase size={14} className="text-slate-400 flex-shrink-0" />
-                  {display.experience} 年从业经验
+              {profile.expected_city && profile.expected_city !== profile.current_city && (
+                <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                  <Navigation size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  期望城市：{profile.expected_city}
                 </div>
               )}
-              {display.education && (
-                <div className="flex items-center gap-2.5 text-slate-600">
-                  <GraduationCap size={14} className="text-slate-400 flex-shrink-0" />
-                  {display.education}
+              {profile.business_area_name && (
+                <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                  <Target size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  {profile.business_area_name}
                 </div>
               )}
-              {display.updatedAt && (
-                <div className="flex items-center gap-2.5 text-slate-600">
-                  <Clock size={14} className="text-slate-400 flex-shrink-0" />
-                  简历更新于 {display.updatedAt}
+              {profile.experience_years != null && (
+                <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                  <Briefcase size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  {profile.experience_years} 年从业经验
+                </div>
+              )}
+              {(profile.birth_year != null) && (
+                <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                  <Clock size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  {profile.birth_year} 年{profile.birth_month != null ? `${profile.birth_month} 月` : ''}
+                  {profile.age != null && <span className="ml-1">（{profile.age} 岁）</span>}
+                </div>
+              )}
+              {profile.birth_year == null && profile.age != null && (
+                <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                  <Clock size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  {profile.age} 岁
+                </div>
+              )}
+              {profile.education && (
+                <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                  <GraduationCap size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  {profile.education}
+                </div>
+              )}
+              {profile.english_level && (
+                <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                  <Languages size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  英语：{profile.english_level}
+                </div>
+              )}
+              {(profile.function_name || profile.business_type) && (
+                <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                  <Star size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  {profile.function_name || profile.business_type}
+                  {profile.is_management_role != null && (
+                    <span className="ml-1 text-xs" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>
+                      · {profile.is_management_role ? '带团队' : '执行岗'}
+                    </span>
+                  )}
+                </div>
+              )}
+              {profile.updated_at && (
+                <div className="flex items-center gap-2.5" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#64748b' }}>
+                  <Clock size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                  更新于 {profile.updated_at.slice(0, 10)}
                 </div>
               )}
             </div>
 
-            {display.salary && (
-              <div className="mt-6 pt-4 border-t border-slate-100">
-                <p className="text-xs text-slate-400 mb-1">期望薪资</p>
-                <p className="text-xl font-bold text-blue-600">{display.salary}</p>
+            {profile.expected_salary_label && (
+              <div
+                className="mt-6 pt-4"
+                style={terminal ? { borderTop: '1px solid var(--t-border)' } : { borderTop: '1px solid #f1f5f9' }}
+              >
+                <p className="text-xs mb-1" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>期望薪资</p>
+                <p className="text-xl font-bold" style={terminal ? { color: 'var(--t-primary)' } : { color: '#2563eb' }}>{profile.expected_salary_label}</p>
               </div>
             )}
 
             <div className="mt-4 space-y-2">
               {!isOwnProfile && user?.role === 'employer' && (
-                <>
-                  {inviteError && (
-                    <p className="text-xs text-red-500">{inviteError}</p>
-                  )}
-                  {inviteSuccess ? (
-                    <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-emerald-100 text-emerald-700 border border-emerald-300 font-medium w-full justify-center">
-                      <CheckCircle size={14} />已发出邀约
-                    </span>
-                  ) : (
-                    <Button className="w-full" onClick={handleInvite} disabled={inviting}>
-                      {inviting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                      {inviting ? '处理中...' : '发起邀约'}
-                    </Button>
-                  )}
-                </>
-              )}
-              {isOwnProfile && (
-                <Button variant="secondary" className="w-full" onClick={() => navigate('/candidate/upload')}>
-                  <Edit size={14} />
-                  更新简历
-                </Button>
+                inviteSuccess ? (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium w-full justify-center border"
+                    style={terminal ? { background: 'var(--t-success-muted)', color: 'var(--t-success)', borderColor: 'var(--t-success)' } : { background: '#ecfdf5', color: '#047857', borderColor: '#6ee7b7' }}
+                  >
+                    <CheckCircle size={14} />已发出邀约
+                  </span>
+                ) : (
+                  <Button terminal={terminal} className="w-full" onClick={handleInvite} disabled={inviting}>
+                    {inviting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    {inviting ? '处理中...' : '发起邀约'}
+                  </Button>
+                )
               )}
             </div>
           </div>
         </div>
 
-        {/* Right: Details */}
-        <div className="lg:col-span-2 space-y-4">
-          {display.summary && (
-            <div className="card p-6">
-              <h2 className="font-semibold text-slate-800 mb-3">个人简介</h2>
-              <p className="text-sm text-slate-600 leading-relaxed">{display.summary}</p>
+        {/* ── 中栏：主内容 ── */}
+        <div
+          className={terminal ? (isOwnProfile ? 'terminal-scrollbar' : '') : 'lg:col-span-2 space-y-4'}
+          style={terminal ? { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', paddingTop: 32, paddingBottom: 32 } : undefined}
+        >
+
+          {/* 个人简介 */}
+          {profile.summary && (
+            <div
+              className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border' : 'card p-6'}
+              style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
+            >
+              <SectionTitle terminal={terminal} mb={3}>个人优势</SectionTitle>
+              <p
+                className="text-sm leading-relaxed"
+                style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}
+              >
+                {profile.summary}
+              </p>
             </div>
           )}
 
-          {display.tags?.length > 0 && (
-            <div className="card p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Star size={16} className="text-blue-500" />
-                <h2 className="font-semibold text-slate-800">技能标签</h2>
-                <span className="text-xs text-slate-400">· 真实档案标签</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {display.tags.map((tagName, i) => {
-                  const tagObj = allTagObjects.find(t => t.name === tagName)
-                  const colors = ['blue', 'purple', 'green', 'orange']
-                  const color = colors[i % colors.length]
-                  const colorClasses = {
-                    blue: 'bg-blue-50 text-blue-700 border-blue-100',
-                    purple: 'bg-purple-50 text-purple-700 border-purple-100',
-                    green: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-                    orange: 'bg-orange-50 text-orange-700 border-orange-100',
-                  }
-                  return (
-                    <div key={tagName} className="flex items-center gap-1">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colorClasses[color]}`}>
-                        {tagName}
-                      </span>
-                      {tagObj && (
-                        <button
-                          type="button"
-                          title="为此标签写描述"
-                          onClick={() => setNoteTag(tagObj)}
-                          className="text-slate-300 hover:text-blue-400 transition-colors"
-                        >
-                          <MessageSquare size={12} />
-                        </button>
-                      )}
+          {/* 能力标签（知识 / 硬技能 / 软技能 分组） */}
+          {tagGroups.length > 0 && (
+            <div
+              className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border' : 'card p-6'}
+              style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
+            >
+              <SectionTitle terminal={terminal} icon={Star} iconColor="#3b82f6">能力标签</SectionTitle>
+              <div className="space-y-3">
+                {tagGroups.map(group => (
+                  <div key={group.label}>
+                    <p className="text-xs mb-1.5" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>{group.label}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {group.tags.map(tagName => {
+                        const tagObj = allTagObjects.find(t => t.name === tagName)
+                        return (
+                          <div key={tagName} className="flex items-center gap-0.5">
+                            {terminal ? (
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center',
+                                padding: '2px 10px', borderRadius: 9999,
+                                fontSize: 11, fontWeight: 500,
+                                ...TAG_STYLES_TERMINAL[group.color],
+                              }}>
+                                {tagName}
+                              </span>
+                            ) : (
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${TAG_COLORS[group.color]}`}>
+                                {tagName}
+                              </span>
+                            )}
+                            {tagObj && isOwnProfile && (
+                              <button
+                                type="button"
+                                title="为此标签写描述"
+                                onClick={() => setNoteTag(tagObj)}
+                                style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
+                                className={terminal ? 'transition-colors' : 'text-slate-300 hover:text-blue-400 transition-colors'}
+                                onMouseEnter={terminal ? e => { e.currentTarget.style.color = 'var(--t-primary)' } : undefined}
+                                onMouseLeave={terminal ? e => { e.currentTarget.style.color = 'var(--t-text-muted)' } : undefined}
+                              >
+                                <MessageSquare size={11} />
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* 真实档案：显示简历文件信息 */}
-          {profile.resume_file_name && (
-            <div className="card p-6">
-              <h2 className="font-semibold text-slate-800 mb-3">简历文件</h2>
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-bold flex-shrink-0">
-                  {profile.resume_file_name?.split('.').pop().toUpperCase()}
+          {/* 简历文件（仅在非 terminal 或企业/admin 查看时显示） */}
+          {profile.resume_file_name && !(terminal && isOwnProfile) && (
+            <div
+              className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border' : 'card p-6'}
+              style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
+            >
+              <SectionTitle terminal={terminal} mb={3}>简历文件</SectionTitle>
+              <div
+                className="flex items-center gap-3 p-3 rounded-lg"
+                style={terminal ? { background: 'var(--t-bg-elevated)' } : { background: '#f8fafc' }}
+              >
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                  style={terminal ? { background: 'var(--t-primary-muted)', color: 'var(--t-primary)' } : { background: '#dbeafe', color: '#2563eb' }}
+                >
+                  {profile.resume_file_name.split('.').pop().toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-700">{profile.resume_file_name}</p>
-                  <p className="text-xs text-slate-400">
-                    上传于 {profile.resume_uploaded_at?.slice(0, 10) ?? '—'}
-                  </p>
+                  <p className="text-sm font-medium" style={terminal ? { color: 'var(--t-text)' } : { color: '#334155' }}>{profile.resume_file_name}</p>
+                  <p className="text-xs" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>上传于 {profile.resume_uploaded_at?.slice(0, 10) ?? '—'}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* CAND-8A: 当前任职（self 永远显示；employer 仅 private_visible 时显示）*/}
+          {/* 当前任职 */}
           {unlockedDetails && (
             profile.current_company ||
             profile.current_responsibilities ||
@@ -361,17 +677,26 @@ export default function CandidateProfile({ viewMode }) {
             profile.current_average_bonus_percent != null ||
             profile.current_has_year_end_bonus != null
           ) && (
-            <div className="card p-6">
-              <h2 className="font-semibold text-slate-800 mb-4">当前任职</h2>
+            <div
+              className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border' : 'card p-6'}
+              style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
+            >
+              <SectionTitle terminal={terminal}>当前任职</SectionTitle>
               {(profile.current_company || profile.current_title) && (
-                <p className="text-sm text-slate-700 mb-2">
+                <p
+                  className="text-sm mb-2"
+                  style={terminal ? { color: 'var(--t-text)' } : { color: '#334155' }}
+                >
                   {profile.current_company || '—'}
                   {profile.current_title ? ` · ${profile.current_title}` : ''}
                 </p>
               )}
               {profile.current_responsibilities && (
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line mb-3">
-                  <span className="text-xs text-slate-400 mr-1">职责：</span>
+                <p
+                  className="text-sm leading-relaxed whitespace-pre-line mb-3"
+                  style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}
+                >
+                  <span className="text-xs mr-1" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>职责：</span>
                   {profile.current_responsibilities}
                 </p>
               )}
@@ -399,15 +724,17 @@ export default function CandidateProfile({ viewMode }) {
                     {
                       label: '年终奖',
                       value: profile.current_has_year_end_bonus
-                        ? (profile.current_year_end_bonus_months != null
-                            ? `${profile.current_year_end_bonus_months} 月`
-                            : '有')
+                        ? (profile.current_year_end_bonus_months != null ? `${profile.current_year_end_bonus_months} 月` : '有')
                         : (profile.current_has_year_end_bonus === false ? '无' : '—'),
                     },
                   ].map(item => (
-                    <div key={item.label} className="bg-slate-50 rounded-xl px-3 py-2.5">
-                      <p className="text-[10px] text-slate-400 mb-0.5">{item.label}</p>
-                      <p className="text-sm font-semibold text-slate-700">{item.value}</p>
+                    <div
+                      key={item.label}
+                      className="rounded-xl px-3 py-2.5"
+                      style={terminal ? { background: 'var(--t-bg-elevated)' } : { background: '#f8fafc' }}
+                    >
+                      <p className="text-[10px] mb-0.5" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>{item.label}</p>
+                      <p className="text-sm font-semibold" style={terminal ? { color: 'var(--t-text)' } : { color: '#334155' }}>{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -415,45 +742,95 @@ export default function CandidateProfile({ viewMode }) {
             </div>
           )}
 
-          {/* CAND-8A: 工作经历（self 永远显示；employer 仅 private_visible 时显示）*/}
+          {/* 工作经历 */}
           {unlockedDetails && Array.isArray(profile.work_experiences) && profile.work_experiences.length > 0 && (
-            <div className="card p-6">
-              <h2 className="font-semibold text-slate-800 mb-4">工作经历</h2>
+            <div
+              className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border' : 'card p-5'}
+              style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
+            >
+              <SectionTitle terminal={terminal} icon={Briefcase} iconColor="#6366f1">工作经历</SectionTitle>
               <div className="space-y-4">
                 {profile.work_experiences.map((w, i) => {
                   const company = w.company_name || w.company || '—'
-                  const period = w.period
-                    || (w.start_month || w.end_month
-                      ? `${w.start_month || '?'} – ${w.end_month || '至今'}`
-                      : '—')
-                  const salaryRange = (w.salary_min != null || w.salary_max != null)
-                    ? `${w.salary_min ?? '—'} ~ ${w.salary_max ?? '—'}`
-                    : null
+                  const period = w.period || (w.start_month || w.end_month
+                    ? `${w.start_month || '?'} – ${w.end_month || '至今'}`
+                    : '—')
+                  const salaryFixed = w.salary_min != null ? Number(w.salary_min).toLocaleString('en-US') : (w.salary_max != null ? Number(w.salary_max).toLocaleString('en-US') : null)
                   const yebText = w.has_year_end_bonus
-                    ? (w.year_end_bonus_months != null ? `${w.year_end_bonus_months} 月` : '有')
-                    : (w.has_year_end_bonus === false ? '无' : null)
+                    ? (w.year_end_bonus_months != null ? `${w.year_end_bonus_months} 月年终` : '有年终')
+                    : (w.has_year_end_bonus === false ? '无年终' : null)
+
+                  const borderColor = terminal ? 'var(--t-border)' : '#bfdbfe'
+                  const mutedColor = terminal ? 'var(--t-text-muted)' : '#94a3b8'
+                  const secondaryColor = terminal ? 'var(--t-text-secondary)' : '#64748b'
+                  const textColor = terminal ? 'var(--t-text)' : '#1e293b'
+
                   return (
-                    <div key={i} className="border-l-2 border-blue-200 pl-3 py-1">
-                      <p className="text-sm font-medium text-slate-800">
-                        {w.title || '—'} · {company}
-                      </p>
-                      <p className="text-xs text-slate-500">{period}</p>
+                    <div
+                      key={i}
+                      className="pl-3 py-1"
+                      style={{ borderLeft: `2px solid ${borderColor}` }}
+                    >
+                      {/* Row 1: title · company + period (right-aligned) */}
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span
+                          className="text-sm font-medium truncate"
+                          style={{ color: textColor }}
+                        >
+                          {w.title || '—'} <span style={{ color: secondaryColor }}>·</span> {company}
+                        </span>
+                        <span
+                          className="text-xs flex-shrink-0"
+                          style={{ color: mutedColor }}
+                        >
+                          {period}
+                        </span>
+                      </div>
+
+                      {/* Row 2: Responsibilities */}
                       {w.responsibilities && (
-                        <p className="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-line">
-                          <span className="mr-1 text-slate-400">职责：</span>{w.responsibilities}
+                        <p
+                          className="text-xs mt-1 leading-relaxed whitespace-pre-line"
+                          style={{ color: secondaryColor }}
+                        >
+                          <span style={{ color: mutedColor }}>职责：</span>{w.responsibilities}
                         </p>
                       )}
+
+                      {/* Row 3: Achievements */}
                       {w.achievements && (
-                        <p className="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-line">
-                          <span className="mr-1 text-slate-400">成就：</span>{w.achievements}
+                        <p
+                          className="text-xs mt-1 leading-relaxed whitespace-pre-line"
+                          style={{ color: secondaryColor }}
+                        >
+                          <span style={{ color: mutedColor }}>成就：</span>{w.achievements}
                         </p>
                       )}
-                      {(salaryRange || w.salary_months != null || w.average_bonus_percent != null || yebText != null) && (
-                        <p className="text-xs text-slate-500 mt-1">
-                          {salaryRange && <span className="mr-2">薪资 {salaryRange}</span>}
-                          {w.salary_months != null && <span className="mr-2">{w.salary_months} 月</span>}
-                          {w.average_bonus_percent != null && <span className="mr-2">奖金 {w.average_bonus_percent}%</span>}
-                          {yebText && <span>年终奖 {yebText}</span>}
+
+                      {/* Row 4: Salary info — compact inline */}
+                      {(salaryFixed || w.salary_months != null || w.average_bonus_percent != null || yebText != null) && (
+                        <p className="text-xs mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5" style={{ color: mutedColor }}>
+                          {salaryFixed && (
+                            <span style={{ color: secondaryColor }}>{salaryFixed}</span>
+                          )}
+                          {w.salary_months != null && (
+                            <>
+                              {salaryFixed && <span style={{ color: mutedColor }}>·</span>}
+                              <span style={{ color: secondaryColor }}>{w.salary_months} 月</span>
+                            </>
+                          )}
+                          {w.average_bonus_percent != null && (
+                            <>
+                              <span style={{ color: mutedColor }}>·</span>
+                              <span style={{ color: secondaryColor }}>奖金 {w.average_bonus_percent}%</span>
+                            </>
+                          )}
+                          {yebText != null && (
+                            <>
+                              <span style={{ color: mutedColor }}>·</span>
+                              <span style={{ color: secondaryColor }}>{yebText}</span>
+                            </>
+                          )}
                         </p>
                       )}
                     </div>
@@ -463,93 +840,519 @@ export default function CandidateProfile({ viewMode }) {
             </div>
           )}
 
-          {profile.education && (
-            <div className="card p-6">
-              <h2 className="font-semibold text-slate-800 mb-4">教育背景</h2>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                  <GraduationCap size={18} className="text-emerald-600" />
+          {/* 教育背景 */}
+          {(profile.education ||
+            (Array.isArray(profile.education_experiences) && profile.education_experiences.length > 0) ||
+            (Array.isArray(profile.certificates) && profile.certificates.length > 0)) && (
+            <div
+              className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border' : 'card p-6'}
+              style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
+            >
+              <SectionTitle terminal={terminal} icon={GraduationCap} iconColor="#10b981">教育与证书</SectionTitle>
+
+              {/* 学历摘要 */}
+              {profile.education && (
+                <p
+                  className="text-sm font-medium mb-3"
+                  style={terminal ? { color: 'var(--t-text)' } : { color: '#334155' }}
+                >
+                  {profile.education}
+                </p>
+              )}
+
+              {/* 详细教育经历 */}
+              {Array.isArray(profile.education_experiences) && profile.education_experiences.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {profile.education_experiences.map((e, i) => (
+                    <div
+                      key={i}
+                      className="pl-3 py-0.5"
+                      style={{ borderLeft: `2px solid ${terminal ? 'var(--t-success-muted)' : '#a7f3d0'}` }}
+                    >
+                      <p className="text-sm" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#334155' }}>
+                        {e.school || '—'}
+                        {e.major ? ` · ${e.major}` : ''}
+                        {e.degree ? ` · ${e.degree}` : ''}
+                      </p>
+                      {e.period && <p className="text-xs" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>{e.period}</p>}
+                    </div>
+                  ))}
                 </div>
+              )}
+
+              {/* 资格证书 */}
+              {Array.isArray(profile.certificates) && profile.certificates.length > 0 && (
                 <div>
-                  <p className="font-semibold text-slate-800">{display.education}</p>
+                  <p className="text-xs mb-1.5" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>资格证书</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.certificates.map(cert => (
+                      terminal ? (
+                        <span key={cert} style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '2px 10px', borderRadius: 9999,
+                          fontSize: 11, fontWeight: 500,
+                          background: 'rgba(251,191,36,0.12)', color: 'var(--t-chart-amber)',
+                          border: '1px solid rgba(251,191,36,0.25)',
+                        }}>
+                          <Award size={10} />
+                          {cert}
+                        </span>
+                      ) : (
+                        <span key={cert} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-amber-50 text-amber-700 border-amber-100">
+                          <Award size={10} />
+                          {cert}
+                        </span>
+                      )
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-          {/* 联系信息 — 自己只读展示；编辑统一进入个人简历页。
-              企业 / admin：仅在 private_visible 时展示 */}
+          {/* 联系信息（自己查看） */}
           {isOwnProfile && (
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-slate-800">联系信息</h2>
-                <Button size="sm" variant="secondary" onClick={() => navigate('/candidate/profile/builder')}>
-                  <Edit size={12} />编辑个人简历
-                </Button>
-              </div>
-              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                联系方式将在你接受企业邀约或主动投递后，对相关企业可见。其它企业仍然看不到你的电话和邮箱。
+            <div
+              className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border' : 'card p-6'}
+              style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
+            >
+              <SectionTitle
+                terminal={terminal}
+                action={
+                  <Button terminal={terminal} size="sm" variant="secondary" onClick={onEdit ?? (() => navigate('/candidate/profile/builder'))}>
+                    <Edit size={12} />编辑档案
+                  </Button>
+                }
+              >
+                联系信息
+              </SectionTitle>
+              <p
+                className="text-xs mb-4 leading-relaxed"
+                style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#64748b' }}
+              >
+                联系方式在订阅覆盖该候选人后对企业可见。
               </p>
               <div className="space-y-2 text-sm">
-                {profile.email ? (
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Mail size={14} className="text-slate-400 flex-shrink-0" />
-                    <span>{profile.email}</span>
-                  </div>
-                ) : null}
-                {profile.phone ? (
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Phone size={14} className="text-slate-400 flex-shrink-0" />
-                    <span>{profile.phone}</span>
-                  </div>
-                ) : null}
-                {profile.address ? (
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Home size={14} className="text-slate-400 flex-shrink-0" />
-                    <span>{profile.address}</span>
-                  </div>
-                ) : null}
+                {profile.email
+                  ? <div className="flex items-center gap-2" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}><Mail size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />{profile.email}</div>
+                  : null}
+                {profile.phone
+                  ? <div className="flex items-center gap-2" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}><Phone size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />{profile.phone}</div>
+                  : null}
+                {profile.address
+                  ? <div className="flex items-center gap-2" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}><Home size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />{profile.address}</div>
+                  : null}
                 {!profile.email && !profile.phone && !profile.address && (
-                  <p className="text-sm text-slate-400">暂无联系信息，请在个人简历中补充。</p>
+                  <p className="text-sm" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>暂无联系信息，请在档案编辑中补充。</p>
                 )}
               </div>
             </div>
           )}
 
-          {/* 企业 / admin 查看候选人时，只有 private_visible 才展示联系信息 */}
+          {/* 联系信息（企业/admin 查看，private_visible 时） */}
           {!isOwnProfile && profile.private_visible && (profile.email || profile.phone || profile.address) && (
-            <div className="card p-6">
-              <h2 className="font-semibold text-slate-800 mb-4">联系信息</h2>
+            <div
+              className={terminal ? 'p-5 rounded-[var(--t-radius-lg)] border' : 'card p-6'}
+              style={terminal ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)' } : undefined}
+            >
+              <SectionTitle terminal={terminal}>联系信息</SectionTitle>
               <div className="space-y-2 text-sm">
                 {profile.email && (
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Mail size={14} className="text-slate-400 flex-shrink-0" />
-                    <a href={`mailto:${profile.email}`} className="hover:text-blue-600">{profile.email}</a>
+                  <div className="flex items-center gap-2" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                    <Mail size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                    <a href={`mailto:${profile.email}`} style={terminal ? { color: 'var(--t-primary)' } : { color: '#2563eb' }}>{profile.email}</a>
                   </div>
                 )}
                 {profile.phone && (
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Phone size={14} className="text-slate-400 flex-shrink-0" />
-                    <a href={`tel:${profile.phone}`} className="hover:text-blue-600">{profile.phone}</a>
+                  <div className="flex items-center gap-2" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                    <Phone size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+                    <a href={`tel:${profile.phone}`} style={terminal ? { color: 'var(--t-primary)' } : { color: '#2563eb' }}>{profile.phone}</a>
                   </div>
                 )}
                 {profile.address && (
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Home size={14} className="text-slate-400 flex-shrink-0" />
+                  <div className="flex items-center gap-2" style={terminal ? { color: 'var(--t-text-secondary)' } : { color: '#475569' }}>
+                    <Home size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
                     {profile.address}
                   </div>
                 )}
               </div>
             </div>
           )}
+
         </div>
+
+        {/* ── 右侧管理面板（terminal + 自己查看） ── */}
+        {terminal && isOwnProfile && (
+          <div className="terminal-scrollbar" style={{ width: 256, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', paddingTop: 32, paddingBottom: 32, paddingRight: 24 }}>
+
+            {/* ── 附件管理 ── */}
+            <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>附件管理</span>
+                <button type="button" onClick={() => navigate('/candidate/upload')}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 6, border: '1px solid var(--t-border)', background: 'var(--t-bg-elevated)', color: 'var(--t-text-secondary)', cursor: 'pointer' }}>
+                  <Plus size={14} />
+                </button>
+              </div>
+              {profile.resume_file_name ? (
+                <>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 8 }}>文件（1/1）· 双击预览</p>
+                  <div
+                    onDoubleClick={handleOpenPreview}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', marginBottom: 10, cursor: 'pointer' }}
+                    title="双击预览简历"
+                  >
+                    <div style={{ width: 38, height: 46, borderRadius: 6, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, color: '#fff', letterSpacing: '0.05em' }}>
+                        {profile.resume_file_name.split('.').pop().toUpperCase()}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--t-text)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile.resume_file_name}</p>
+                      <p style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>
+                        更新于 {profile.resume_uploaded_at ? profile.resume_uploaded_at.slice(0, 10).replace(/-/g, '.') : '—'}
+                      </p>
+                    </div>
+                    {/* 删除按钮 */}
+                    {deleteConfirm ? (
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                        <button type="button" onClick={() => setDeleteConfirm(false)}
+                          style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'var(--t-bg)', color: 'var(--t-text-muted)', cursor: 'pointer' }}>
+                          取消
+                        </button>
+                        <button type="button" onClick={handleDeleteResume} disabled={deleting}
+                          style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: 'none', background: 'var(--t-danger)', color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}>
+                          {deleting ? '...' : '确认'}
+                        </button>
+                      </div>
+                    ) : (
+                      <button type="button"
+                        onClick={e => { e.stopPropagation(); setDeleteConfirm(true) }}
+                        style={{ flexShrink: 0, padding: 4, borderRadius: 4, border: 'none', background: 'none', color: 'var(--t-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--t-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--t-text-muted)'}
+                        title="删除简历">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  {/* AI 解析按钮 */}
+                  <button type="button" onClick={handleAIParse} disabled={parsing}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 0', borderRadius: 6, border: '1px solid var(--t-primary)', background: 'var(--t-primary-muted)', color: 'var(--t-primary)', fontSize: 12, fontWeight: 500, cursor: parsing ? 'not-allowed' : 'pointer', opacity: parsing ? 0.7 : 1 }}>
+                    {parsing ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                    {parsing ? 'AI 解析中...' : 'AI 解析档案'}
+                  </button>
+                  {parseError && <p style={{ fontSize: 11, color: 'var(--t-danger)', marginTop: 6 }}>{parseError}</p>}
+                </>
+              ) : (
+                <div style={{ padding: '16px 0', textAlign: 'center' }}>
+                  <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 8 }}>暂未上传简历附件</p>
+                  <button type="button" onClick={() => navigate('/candidate/upload')}
+                    style={{ fontSize: 12, color: 'var(--t-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    立即上传 →
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ── 简历诊断（DeepSeek） ── */}
+            <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>简历诊断</p>
+                <button type="button" onClick={handleDiagnose} disabled={diagnosing}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '3px 8px', borderRadius: 5, border: '1px solid var(--t-primary)', background: 'var(--t-primary-muted)', color: 'var(--t-primary)', cursor: diagnosing ? 'not-allowed' : 'pointer', opacity: diagnosing ? 0.7 : 1, whiteSpace: 'nowrap' }}>
+                  {diagnosing ? <Loader2 size={10} className="animate-spin" /> : <ShieldAlert size={10} />}
+                  {diagnosing ? '分析中...' : 'AI 诊断'}
+                </button>
+              </div>
+
+              {/* 初始空态 */}
+              {!diagnosing && !diagnosisResult && !diagnosisError && (
+                <div style={{ padding: '12px 0', textAlign: 'center' }}>
+                  <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 6, lineHeight: 1.6 }}>点击「AI 诊断」，DeepSeek 将分析你的档案并给出改进建议</p>
+                </div>
+              )}
+
+              {/* 加载中 */}
+              {diagnosing && (
+                <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <Loader2 size={20} className="animate-spin" style={{ color: 'var(--t-primary)' }} />
+                  <p style={{ fontSize: 12, color: 'var(--t-text-muted)' }}>DeepSeek 正在分析档案...</p>
+                </div>
+              )}
+
+              {/* 错误 */}
+              {diagnosisError && (
+                <div style={{ fontSize: 12, color: 'var(--t-danger)', padding: '8px 0' }}>{diagnosisError}</div>
+              )}
+
+              {/* 结果 */}
+              {diagnosisResult && (
+                <div style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 8, padding: '14px 16px' }}>
+                  <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--t-text-secondary)', marginBottom: 6 }}>完善简历内容</p>
+                  <p style={{ fontSize: 36, fontWeight: 700, color: 'var(--t-chart-amber)', lineHeight: 1, marginBottom: 2 }}>{diagnosisResult.items.length}</p>
+                  <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 14 }}>项待优化</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {diagnosisResult.items.map((item, idx) => (
+                      <div key={idx} style={{ paddingLeft: 10, borderLeft: `3px solid ${item.priority === 'high' ? 'var(--t-danger)' : 'var(--t-primary)'}` }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)', marginBottom: 3 }}>{item.title}</p>
+                        <p style={{ fontSize: 11, color: 'var(--t-text-muted)', lineHeight: 1.6 }}>{item.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── 隐私设置 ── */}
+            <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>隐私设置</span>
+                <button type="button" onClick={() => navigate('/candidate/settings')}
+                  style={{ fontSize: 12, color: 'var(--t-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 }}>
+                  设置
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, color: 'var(--t-text-secondary)' }}>简历设置</span>
+                <span style={{ fontSize: 12, color: 'var(--t-text-secondary)' }}>
+                  {profile.contact_visible ? '对外开放' : '仅自己可见'}
+                </span>
+              </div>
+            </div>
+
+            {/* ── 屏蔽公司 ── */}
+            <div style={{ background: 'var(--t-bg-panel)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-lg)', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>屏蔽公司</span>
+                {blockSaving && <Loader2 size={12} className="animate-spin" style={{ color: 'var(--t-text-muted)' }} />}
+              </div>
+
+              {/* Search input */}
+              <div style={{ position: 'relative', marginBottom: 10 }}>
+                <input
+                  type="text"
+                  value={blockSearchQ}
+                  placeholder="搜索并添加..."
+                  onChange={e => {
+                    setBlockSearchQ(e.target.value)
+                    searchCompanies(e.target.value)
+                  }}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '5px 8px', fontSize: 12, borderRadius: 6,
+                    border: '1px solid var(--t-border)', outline: 'none',
+                    background: 'var(--t-bg-input)', color: 'var(--t-text)',
+                  }}
+                />
+                {blockSearching && (
+                  <Loader2 size={11} className="animate-spin"
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--t-text-muted)' }} />
+                )}
+                {blockSuggestions.length > 0 && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                    background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)',
+                    borderRadius: 6, marginTop: 2, overflow: 'hidden',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  }}>
+                    {blockSuggestions.map(c => (
+                      <button key={c.id} type="button"
+                        onClick={() => addBlockedCompany(c)}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left',
+                          padding: '7px 10px', fontSize: 12, color: 'var(--t-text)',
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          borderBottom: '1px solid var(--t-border-subtle)',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--t-bg-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >{c.name}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Blocked list */}
+              {blockedCompanies.length === 0 ? (
+                <p style={{ fontSize: 12, color: 'var(--t-text-muted)', textAlign: 'center', padding: '8px 0' }}>
+                  暂未屏蔽任何公司
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {blockedCompanies.map(c => (
+                    <div key={c.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '5px 8px', borderRadius: 6,
+                      background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)',
+                    }}>
+                      <span style={{ fontSize: 12, color: 'var(--t-text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                      <button type="button" onClick={() => removeBlockedCompany(c.id)}
+                        style={{ flexShrink: 0, marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--t-text-muted)', display: 'flex', alignItems: 'center' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--t-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--t-text-muted)'}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
       </div>
 
-      {/* 标签描述弹窗 */}
-      {noteTag && (
-        <TagNoteModal tag={noteTag} onClose={() => setNoteTag(null)} />
+      {noteTag && <TagNoteModal tag={noteTag} onClose={() => setNoteTag(null)} />}
+
+      {/* ── 简历预览弹窗 ── */}
+      {previewOpen && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9600, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          onClick={e => { if (e.target === e.currentTarget) { setPreviewOpen(false); setPreviewUrl('') } }}
+        >
+          <div style={{ width: '100%', maxWidth: 880, height: '85vh', display: 'flex', flexDirection: 'column', borderRadius: 'var(--t-radius-lg)', border: '1px solid var(--t-border)', background: 'var(--t-bg-panel)', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--t-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FileText size={14} style={{ color: 'var(--t-primary)' }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-text)' }}>{previewFilename || '简历预览'}</span>
+              </div>
+              <button type="button" onClick={() => { setPreviewOpen(false); setPreviewUrl('') }}
+                style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid var(--t-border)', background: 'transparent', color: 'var(--t-text-muted)', cursor: 'pointer', fontSize: 13 }}>
+                关闭
+              </button>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--t-bg)' }}>
+              {previewLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                  <Loader2 size={24} className="animate-spin" style={{ color: 'var(--t-primary)' }} />
+                  <p style={{ fontSize: 13, color: 'var(--t-text-muted)' }}>加载中...</p>
+                </div>
+              ) : previewUrl ? (
+                <iframe
+                  src={previewUrl}
+                  title="简历预览"
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                />
+              ) : (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: 13, color: 'var(--t-danger)', marginBottom: 8 }}>预览加载失败</p>
+                  <button type="button" onClick={handleOpenPreview}
+                    style={{ fontSize: 12, color: 'var(--t-primary)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    重试
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
-    </div>
+
+      {/* ── AI 解析确认弹窗 ── */}
+      {parsedData && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9500, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          onClick={e => { if (e.target === e.currentTarget) setParsedData(null) }}>
+          <div style={{ width: '100%', maxWidth: 540, maxHeight: '85vh', display: 'flex', flexDirection: 'column', borderRadius: 'var(--t-radius-lg)', border: '1px solid var(--t-border)', background: 'var(--t-bg-panel)', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--t-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FileText size={15} style={{ color: 'var(--t-primary)' }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--t-text)' }}>AI 解析结果</span>
+              </div>
+              <button type="button" onClick={() => setParsedData(null)} style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--t-text-muted)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontSize: 12, color: 'var(--t-text-muted)', marginBottom: 4 }}>AI 已从简历中提取以下内容，点击「进入编辑页确认」后可逐项核对。</p>
+              {[
+                ['姓名', parsedData.full_name],
+                ['手机', parsedData.phone],
+                ['邮箱', parsedData.email],
+                ['性别', parsedData.gender === 'male' ? '男' : parsedData.gender === 'female' ? '女' : null],
+                ['出生年月', parsedData.birth_year != null ? `${parsedData.birth_year}年${parsedData.birth_month != null ? parsedData.birth_month + '月' : ''}` : null],
+                ['城市', parsedData.current_city],
+                ['求职状态', parsedData.availability_status === 'open' ? '离职-随时到岗' : parsedData.availability_status === 'passive_now' ? '在职-月内到岗' : parsedData.availability_status === 'passive' ? '在职-考虑机会' : null],
+                ['业务方向', parsedData.function_code],
+                ['学历', parsedData.education],
+                ['英语水平', parsedData.english_level],
+                ['期望岗位', parsedData.desired_position],
+                ['期望薪资', parsedData.expected_salary_min != null
+                  ? `${parsedData.expected_salary_min?.toLocaleString()}—${parsedData.expected_salary_max?.toLocaleString()} /${parsedData.expected_salary_period === 'year' ? '年' : '月'}`
+                  : null],
+                ['当前月薪', parsedData.current_salary != null ? `${parsedData.current_salary.toLocaleString()} 元` : null],
+              ].filter(([, v]) => v != null).map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', gap: 12, padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <span style={{ fontSize: 11, color: 'var(--t-text-muted)', width: 64, flexShrink: 0 }}>{label}</span>
+                  <span style={{ fontSize: 12, color: 'var(--t-text)', fontWeight: 500 }}>{String(value)}</span>
+                </div>
+              ))}
+              {parsedData.work_experiences?.length > 0 && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 6 }}>工作经历（{parsedData.work_experiences.length} 条）</p>
+                  {parsedData.work_experiences.map((w, i) => (
+                    <div key={i} style={{ marginBottom: i < parsedData.work_experiences.length - 1 ? 6 : 0 }}>
+                      <p style={{ fontSize: 12, color: 'var(--t-text)', marginBottom: w.responsibilities ? 2 : 0 }}>{w.company_name} · {w.title} {w.start_month || ''}—{w.end_month || '至今'}</p>
+                      {w.responsibilities && (
+                        <p style={{ fontSize: 11, color: 'var(--t-text-secondary)', lineHeight: 1.5, paddingLeft: 8 }}>
+                          {w.responsibilities.length > 80 ? w.responsibilities.slice(0, 80) + '…' : w.responsibilities}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {parsedData.education_experiences?.length > 0 && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 6 }}>教育经历（{parsedData.education_experiences.length} 条）</p>
+                  {parsedData.education_experiences.map((e, i) => (
+                    <p key={i} style={{ fontSize: 12, color: 'var(--t-text)', marginBottom: 2 }}>{e.school} · {e.major} · {e.degree}</p>
+                  ))}
+                </div>
+              )}
+              {(parsedData.hard_skill_tags?.length > 0 || parsedData.soft_skill_tags?.length > 0) && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 6 }}>能力标签</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {[...(parsedData.hard_skill_tags || []), ...(parsedData.soft_skill_tags || [])].map((tag, i) => (
+                      <span key={i} style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'var(--t-primary-muted)', color: 'var(--t-primary)', border: '1px solid var(--t-border)' }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {parsedData.summary && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 4 }}>个人优势</p>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-secondary)', lineHeight: 1.6 }}>
+                    {parsedData.summary.length > 120 ? parsedData.summary.slice(0, 120) + '…' : parsedData.summary}
+                  </p>
+                </div>
+              )}
+              {parsedData.certificates?.length > 0 && (
+                <div style={{ padding: '7px 10px', borderRadius: 6, background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border-subtle)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--t-text-muted)', marginBottom: 4 }}>证书</p>
+                  <p style={{ fontSize: 12, color: 'var(--t-text)' }}>{parsedData.certificates.join('、')}</p>
+                </div>
+              )}
+              {parseError && <p style={{ fontSize: 12, color: 'var(--t-danger)' }}>{parseError}</p>}
+            </div>
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--t-border)', display: 'flex', gap: 10, flexShrink: 0 }}>
+              <button type="button" onClick={() => setParsedData(null)}
+                style={{ flex: 1, padding: '8px 0', borderRadius: 6, border: '1px solid var(--t-border)', background: 'transparent', color: 'var(--t-text-secondary)', fontSize: 13, cursor: 'pointer' }}>
+                取消
+              </button>
+              <button type="button" onClick={handleApplyParsed}
+                style={{ flex: 2, padding: '8px 0', borderRadius: 6, border: 'none', background: 'var(--t-primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                进入编辑页确认
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   )
 }

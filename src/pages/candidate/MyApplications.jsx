@@ -6,6 +6,7 @@ import {
   CheckCircle, Eye, Star, XCircle, RotateCcw, Trash2,
 } from 'lucide-react'
 import { applicationsApi } from '../../api/applications'
+import { useToast } from '../../components/ui/Toast'
 
 /**
  * CAND-8B — Candidate "My Applications" page.
@@ -20,6 +21,7 @@ import { applicationsApi } from '../../api/applications'
  */
 
 const STATUS_DEFS = {
+  saved:       { label: '已收藏',         Icon: Star,        terminalKey: 'warning'   },
   submitted:   { label: '已投递',         Icon: Send,        terminalKey: 'chartBlue' },
   viewed:      { label: '企业已查看',     Icon: Eye,         terminalKey: 'primary'   },
   shortlisted: { label: '已进入候选名单', Icon: Star,        terminalKey: 'success'   },
@@ -31,11 +33,13 @@ const TERMINAL_STATUS_COLOR = {
   chartBlue: 'var(--t-chart-blue)',
   primary:   'var(--t-primary)',
   success:   'var(--t-success)',
+  warning:   'var(--t-warning)',
   danger:    'var(--t-danger)',
   muted:     'var(--t-text-muted)',
 }
 
 const LIGHT_STATUS_CLASS = {
+  saved:       'bg-amber-50   text-amber-700   border-amber-200',
   submitted:   'bg-blue-50    text-blue-700    border-blue-200',
   viewed:      'bg-indigo-50  text-indigo-700  border-indigo-200',
   shortlisted: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -50,11 +54,12 @@ function StatusChip({ status, terminal }) {
     const c = TERMINAL_STATUS_COLOR[def.terminalKey] || 'var(--t-text-muted)'
     return (
       <span
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border"
+        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium"
         style={{
           background: 'var(--t-bg-elevated)',
-          borderColor: c,
+          border: `1px solid ${c}`,
           color: c,
+          borderRadius: 'var(--t-radius-sm)',
         }}
       >
         <Icon size={11} /> {def.label}
@@ -90,7 +95,7 @@ function ApplicationCard({ app, terminal, onWithdraw }) {
     j.location_name || j.city_name || j.city || '—'
 
   // CAND-4B: show withdraw button for non-terminal states
-  const canWithdraw = ['submitted', 'viewed', 'shortlisted'].includes(app.status)
+  const canWithdraw = ['saved', 'submitted', 'viewed', 'shortlisted'].includes(app.status)
 
   return (
     <div className={cardClass} style={cardStyle}>
@@ -151,7 +156,7 @@ function ApplicationCard({ app, terminal, onWithdraw }) {
                 : undefined
             }
           >
-            <Trash2 size={12} /> 撤回投递
+            <Trash2 size={12} /> {app.status === 'saved' ? '取消收藏' : '撤回投递'}
           </button>
         )}
       </div>
@@ -160,39 +165,32 @@ function ApplicationCard({ app, terminal, onWithdraw }) {
 }
 
 function Cell({ icon: Icon, label, value, terminal, accentValue }) {
-  return (
-    <div
-      className={terminal ? 'rounded-md px-2.5 py-1.5' : 'rounded-md bg-slate-50 px-2.5 py-1.5'}
-      style={
-        terminal
-          ? { background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)' }
-          : undefined
-      }
-    >
-      <div className="flex items-center gap-1 mb-0.5">
-        <Icon size={10} style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
-        <span
-          className={terminal ? 'text-[10px]' : 'text-[10px] text-slate-400'}
-          style={terminal ? { color: 'var(--t-text-muted)' } : undefined}
-        >
-          {label}
-        </span>
+  if (terminal) {
+    return (
+      <div className="px-2.5 py-1.5" style={{ background: 'var(--t-bg-elevated)', border: '1px solid var(--t-border)', borderRadius: 'var(--t-radius-sm)' }}>
+        <div className="flex items-center gap-1 mb-0.5">
+          <Icon size={10} style={{ color: 'var(--t-text-muted)' }} />
+          <span className="font-sans text-xs uppercase tracking-[0.04em]" style={{ color: 'var(--t-text-muted)' }}>{label}</span>
+        </div>
+        <p className="text-xs truncate" style={accentValue ? { color: 'var(--t-chart-blue)' } : { color: 'var(--t-text-secondary)' }}>
+          {value}
+        </p>
       </div>
-      <p
-        className={terminal ? 'text-xs font-medium truncate' : 'text-xs font-medium text-slate-700 truncate'}
-        style={
-          terminal
-            ? (accentValue ? { color: 'var(--t-chart-blue)' } : { color: 'var(--t-text-secondary)' })
-            : undefined
-        }
-      >
-        {value}
-      </p>
+    )
+  }
+  return (
+    <div className="rounded-md bg-slate-50 px-2.5 py-1.5">
+      <div className="flex items-center gap-1 mb-0.5">
+        <Icon size={10} style={{ color: '#94a3b8' }} />
+        <span className="text-[10px] text-slate-400">{label}</span>
+      </div>
+      <p className={`text-xs font-medium truncate ${accentValue ? 'text-blue-600' : 'text-slate-700'}`}>{value}</p>
     </div>
   )
 }
 
 export default function MyApplications({ terminal = false }) {
+  const toast = useToast()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
@@ -249,7 +247,7 @@ export default function MyApplications({ terminal = false }) {
         message: err.message,
       })
       const msg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.detail || '撤回失败，请重试'
-      alert(msg)
+      toast.show(msg, 'error')
     } finally {
       setWithdrawing(null)
     }
@@ -316,7 +314,7 @@ export default function MyApplications({ terminal = false }) {
             style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}
           >
             <Send size={14} />
-            <span className="text-[11px] tracking-[0.2em] uppercase">APPLICATIONS · ME</span>
+            <span className="text-[11px] tracking-[0.04em] uppercase">APPLICATIONS · ME</span>
           </div>
           <h1
             className={terminal ? 'text-2xl font-semibold' : 'text-2xl font-semibold text-slate-800'}

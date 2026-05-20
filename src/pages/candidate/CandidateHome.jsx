@@ -1,17 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Briefcase, Database, Send, Tags, TrendingUp, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Briefcase, Send, Tags, FileText, Users, UsersRound, Wrench, MessageSquare } from 'lucide-react'
 import TerminalLayout from '../../components/terminal/TerminalLayout'
-import FunctionRail, { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
-import AreaSidebar, { DEFAULT_AREAS } from '../../components/terminal/AreaSidebar'
+import { DEFAULT_FUNCTIONS } from '../../components/terminal/FunctionRail'
+import { DEFAULT_AREAS } from '../../components/terminal/AreaSidebar'
+import AreaRail from '../../components/terminal/AreaRail'
+import FunctionSidebar from '../../components/terminal/FunctionSidebar'
 import CandidateChartPanel from '../../components/terminal/CandidateChartPanel'
 import TerminalActionBar from '../../components/terminal/TerminalActionBar'
+import TrendSummaryCard from '../../components/terminal/TrendSummaryCard'
+import LockedInsightsPanel from '../../components/terminal/LockedInsightsPanel'
 import MetricCard from '../../components/data/MetricCard'
 import { CANDIDATE_ICON_NAV } from '../../components/terminal/navItems'
 import { useAuth } from '../../context/AuthContext'
 import { jobsApi } from '../../api/jobs'
+import { applicationsApi } from '../../api/applications'
+import { conversationsApi } from '../../api/conversations'
+import { subscriptionsApi } from '../../api/subscriptions'
+import { candidateDashboardApi } from '../../api/candidateDashboard'
 
 const DEFAULT_FUNCTION = 'ALL'
-const DEFAULT_AREA = 'Global'
+const DEFAULT_AREA = 'China'
 
 const FUNCTION_KEYWORDS = {
   Sea: ['海运', '海', 'sea', 'ocean', 'shipping'],
@@ -23,13 +32,7 @@ const FUNCTION_KEYWORDS = {
 }
 
 const AREA_KEYWORDS = {
-  'Great China': ['中国', 'china', '上海', '北京', '广州', '深圳', '宁波', '青岛', '厦门', '天津'],
-  'East China': ['华东', '上海', '江苏', '南京', '苏州', '浙江', '杭州', '宁波', '安徽', '山东', '青岛'],
-  'North China': ['华北', '北京', '天津', '河北', '山西', '内蒙古'],
-  'South China': ['华南', '广东', '广州', '深圳', '福建', '厦门', '广西', '海南'],
-  'West China': ['西部', '西南', '西北', '四川', '成都', '重庆', '陕西', '西安', '云南', '贵州', '新疆'],
-  Taiwan: ['台湾', 'taiwan', '台北'],
-  'Hong Kong': ['香港', 'hong kong', 'hk'],
+  China: ['中国', 'china', '上海', '北京', '广州', '深圳', '宁波', '青岛', '厦门', '天津', '香港', '台湾', '澳门'],
 }
 
 function textOfJob(job) {
@@ -66,36 +69,28 @@ function matchesArea(job, areaKey) {
   return hasAny(textOfJob(job), AREA_KEYWORDS[areaKey])
 }
 
-function inferAreas(job) {
-  const areas = DEFAULT_AREAS
-    .filter((area) => area.key !== DEFAULT_AREA && matchesArea(job, area.key))
-    .map((area) => area.key)
-  return areas.length > 0 ? areas : [DEFAULT_AREA]
-}
-
-function countBy(items, keys, predicate) {
-  return keys
-    .map((item) => ({
-      label: item.label,
-      count: items.filter((job) => predicate(job, item.key)).length,
-    }))
-    .filter((bar) => bar.count > 0)
-}
-
 export default function CandidateHome() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [selectedFunction, setSelectedFunction] = useState(DEFAULT_FUNCTION)
   const [selectedArea, setSelectedArea] = useState(DEFAULT_AREA)
-  const [granularity, setGranularity] = useState('day')
+  const [granularity, setGranularity] = useState('bi_monthly')
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [updatedAt, setUpdatedAt] = useState('—')
+  const [applications, setApplications] = useState([])
+  const [applicationsLoading, setApplicationsLoading] = useState(true)
+  const [conversations, setConversations] = useState([])
+  const [convsLoading, setConvsLoading] = useState(true)
+  const [trendSummary, setTrendSummary] = useState(null)
+  const [trendLoading, setTrendLoading] = useState(true)
+  const [hasSubscription, setHasSubscription] = useState(null)
 
   useEffect(() => {
     let alive = true
     jobsApi
-      .getPublicJobs({})
+      .getPublicJobs({ page_size: 500 })
       .then((res) => {
         if (!alive) return
         setJobs(res.data.jobs ?? [])
@@ -106,12 +101,44 @@ export default function CandidateHome() {
         setJobs([])
         setError(err.response?.data?.message ?? '岗位数据加载失败')
       })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-    return () => {
-      alive = false
-    }
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    applicationsApi
+      .getMyApplications()
+      .then((res) => { if (alive) setApplications(res.data?.applications ?? []) })
+      .catch(() => { if (alive) setApplications([]) })
+      .finally(() => { if (alive) setApplicationsLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    conversationsApi
+      .getMyConversations()
+      .then((res) => { if (alive) setConversations(res.data?.threads ?? res.data ?? []) })
+      .catch(() => { if (alive) setConversations([]) })
+      .finally(() => { if (alive) setConvsLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    candidateDashboardApi
+      .getSummary()
+      .then((res) => { if (alive) setTrendSummary(res.data) })
+      .catch(() => { if (alive) setTrendSummary(null) })
+      .finally(() => { if (alive) setTrendLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    subscriptionsApi.getMySubscription()
+      .then((res) => setHasSubscription(res.data.has_active))
+      .catch(() => setHasSubscription(false))
   }, [])
 
   const filteredJobs = useMemo(
@@ -120,20 +147,26 @@ export default function CandidateHome() {
   )
 
   const chartBars = useMemo(() => {
-    // Time-based aggregation: X axis is always time
     function periodKey(dateStr) {
       const d = new Date(dateStr)
       if (isNaN(d.getTime())) return null
-      if (granularity === 'day') {
-        const mm = String(d.getMonth() + 1).padStart(2, '0')
-        const dd = String(d.getDate()).padStart(2, '0')
-        return { period: `${d.getFullYear()}-${mm}-${dd}`, label: `${mm}-${dd}` }
-      }
-      if (granularity === 'week') {
-        // ISO week approximation
-        const oneJan = new Date(d.getFullYear(), 0, 1)
-        const week = Math.ceil(((d - oneJan) / 86400000 + oneJan.getDay() + 1) / 7)
-        return { period: `${d.getFullYear()}-W${String(week).padStart(2, '0')}`, label: `W${String(week).padStart(2, '0')}` }
+      if (granularity === 'bi_monthly') {
+        let snapYear = d.getFullYear()
+        let snapMonth = d.getMonth() + 1
+        let snapDay
+        const day = d.getDate()
+        if (day <= 10) {
+          snapDay = 10
+        } else if (day <= 20) {
+          snapDay = 20
+        } else {
+          snapDay = 10
+          snapMonth += 1
+          if (snapMonth > 12) { snapMonth = 1; snapYear += 1 }
+        }
+        const mm = String(snapMonth).padStart(2, '0')
+        const period = `${snapYear}-${mm}-${String(snapDay).padStart(2, '0')}`
+        return { period, label: `${mm}/${String(snapDay).padStart(2, '0')}` }
       }
       if (granularity === 'month') {
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -159,89 +192,158 @@ export default function CandidateHome() {
         count: (counter.get(pk.period)?.count || 0) + 1,
       })
     }
-
     return Array.from(counter.values()).sort((a, b) => a.period.localeCompare(b.period))
   }, [filteredJobs, granularity])
 
-  const areaCoverage = useMemo(() => {
-    const uniqueAreas = new Set()
-    for (const job of jobs) {
-      for (const area of inferAreas(job)) uniqueAreas.add(area)
-    }
-    uniqueAreas.delete(DEFAULT_AREA)
-    return uniqueAreas.size
-  }, [jobs])
+  const platformTotals = useMemo(() => trendSummary?.platform_totals ?? {}, [trendSummary])
+
+  const appliedJobCount = useMemo(() => {
+    const ids = new Set(
+      applications
+        .filter((item) => item && !['saved', 'withdrawn'].includes(item.status))
+        .map((item) => item.job_id)
+        .filter(Boolean)
+    )
+    return ids.size
+  }, [applications])
+
+  const savedJobCount = useMemo(() => {
+    const ids = new Set(
+      applications
+        .filter((item) => item?.is_saved)
+        .map((item) => item.job_id)
+        .filter(Boolean)
+    )
+    return ids.size
+  }, [applications])
+
+  const messagedJobCount = useMemo(() => {
+    const ids = new Set(
+      (Array.isArray(conversations) ? conversations : [])
+        .filter((t) => t?.job_id)
+        .map((t) => t.job_id)
+    )
+    return ids.size
+  }, [conversations])
 
   const subtitle = `FUNC=${selectedFunction} / AREA=${selectedArea}`
   const displayName = user?.name || 'Candidate'
 
   return (
     <TerminalLayout title="DASHBOARD" activeIconId="dashboard" navItems={CANDIDATE_ICON_NAV}>
-      <FunctionRail
-        value={selectedFunction}
-        onChange={setSelectedFunction}
-        functions={DEFAULT_FUNCTIONS}
-      />
-
-      <AreaSidebar
+      <AreaRail
         value={selectedArea}
         onChange={setSelectedArea}
         areas={DEFAULT_AREAS}
       />
 
+      <FunctionSidebar
+        value={selectedFunction}
+        onChange={setSelectedFunction}
+        functions={DEFAULT_FUNCTIONS}
+        hasSubscription={true}
+      />
+
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--t-border-subtle)] px-5 py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+            <span className="font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
               ACCOUNT
             </span>
-            <span className="truncate font-[var(--t-font-mono)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)]">
+            <span className="truncate font-[var(--t-font-sans)] text-[length:var(--t-text-sm)] font-semibold text-[color:var(--t-text)]">
               {displayName}
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-[var(--t-font-mono)] text-[10px] uppercase tracking-[0.2em] text-[color:var(--t-text-muted)]">
+            <span className="font-[var(--t-font-sans)] text-[10px] uppercase tracking-[0.04em] text-[color:var(--t-text-muted)]">
               UPDATED
             </span>
-            <span className="font-[var(--t-font-mono)] text-[10px] text-[color:var(--t-text-secondary)]">
+            <span className="font-[var(--t-font-sans)] text-[10px] text-[color:var(--t-text-secondary)]">
               {updatedAt}
             </span>
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
-          <div className="grid shrink-0 grid-cols-3 gap-4">
+        <div className="terminal-dashboard-body terminal-scrollbar min-w-0">
+          <div className="terminal-platform-count-grid shrink-0">
             <MetricCard
-              label="Jobs"
-              value={loading ? '—' : filteredJobs.length}
-              helper={subtitle}
+              compact
+              highlight
+              label="PLATFORM CANDIDATES"
+              value={trendLoading ? '—' : (platformTotals.candidates ?? 0)}
+              icon={<Users size={14} />}
+            />
+            <MetricCard
+              compact
+              highlight
+              label="PLATFORM JOBS"
+              value={trendLoading ? '—' : (platformTotals.jobs ?? 0)}
               icon={<Briefcase size={14} />}
             />
             <MetricCard
-              label="Functions"
-              value={DEFAULT_FUNCTIONS.length - 1}
-              helper={selectedFunction === DEFAULT_FUNCTION ? 'ALL' : selectedFunction}
-              icon={<Database size={14} />}
+              compact
+              highlight
+              label="PLATFORM TEAMS"
+              value={trendLoading ? '—' : (platformTotals.teams ?? 0)}
+              icon={<UsersRound size={14} />}
             />
             <MetricCard
-              label="Areas"
-              value={areaCoverage || DEFAULT_AREAS.length - 1}
-              helper={selectedArea}
-              icon={<TrendingUp size={14} />}
+              compact
+              highlight
+              label="TO BE SOON"
+              value="—"
+              icon={<Wrench size={14} />}
             />
           </div>
 
-          <CandidateChartPanel
-            data={chartBars}
-            title="JOB TREND"
-            subtitle={subtitle}
-            loading={loading}
-            meta={updatedAt}
-            unitLabel="jobs"
-            emptyText={error || '暂无岗位数据'}
-            granularity={granularity}
-            onGranularityChange={setGranularity}
-          />
+          <div className="terminal-dashboard-main min-w-0">
+            <CandidateChartPanel
+              data={chartBars}
+              title="JOB TREND"
+              subtitle={subtitle}
+              loading={loading}
+              meta={updatedAt}
+              unitLabel="jobs"
+              emptyText={error || '暂无岗位数据'}
+              granularity={granularity}
+              onGranularityChange={setGranularity}
+            />
+            <aside className="terminal-dashboard-stats-aside-wrap">
+              <TrendSummaryCard type="jobs"       data={trendSummary} loading={trendLoading} />
+              <TrendSummaryCard type="candidates" data={trendSummary} loading={trendLoading} />
+            </aside>
+          </div>
+
+          <LockedInsightsPanel
+            locked={hasSubscription === false}
+            onPricingClick={() => navigate('/employer/pricing')}
+          >
+            <div className="terminal-insights-panel flex flex-col">
+              <div className="terminal-card-grid">
+                <MetricCard
+                  compact
+                  label="APPLIED JOBS"
+                  value={applicationsLoading ? '—' : appliedJobCount}
+                  helper="SUBMITTED POSITIONS"
+                  icon={<Send size={14} />}
+                />
+                <MetricCard
+                  compact
+                  label="SAVED JOBS"
+                  value={applicationsLoading ? '—' : savedJobCount}
+                  helper="BOOKMARKED POSITIONS"
+                  icon={<Tags size={14} />}
+                />
+                <MetricCard
+                  compact
+                  label="MESSAGED JOBS"
+                  value={convsLoading ? '—' : messagedJobCount}
+                  helper="ACTIVE CONVERSATIONS"
+                  icon={<MessageSquare size={14} />}
+                />
+              </div>
+            </div>
+          </LockedInsightsPanel>
 
           <TerminalActionBar
             actions={[

@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import logging
+from sqlalchemy import func as sa_func, case as sa_case
+from sqlalchemy.orm import joinedload
 from ..extensions import db
 from ..models.user import User
 from ..models.job import Job
@@ -22,10 +24,18 @@ def create_invitation():
     if not user or user.role not in ('employer', 'admin'):
         return jsonify({'message': '无权限'}), 403
 
+    # Phase 8: subscription gate for employers — store sub for later scope check
+    _employer_sub = None
+    if user.role == 'employer':
+        from app.utils.subscription_access import subscription_gate
+        _employer_sub, sub_err = subscription_gate(user.id)
+        if sub_err:
+            return sub_err
+
     data = request.get_json(silent=True) or {}
-    job_id       = data.get('job_id')
+    job_id = data.get('job_id')
     candidate_id = data.get('candidate_id')
-    message      = data.get('message', '').strip()
+    message = data.get('message', '').strip()
 
     if not job_id or not candidate_id:
         return jsonify({'message': 'job_id 和 candidate_id 为必填项'}), 400
@@ -47,6 +57,16 @@ def create_invitation():
         return jsonify({'message': '候选人不存在'}), 404
     if candidate.availability_status == 'closed':
         return jsonify({'message': '该候选人当前不接受邀约（已关闭求职状态）'}), 422
+
+    # Phase 8: subscription must cover candidate's function+area (reuse sub from gate above)
+    if user.role == 'employer' and _employer_sub:
+        if not _employer_sub.covers_candidate(candidate.function_code, candidate.business_area_code):
+            return jsonify({
+                'success': False,
+                'message': '您的订阅范围不覆盖该候选人，无法发起邀约',
+                'error_code': 'subscription_scope_mismatch',
+                'pricing_url': '/employer/pricing',
+            }), 402
 
     # 幂等/去重逻辑：
     # - 同一岗位+候选人已有 pending/accepted 邀约 → 直接返回已有记录（不重复发）
@@ -94,6 +114,18 @@ def create_invitation():
     )
     db.session.add(thread)
     db.session.commit()
+
+    if candidate.user_id:
+        from app.utils.notifications import create_and_push_notification
+        job_title = job.title if job else '某岗位'
+        company = user.company_name or user.name or '某企业'
+        create_and_push_notification(
+            user_id=candidate.user_id,
+            type='invitation_status_change',
+            title=f'{company} 向您发出邀约',
+            body=job_title,
+            data={'invitation_id': inv.id, 'thread_id': thread.id},
+        )
 
     # 发送邀约邮件（新邀约才发送，existing pending/accepted 不重复发）
     email_sent = False
@@ -159,13 +191,21 @@ def get_sent_invitations():
     if user.role == 'employer':
         invs = (
             Invitation.query
+            .options(joinedload(Invitation.job).joinedload(Job.company))
+            .options(joinedload(Invitation.thread))
             .filter_by(employer_id=current_user_id)
             .order_by(Invitation.created_at.desc())
             .all()
         )
     else:
         # admin: 全部
-        invs = Invitation.query.order_by(Invitation.created_at.desc()).all()
+        invs = (
+            Invitation.query
+            .options(joinedload(Invitation.job).joinedload(Job.company))
+            .options(joinedload(Invitation.thread))
+            .order_by(Invitation.created_at.desc())
+            .all()
+        )
 
     return jsonify({
         'invitations': [
@@ -192,21 +232,29 @@ def get_my_invitations():
             return jsonify({'invitations': []}), 200
         invs = (
             Invitation.query
+            .options(joinedload(Invitation.job).joinedload(Job.company))
+            .options(joinedload(Invitation.thread))
             .filter_by(candidate_id=candidate.id)
             .order_by(Invitation.created_at.desc())
             .all()
         )
     else:
         # admin: 查看全部
-        invs = Invitation.query.order_by(Invitation.created_at.desc()).all()
+        invs = (
+            Invitation.query
+            .options(joinedload(Invitation.job).joinedload(Job.company))
+            .options(joinedload(Invitation.thread))
+            .order_by(Invitation.created_at.desc())
+            .all()
+        )
 
     result = []
     for inv in invs:
         item = inv.to_dict()
-        item['job_title']    = inv.job.title if inv.job else '—'
+        item['job_title'] = inv.job.title if inv.job else '—'
         item['company_name'] = inv.job.company.company_name if inv.job and inv.job.company else '—'
-        item['job_city']     = inv.job.city if inv.job else '—'
-        item['thread_id']    = inv.thread.id if inv.thread else None
+        item['job_city'] = inv.job.city if inv.job else '—'
+        item['thread_id'] = inv.thread.id if inv.thread else None
         result.append(item)
 
     return jsonify({'invitations': result}), 200
@@ -222,19 +270,33 @@ def company_summary():
         return jsonify({'message': '无权限'}), 403
 
     if user.role == 'employer':
-        total    = Invitation.query.filter_by(employer_id=current_user_id).count()
-        accepted = Invitation.query.filter_by(employer_id=current_user_id, status='accepted').count()
-        declined = Invitation.query.filter_by(employer_id=current_user_id, status='declined').count()
+        row = (
+            db.session.query(
+                sa_func.count(Invitation.id).label('total'),
+                sa_func.sum(sa_case((Invitation.status == 'accepted', 1), else_=0)).label('accepted'),
+                sa_func.sum(sa_case((Invitation.status == 'declined', 1), else_=0)).label('declined'),
+            )
+            .filter(Invitation.employer_id == current_user_id)
+            .first()
+        )
     else:
-        total    = Invitation.query.count()
-        accepted = Invitation.query.filter_by(status='accepted').count()
-        declined = Invitation.query.filter_by(status='declined').count()
+        row = (
+            db.session.query(
+                sa_func.count(Invitation.id).label('total'),
+                sa_func.sum(sa_case((Invitation.status == 'accepted', 1), else_=0)).label('accepted'),
+                sa_func.sum(sa_case((Invitation.status == 'declined', 1), else_=0)).label('declined'),
+            )
+            .first()
+        )
+    total = int(row.total or 0)
+    accepted = int(row.accepted or 0)
+    declined = int(row.declined or 0)
 
     replied = accepted + declined
 
     return jsonify({
-        'total':    total,
-        'replied':  replied,
+        'total': total,
+        'replied': replied,
         'accepted': accepted,
         'declined': declined,
     }), 200
@@ -273,6 +335,16 @@ def update_invitation_status(inv_id):
 
     inv.status = new_status
     db.session.commit()
+
+    from app.utils.notifications import create_and_push_notification
+    status_label = '接受了' if new_status == 'accepted' else '婉拒了'
+    cand_name = candidate.user.name if (candidate and candidate.user) else '候选人'
+    create_and_push_notification(
+        user_id=inv.employer_id,
+        type='invitation_status_change',
+        title=f'{cand_name} {status_label}您的邀约',
+        data={'invitation_id': inv.id},
+    )
 
     return jsonify({
         'message': '邀约状态已更新',

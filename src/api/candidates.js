@@ -39,11 +39,40 @@ export const candidatesApi = {
   },
 
   /**
+   * 调用 AI 解析已上传的简历，提取档案字段（DeepSeek）
+   * 超时设为 90s，DeepSeek 侧最长需要 60s
+   */
+  aiParseResume() {
+    return client.post('/v2/candidates/me/resume/ai-parse', null, { timeout: 90000 })
+  },
+
+  /**
    * 获取候选人公开档案（供 employer / admin 查看）
    * @param {number} candidateId
    */
   getCandidatePublicProfile(candidateId) {
     return client.get(`/candidates/${candidateId}`)
+  },
+
+  /** 获取当前候选人屏蔽的公司列表 */
+  getBlockedCompanies() {
+    return client.get('/candidates/me/blocked-companies')
+  },
+
+  /**
+   * 全量替换屏蔽公司列表
+   * @param {number[]} companyIds
+   */
+  updateBlockedCompanies(companyIds) {
+    return client.put('/candidates/me/blocked-companies', { company_ids: companyIds })
+  },
+
+  /**
+   * 获取候选人附件简历文件（返回 Blob，供预览或下载）
+   * @param {number} candidateId
+   */
+  getCandidateResume(candidateId) {
+    return client.get(`/candidates/${candidateId}/resume`, { responseType: 'blob' })
   },
 
   /**
@@ -64,6 +93,11 @@ export const candidatesApi = {
     if (filters.location_code)       params.location_code = filters.location_code
     if (filters.availability_status) params.availability_status = filters.availability_status
     if (filters.q)                   params.q = filters.q
+    if (filters.gender)              params.gender = filters.gender
+    if (filters.pool_type)           params.pool_type = filters.pool_type
+    if (filters.job_id)              params.job_id = filters.job_id
+    if (filters.page != null)        params.page = filters.page
+    if (filters.page_size != null)   params.page_size = filters.page_size
     if (filters.tagGroups) {
       const s = serializeTagGroups(filters.tagGroups)
       if (s) params.tag_groups = s
@@ -71,8 +105,33 @@ export const candidatesApi = {
     return client.get('/candidates', { params })
   },
 
+  /** POST /api/candidates/:id/favorite — 切换收藏，返回 { favorited: bool } */
+  toggleFavorite(candidateId) {
+    return client.post(`/candidates/${candidateId}/favorite`)
+  },
+
+  /** GET /api/candidates/favorites — 返回已收藏的 candidate_id 数组 */
+  getFavorites() {
+    return client.get('/candidates/favorites')
+  },
+
+  /** POST /api/candidates/favorites/sync — 批量迁移 localStorage → 后端 */
+  syncFavorites(candidateIds) {
+    return client.post('/candidates/favorites/sync', { candidate_ids: candidateIds })
+  },
+
   /** GET /api/candidates/area-filters — counts of open/passive candidates by business_area_code */
   getAreaFilters() {
     return client.get('/candidates/area-filters')
+  },
+
+  /** GET /api/candidates/:id/email-actions?job_id=X — 查询邮件发送状态 */
+  getCandidateEmailActions(candidateId, params = {}) {
+    return client.get(`/candidates/${candidateId}/email-actions`, { params })
+  },
+
+  /** POST /api/candidates/:id/email-action — 发送邮件动作 */
+  sendCandidateEmailAction(candidateId, payload) {
+    return client.post(`/candidates/${candidateId}/email-action`, payload)
   },
 }

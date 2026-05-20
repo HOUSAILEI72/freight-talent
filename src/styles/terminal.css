@@ -5,31 +5,100 @@
 ────────────────────────────────────────────── */
 
 :root {
-  /* ── Backgrounds ── */
-  --t-bg:            #0b0e13;   /* root shell background */
-  --t-bg-panel:      #111720;   /* panel / card surface */
-  --t-bg-elevated:   #16202e;   /* slightly lifted surface */
-  --t-bg-hover:      #1a2535;   /* hover state */
-  --t-bg-active:     #1f2d42;   /* pressed / selected */
-  --t-bg-input:      #0f1823;   /* form input fill */
+  /* ── Spacing Scale ── */
+  --t-radius-sm:  4px;
+  --t-radius:     6px;
+  --t-radius-lg:  10px;
+  --t-radius-xl:  14px;
 
-  /* ── Borders ── */
-  --t-border:        #1e2d40;   /* default border */
-  --t-border-subtle: #162030;   /* dividers, separators */
-  --t-border-focus:  #2563eb;   /* keyboard focus ring */
+  /* ── Typography ── */
+  --t-font-mono: "JetBrains Mono", "SFMono-Regular", "Cascadia Code", ui-monospace, monospace;
+  --t-font-sans: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* UI-first: Inter leads (English labels, numbers, symbols, mixed content) */
+  --t-font-ui:  "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* CJK-first: PingFang SC leads (names, Chinese-dense body text) */
+  --t-font-cjk: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Inter", system-ui, sans-serif;
 
-  /* ── Text ── */
-  --t-text:          #e2e8f0;   /* primary text */
-  --t-text-secondary:#94a3b8;   /* secondary / supporting */
-  --t-text-muted:    #4b5a6e;   /* muted / disabled */
-  --t-text-inverse:  #0b0e13;   /* text on bright backgrounds */
+  /* ── Letter-spacing scale ── */
+  --t-letter-ui:   0.01em;   /* default body, CJK names */
+  --t-letter-caps: 0.08em;   /* uppercase nav/section labels */
+  --t-letter-mono: 0.02em;   /* numeric / code labels */
 
-  /* ── Brand / Accent ── */
-  --t-primary:       #2563eb;   /* primary blue */
-  --t-primary-hover: #1d4ed8;
-  --t-primary-muted: #1e3a6e;   /* primary bg tint */
+  /* ── Line-height scale ── */
+  --t-line-tight:  1.25;     /* headings, names */
+  --t-line-normal: 1.45;     /* body, meta info */
 
-  /* ── Semantic Colors ── */
+  /* ── Transitions ── */
+  --t-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Duration scale (use these for new components) ── */
+  --t-dur-fast:  80ms;
+  --t-dur-std:   120ms;
+  --t-dur-slow:  200ms;
+  --t-ease-std:  cubic-bezier(0.4, 0, 0.2, 1);
+  --t-ease-out:  cubic-bezier(0, 0, 0.2, 1);
+
+  /* ── Rail hover animation ── */
+  --t-rail-collapsed:        60px;
+  --t-rail-expanded:         228px;
+  --t-rail-expand-duration:  400ms;
+  --t-rail-collapse-duration:300ms;
+  --t-rail-ease:             cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ── Responsive layout tokens ── */
+  --t-filter-sidebar-width:  clamp(210px, 18vw, 280px);
+  --t-conv-list-width:       clamp(200px, 17vw, 256px);
+  --t-dock-width:            clamp(200px, 16vw, 240px);
+  --t-detail-panel-width:    clamp(320px, 28vw, 480px);
+  --t-page-h-pad:            clamp(12px, 2vw, 24px);
+  --t-card-min:              220px;
+
+  /* ── Chart Palette (theme-independent) ── */
+  --t-chart-purple:  #a78bfa;
+  --t-chart-blue:    #60a5fa;
+  --t-chart-cyan:    #22d3ee;
+  --t-chart-green:   #4ade80;
+  --t-chart-amber:   #fbbf24;
+
+  /* ── Trend Indicators (theme-independent) ── */
+  --t-trend-up:      #22c55e;
+  --t-trend-down:    #ef4444;
+  --t-trend-neutral: #94a3b8;
+
+  /* ── Chip selected state (theme-independent — rgba works on both dark/light) ── */
+  --t-chip-selected-bg:           rgba(59, 130, 246, 0.07);
+  --t-chip-selected-border:       rgba(59, 130, 246, 0.28);
+  --t-chip-selected-bg-hover:     rgba(59, 130, 246, 0.11);
+  --t-chip-selected-border-hover: rgba(59, 130, 246, 0.38);
+}
+
+/* ── Dark theme ── */
+:where(.terminal-shell, body)[data-terminal-theme="dark"] {
+  /* Backgrounds */
+  --t-bg:            #0b0e13;
+  --t-bg-panel:      #111720;
+  --t-bg-elevated:   #18243a;
+  --t-bg-hover:      #1e2e48;
+  --t-bg-active:     #243450;
+  --t-bg-input:      #0f1823;
+
+  /* Borders */
+  --t-border:        #2c4060;
+  --t-border-subtle: #1e3050;
+  --t-border-focus:  #3b82f6;
+
+  /* Text */
+  --t-text:          #e2e8f0;
+  --t-text-secondary:#a8bbd0;
+  --t-text-muted:    #7a8fa6;
+  --t-text-inverse:  #0b0e13;
+
+  /* Brand / Accent */
+  --t-primary:       #3b82f6;
+  --t-primary-hover: #2563eb;
+  --t-primary-muted: #1e3a6e;
+
+  /* Semantic */
   --t-success:       #22c55e;
   --t-success-muted: #14532d;
   --t-danger:        #ef4444;
@@ -37,43 +106,146 @@
   --t-warning:       #f59e0b;
   --t-warning-muted: #78350f;
 
-  /* ── Chart Palette ── */
-  --t-chart-purple:  #a78bfa;
-  --t-chart-blue:    #60a5fa;
-  --t-chart-cyan:    #22d3ee;
-  --t-chart-green:   #4ade80;
-  --t-chart-amber:   #fbbf24;
-
-  /* ── Trend Indicators ── */
-  --t-trend-up:      #22c55e;
-  --t-trend-down:    #ef4444;
-  --t-trend-neutral: #94a3b8;
-
-  /* ── Spacing Scale ── */
-  --t-radius-sm:  4px;
-  --t-radius:     6px;
-  --t-radius-lg:  10px;
-  --t-radius-xl:  14px;
-
-  /* ── Shadows ── */
+  /* Shadows */
   --t-shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.5),
                     0 0 0 1px var(--t-border);
   --t-shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.6),
                        0 0 0 1px var(--t-border);
 
-  /* ── Typography ── */
-  --t-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
-  --t-font-sans: "Inter", system-ui, sans-serif;
+  /* Pricing button (default blue on all terminal pages) */
+  --t-pricing-bg:       #2563eb;
+  --t-pricing-bg-hover: #1d4ed8;
+  --t-pricing-text:     #ffffff;
 
-  --t-text-xs:  0.75rem;   /* 12px */
-  --t-text-sm:  0.8125rem; /* 13px */
-  --t-text-base: 0.875rem; /* 14px — terminal default */
-  --t-text-md:  1rem;      /* 16px */
-  --t-text-lg:  1.125rem;  /* 18px */
-  --t-text-xl:  1.375rem;  /* 22px */
+  /* Primary action foreground — text/icon on top of --t-primary background */
+  --t-primary-fg:       #ffffff;
+}
 
-  /* ── Transitions ── */
-  --t-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+/* ── Light theme ── */
+:where(.terminal-shell, body)[data-terminal-theme="light"] {
+  /* Backgrounds */
+  --t-bg:            #f6f8fb;
+  --t-bg-panel:      #ffffff;
+  --t-bg-elevated:   #f1f5f9;
+  --t-bg-hover:      #e8eef7;
+  --t-bg-active:     #dbeafe;
+  --t-bg-input:      #ffffff;
+
+  /* Borders */
+  --t-border:        #d8e0eb;
+  --t-border-subtle: #e6edf5;
+  --t-border-focus:  #2563eb;
+
+  /* Text */
+  --t-text:          #0f172a;
+  --t-text-secondary:#475569;
+  --t-text-muted:    #94a3b8;
+  --t-text-inverse:  #ffffff;
+
+  /* Brand / Accent */
+  --t-primary:       #2563eb;
+  --t-primary-hover: #1d4ed8;
+  --t-primary-muted: #dbeafe;
+
+  /* Semantic */
+  --t-success:       #16a34a;
+  --t-success-muted: #dcfce7;
+  --t-danger:        #dc2626;
+  --t-danger-muted:  #fee2e2;
+  --t-warning:       #d97706;
+  --t-warning-muted: #fef3c7;
+
+  /* Shadows */
+  --t-shadow-panel: 0 1px 2px rgba(15, 23, 42, 0.06),
+                    0 0 0 1px var(--t-border);
+  --t-shadow-elevated: 0 8px 24px rgba(15, 23, 42, 0.10),
+                       0 0 0 1px var(--t-border);
+
+  /* Pricing button */
+  --t-pricing-bg:       #2563eb;
+  --t-pricing-bg-hover: #1d4ed8;
+  --t-pricing-text:     #ffffff;
+
+  /* Primary action foreground */
+  --t-primary-fg:       #ffffff;
+}
+
+
+/* ── Terminal shell base font + responsive scale ── */
+.terminal-shell {
+  font-family: var(--t-font-ui);
+
+  /* ── Scale anchor (overridden by viewport breakpoints below) ── */
+  --terminal-rem-base: 14px;
+  font-size: var(--terminal-rem-base);
+
+  /* ── Typography tokens (all scale with --terminal-rem-base) ── */
+  --t-text-2xs:  calc(var(--terminal-rem-base) * 0.7143);  /* ≈10px @ 14px */
+  --t-text-xs:   calc(var(--terminal-rem-base) * 0.7857);  /* ≈11px @ 14px */
+  --t-text-sm:   calc(var(--terminal-rem-base) * 0.8571);  /* ≈12px @ 14px */
+  --t-text-base: var(--terminal-rem-base);                 /* =14px @ 14px */
+  --t-text-md:   calc(var(--terminal-rem-base) * 1.0714);  /* ≈15px @ 14px */
+  --t-text-lg:   calc(var(--terminal-rem-base) * 1.1429);  /* ≈16px @ 14px */
+  --t-text-xl:   calc(var(--terminal-rem-base) * 1.2857);  /* ≈18px @ 14px */
+
+  /* ── Spacing tokens ── */
+  --t-space-xs:  calc(var(--terminal-rem-base) * 0.5);     /* ≈7px  */
+  --t-space-sm:  calc(var(--terminal-rem-base) * 0.857);   /* ≈12px */
+  --t-space-md:  calc(var(--terminal-rem-base) * 1.143);   /* ≈16px */
+  --t-space-lg:  calc(var(--terminal-rem-base) * 1.714);   /* ≈24px */
+  --t-space-xl:  calc(var(--terminal-rem-base) * 2.286);   /* ≈32px */
+
+  /* ── Control heights ── */
+  --t-control-height-sm: calc(var(--terminal-rem-base) * 2);      /* ≈28px */
+  --t-control-height-md: calc(var(--terminal-rem-base) * 2.286);  /* ≈32px */
+  --t-control-height-lg: calc(var(--terminal-rem-base) * 2.571);  /* ≈36px */
+  --t-control-height-xl: calc(var(--terminal-rem-base) * 3.143);  /* ≈44px */
+}
+
+/* ── Terminal viewport scale breakpoints ──
+   Only --terminal-rem-base changes; all calc() tokens follow.
+   Breakpoints target CSS viewport width at 100% browser zoom.
+   13"  laptop  (≤1440px) → 13px  ≈ 0.9× of baseline
+   Std  desktop (1441–1919px) → 14px = baseline (default on .terminal-shell)
+   Large desktop (1920–2559px) → 15px ≈ 1.07× of baseline
+   27"  4K      (≥2560px)  → 16px  ≈ 1.14× of baseline
+   ─────────────────────────────────────────────────────── */
+@media (max-width: 1440px) {
+  .terminal-shell { --terminal-rem-base: 13px; }
+
+  /* Compact candidate cards to match 90% zoom density on 13" screens */
+  .terminal-mode .terminal-candidate-identity,
+  .terminal-mode .terminal-candidate-timeline {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .terminal-mode .terminal-candidate-actions {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .terminal-result-pill-btn {
+    height: 26px !important;
+  }
+}
+/* 1441–1919px: uses the default 14px set on .terminal-shell itself */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .terminal-shell { --terminal-rem-base: 15px; }
+}
+@media (min-width: 2560px) {
+  .terminal-shell { --terminal-rem-base: 16px; }
+}
+
+/* ── `.terminal-mode` font overrides ── */
+/* All form controls in terminal context inherit UI font */
+.terminal-mode input,
+.terminal-mode textarea,
+.terminal-mode select,
+.terminal-mode button {
+  font-family: var(--t-font-ui);
+}
+/* Tailwind `font-sans` class — remap to --t-font-ui inside terminal */
+.terminal-mode .font-sans {
+  font-family: var(--t-font-ui) !important;
 }
 
 /* ── Terminal-only dark scrollbar (used by FunctionRail / AreaSidebar) ── */
@@ -110,6 +282,15 @@
 
 /* Surfaces ─────────────────────────────────────────── */
 .terminal-mode { color: var(--t-text); }
+
+/* ── Tailwind font-size utilities → scaled terminal tokens ── */
+.terminal-mode .text-xs   { font-size: var(--t-text-xs)  !important; }
+.terminal-mode .text-sm   { font-size: var(--t-text-sm)  !important; }
+.terminal-mode .text-base { font-size: var(--t-text-base) !important; }
+.terminal-mode .text-lg   { font-size: var(--t-text-lg)  !important; }
+.terminal-mode .text-xl   { font-size: var(--t-text-xl)  !important; }
+.terminal-mode .text-2xl  { font-size: calc(var(--terminal-rem-base) * 1.571) !important; } /* ≈22px */
+.terminal-mode .text-3xl  { font-size: calc(var(--terminal-rem-base) * 1.857) !important; } /* ≈26px */
 
 .terminal-mode .bg-white,
 .terminal-mode .bg-slate-50,
@@ -178,6 +359,16 @@
   border-color: var(--t-border) !important;
   color: var(--t-text) !important;
 }
+/* Native select option fallback (for any remaining <select> in terminal pages) */
+.terminal-mode select option,
+.terminal-mode select optgroup {
+  background-color: var(--t-bg-elevated);
+  color: var(--t-text);
+}
+.terminal-mode select option:checked {
+  background-color: var(--t-bg-active);
+  color: var(--t-text);
+}
 .terminal-mode input::placeholder,
 .terminal-mode textarea::placeholder {
   color: var(--t-text-muted) !important;
@@ -185,9 +376,19 @@
 .terminal-mode input:focus,
 .terminal-mode textarea:focus,
 .terminal-mode select:focus {
-  outline: none;
+  outline: none !important;
   border-color: var(--t-border-focus) !important;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18) !important;
+  box-shadow: none !important;
+}
+.terminal-mode input:focus-visible,
+.terminal-mode textarea:focus-visible,
+.terminal-mode select:focus-visible {
+  outline: none !important;
+  border-color: var(--t-border-focus) !important;
+  box-shadow: none !important;
+}
+.terminal-mode button:focus-visible {
+  outline: none !important;
 }
 
 /* Hovers commonly used as row highlights ──────────── */
@@ -216,7 +417,7 @@
 
 /* Additional pastel surface / border / text overrides ─────────── */
 .terminal-mode .bg-slate-50\/40 {
-  background-color: rgba(17, 23, 32, 0.6) !important;
+  background-color: var(--t-bg-panel) !important;
 }
 .terminal-mode .bg-emerald-100 {
   background-color: rgba(74, 222, 128, 0.14) !important;
@@ -226,17 +427,62 @@
   background-color: rgba(251, 191, 36, 0.14) !important;
   color: var(--t-chart-amber) !important;
 }
+.terminal-mode .bg-orange-50,
+.terminal-mode .bg-orange-100 {
+  background-color: rgba(251, 191, 36, 0.12) !important;
+}
+.terminal-mode .bg-purple-50,
+.terminal-mode .bg-purple-100 {
+  background-color: rgba(167, 139, 250, 0.12) !important;
+}
 .terminal-mode .border-blue-100 {
   border-color: rgba(96, 165, 250, 0.28) !important;
 }
 .terminal-mode .border-emerald-100 {
   border-color: rgba(74, 222, 128, 0.28) !important;
 }
-.terminal-mode .text-blue-800 {
+.terminal-mode .border-amber-100,
+.terminal-mode .border-amber-200 {
+  border-color: rgba(251, 191, 36, 0.28) !important;
+}
+.terminal-mode .border-orange-100,
+.terminal-mode .border-orange-200 {
+  border-color: rgba(251, 191, 36, 0.28) !important;
+}
+.terminal-mode .border-purple-100,
+.terminal-mode .border-purple-200 {
+  border-color: rgba(167, 139, 250, 0.28) !important;
+}
+.terminal-mode .border-red-100,
+.terminal-mode .border-red-200 {
+  border-color: rgba(239, 68, 68, 0.28) !important;
+}
+/* Text — colored semantic classes */
+.terminal-mode .text-blue-800,
+.terminal-mode .text-blue-700,
+.terminal-mode .text-blue-600 {
   color: var(--t-chart-blue) !important;
 }
-.terminal-mode .text-emerald-800 {
-  color: var(--t-chart-green) !important;
+.terminal-mode .text-emerald-800,
+.terminal-mode .text-emerald-700,
+.terminal-mode .text-emerald-600 {
+  color: var(--t-success) !important;
+}
+.terminal-mode .text-amber-700,
+.terminal-mode .text-amber-600 {
+  color: var(--t-chart-amber) !important;
+}
+.terminal-mode .text-orange-700,
+.terminal-mode .text-orange-600 {
+  color: var(--t-chart-amber) !important;
+}
+.terminal-mode .text-purple-700,
+.terminal-mode .text-purple-600 {
+  color: var(--t-chart-purple) !important;
+}
+.terminal-mode .text-red-600,
+.terminal-mode .text-red-500 {
+  color: var(--t-danger) !important;
 }
 
 /* `.card` (light-theme card from index.css) — flatten to terminal panel */
@@ -247,6 +493,17 @@
 }
 .terminal-mode .card:hover {
   box-shadow: none !important;
+}
+
+/* Button secondary in terminal context (fallback for unpropagated terminal prop) */
+.terminal-mode .bg-white.border-blue-200,
+.terminal-mode button.border-blue-200 {
+  background-color: transparent !important;
+  border-color: var(--t-border) !important;
+  color: var(--t-text-secondary) !important;
+}
+.terminal-mode button.border-blue-200:hover {
+  background-color: var(--t-bg-hover) !important;
 }
 
 /* Buttons that were styled blue/white CTAs stay blue (--t-primary
@@ -270,4 +527,1492 @@
 }
 .terminal-mode *::-webkit-scrollbar-thumb:hover {
   background: var(--t-bg-active);
+}
+
+/* RegionSelector uses parent-column scrolling for reveal; keep the panel
+   scrollable by wheel/touch while hiding its own visual scrollbar. */
+.terminal-region-popover,
+.terminal-region-popover * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none;
+}
+.terminal-region-popover::-webkit-scrollbar,
+.terminal-region-popover *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none;
+}
+
+/* ── min-width:0 scoped to candidate-pool and split-sidebar containers only.
+   Prevents flex overflow on narrow screens WITHOUT collapsing Dashboard cards. ── */
+.terminal-candidate-list-container *,
+.terminal-split-sidebar * {
+  min-width: 0;
+}
+
+/* ── Text overflow utility classes (scoped to terminal-mode) ── */
+.t-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.t-wrap {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.t-chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Terminal focus management ────────────────────────────────────────────
+   Inside the terminal shell: use token-coloured focus ring for keyboard nav;
+   suppress mouse-click outlines; SVG elements (Recharts) never show outlines.
+───────────────────────────────────────────────────────────────────────────── */
+.terminal-shell *:focus:not(:focus-visible) {
+  outline: none !important;
+}
+
+.terminal-shell *:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: 0 0 0 2px var(--t-bg), 0 0 0 4px var(--t-border-focus) !important;
+  border-radius: var(--t-radius-sm) !important;
+}
+
+/* Recharts inside terminal shell — suppress mouse-click focus ring */
+.terminal-shell .recharts-wrapper:focus,
+.terminal-shell .recharts-wrapper:focus-visible,
+.terminal-shell .recharts-surface:focus,
+.terminal-shell .recharts-surface:focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-transition:                0ms;
+    --t-rail-expand-duration:      0ms;
+    --t-rail-collapse-duration:    0ms;
+    --t-dur-fast:                  0ms;
+    --t-dur-std:                   0ms;
+    --t-dur-slow:                  0ms;
+  }
+
+  /* Disable all terminal animations for users who prefer reduced motion */
+  .terminal-shell *,
+  .terminal-mode * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   TERMINAL RESPONSIVE LAYOUT UTILITIES
+   Breakpoints:
+     @1440  — large laptop / external monitor
+     @1280  — 13-inch MacBook target
+     @1180  — compact threshold (stack / collapse)
+     @1024  — minimum supported (allow scroll, no content loss)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Shell ── */
+.terminal-shell {
+  width: 100vw;
+  height: 100dvh;          /* dvh handles mobile chrome bar */
+  overflow: hidden;
+  display: flex;
+  font-family: var(--t-font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+/* ── Header compact on narrow screens ── */
+@media (max-width: 1280px) {
+  .terminal-header-brand .brand-sep,
+  .terminal-header-brand .brand-terminal {
+    display: none;
+  }
+  .terminal-header-brand .brand-page {
+    font-size: var(--t-text-xs);
+  }
+  .terminal-header-user .role-badge {
+    display: none;
+  }
+  .terminal-header-user .user-name {
+    max-width: 80px;
+  }
+  .terminal-pricing-btn .pricing-text {
+    display: none;
+  }
+  .terminal-pricing-btn {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+/* ── Dashboard grid ── */
+.terminal-dashboard-body {
+  display: grid;
+  grid-template-rows: auto minmax(0, clamp(280px, 38dvh, 400px)) auto auto;
+  align-content: start;
+  gap: clamp(calc(var(--terminal-rem-base) * 0.714), 1.4vh, var(--t-space-md));
+  padding: clamp(calc(var(--terminal-rem-base) * 0.714), 1.6vh, var(--t-space-md)) var(--t-space-md);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.terminal-dashboard-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 300px);
+  align-items: stretch;
+  gap: var(--t-space-md);
+  min-height: 0;
+  height: 100%;
+}
+
+.terminal-dashboard-stats-aside-wrap {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--terminal-rem-base) * 1);
+  height: 100%;
+  min-height: 0;
+  overflow: visible;
+}
+
+.terminal-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--t-space-md);
+}
+
+.terminal-platform-count-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--t-space-md);
+  align-items: start;
+}
+
+.terminal-insights-panel {
+  gap: var(--t-space-md);
+  padding: var(--t-space-md);
+}
+
+/* ── Growth cards (right sidebar) ── */
+.terminal-growth-card {
+  background: var(--t-bg-panel);
+  border: 1px solid var(--t-border);
+  box-shadow: var(--t-shadow-panel);
+  border-radius: var(--t-radius-lg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+  height: 100%;
+  padding: clamp(var(--t-space-md), 2vh, var(--t-space-lg)) calc(var(--terminal-rem-base) * 1.571);
+  box-sizing: border-box;
+}
+
+.terminal-growth-card-label {
+  display: block;
+  margin-bottom: clamp(calc(var(--terminal-rem-base) * 1), 2vh, calc(var(--terminal-rem-base) * 1.857));
+  color: var(--t-text-muted);
+  font-size: var(--t-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.terminal-growth-card-rows {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(calc(var(--terminal-rem-base) * 0.714), 1.6vh, calc(var(--terminal-rem-base) * 1.286));
+}
+
+.terminal-growth-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--t-space-sm);
+  color: var(--t-text-secondary);
+  font-size: var(--t-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.terminal-growth-row-value {
+  font-family: var(--t-font-sans);
+  font-size: clamp(calc(var(--terminal-rem-base) * 1.429), 1.8vw, calc(var(--terminal-rem-base) * 1.857));
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.terminal-growth-row-value--sm {
+  font-size: clamp(calc(var(--terminal-rem-base) * 1.143), 1.4vw, calc(var(--terminal-rem-base) * 1.429));
+  font-weight: 700;
+}
+
+/* 1440 — tighten stats column */
+@media (max-width: 1440px) {
+  .terminal-dashboard-main {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 280px);
+    gap: calc(var(--terminal-rem-base) * 1);
+  }
+  .terminal-dashboard-stats-aside-wrap {
+    gap: var(--t-space-sm);
+  }
+}
+
+/* 1280 — stack chart + stats side by side below */
+@media (max-width: 1280px) {
+  .terminal-dashboard-body {
+    grid-template-rows: auto auto auto auto;
+    padding: var(--t-space-sm) calc(var(--terminal-rem-base) * 1);
+    gap: var(--t-space-sm);
+  }
+  .terminal-dashboard-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    align-items: start;
+    height: auto;
+  }
+  .terminal-dashboard-stats-aside-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    height: auto;
+    gap: 12px;
+    overflow: visible;
+  }
+  .terminal-card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .terminal-platform-count-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+/* 1024 — further compact */
+@media (max-width: 1024px) {
+  .terminal-dashboard-body {
+    padding: calc(var(--terminal-rem-base) * 0.714) 12px;
+    gap: calc(var(--terminal-rem-base) * 0.714);
+  }
+  .terminal-card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: calc(var(--terminal-rem-base) * 0.714);
+  }
+}
+
+/* Height-constrained desktop windows need vertical compaction too.
+   Many external monitors report a wide CSS viewport but only ~800-900px
+   of usable height after browser chrome, so width-only breakpoints miss them. */
+@media (max-height: 920px) {
+  .terminal-dashboard-body {
+    grid-template-rows: auto minmax(0, clamp(240px, 34dvh, 340px)) auto auto;
+    gap: 12px;
+    padding: 12px 20px;
+  }
+
+  .terminal-dashboard-main {
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 280px);
+    gap: 12px;
+  }
+
+  .terminal-insights-panel {
+    gap: calc(var(--terminal-rem-base) * 0.714);
+    padding: 12px;
+  }
+
+  .terminal-card-grid {
+    gap: calc(var(--terminal-rem-base) * 0.714);
+  }
+
+}
+
+@media (max-height: 820px) {
+  .terminal-dashboard-body {
+    gap: calc(var(--terminal-rem-base) * 0.714);
+    padding-top: calc(var(--terminal-rem-base) * 0.714);
+    padding-bottom: calc(var(--terminal-rem-base) * 0.714);
+  }
+
+  .terminal-insights-panel {
+    gap: var(--t-space-xs);
+    padding: calc(var(--terminal-rem-base) * 0.714);
+  }
+
+}
+
+/* ── Action bar ── */
+.terminal-action-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--t-space-sm);
+  flex-wrap: wrap;
+  overflow-x: auto;
+  padding: var(--t-space-sm) calc(var(--terminal-rem-base) * 0.286) calc(var(--terminal-rem-base) * 0.286);
+  border-top: 1px solid var(--t-border-subtle);
+  flex-shrink: 0;
+}
+
+.terminal-action-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--terminal-rem-base) * 0.714);
+  min-height: var(--t-control-height-xl);
+  height: auto;
+  min-width: clamp(130px, 16vw, 180px);
+  padding: calc(var(--terminal-rem-base) * 0.571) var(--t-space-md);
+  border-radius: var(--t-radius);
+  flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+  .terminal-action-bar {
+    gap: 8px;
+  }
+  .terminal-action-bar-btn {
+    min-height: calc(var(--terminal-rem-base) * 2.857);
+    height: auto;
+    min-width: clamp(110px, 14vw, 160px);
+    padding: calc(var(--terminal-rem-base) * 0.5) var(--t-space-sm);
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-action-bar-btn .action-hint {
+    display: none;
+  }
+  .terminal-action-bar-btn {
+    min-width: auto;
+    padding: 6px 10px;
+  }
+}
+
+@media (max-height: 920px) {
+  .terminal-action-bar {
+    gap: 10px;
+    padding-top: 10px;
+  }
+}
+
+@media (max-height: 820px) {
+  .terminal-action-bar {
+    padding-top: 8px;
+  }
+}
+
+/* ── Split sidebar (CandidatePool / JobMarketplace) ── */
+.terminal-split-sidebar {
+  width: var(--t-filter-sidebar-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 1180px) {
+  .terminal-split-sidebar {
+    width: clamp(190px, 17vw, 230px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-split-sidebar {
+    width: 190px;
+  }
+}
+
+/* ── Three-column form grid (PostJob) ── */
+.terminal-form-grid-3 {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.15fr) minmax(260px, 1fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.terminal-headhunting-form-grid {
+  grid-template-columns: minmax(280px, 0.9fr) minmax(340px, 1.15fr) minmax(260px, 0.95fr);
+  gap: 14px;
+  padding: 16px 24px;
+  align-items: stretch;
+}
+
+@media (max-width: 1280px) {
+  .terminal-form-grid-3 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .terminal-headhunting-form-grid {
+    padding: 14px 16px;
+    align-content: start;
+  }
+  .terminal-form-grid-3 > *:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .terminal-form-grid-3 > *:nth-child(3) {
+    grid-column: 1;
+  }
+}
+
+/* ── Outer form shell (PostJob wrapping px-6) ── */
+.terminal-form-shell {
+  padding: 20px 24px;
+}
+
+@media (max-width: 1280px) {
+  .terminal-form-shell {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-form-shell {
+    padding: 10px 12px;
+  }
+}
+
+/* ── CandidateChartPanel min-height to drive aside height ── */
+.terminal-candidate-chart-panel {
+  min-height: clamp(220px, 32dvh, 300px);
+}
+
+@media (max-width: 1440px) {
+  .terminal-candidate-chart-panel {
+    min-height: clamp(200px, 30dvh, 270px);
+  }
+}
+
+@media (max-width: 1280px) {
+  .terminal-candidate-chart-panel {
+    min-height: clamp(190px, 28dvh, 240px);
+  }
+}
+
+@media (max-height: 920px) {
+  .terminal-candidate-chart-panel {
+    min-height: clamp(200px, 28dvh, 260px);
+  }
+}
+
+@media (max-height: 820px) {
+  .terminal-candidate-chart-panel {
+    min-height: clamp(175px, 26dvh, 220px);
+  }
+}
+
+/* ── Safe glyph containers — prevents ascent clipping on any system/zoom ── */
+.terminal-page-title-safe {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  line-height: 24px;
+  padding-top: 2px;
+  overflow: visible;
+  font-family: var(--t-font-sans);
+}
+
+.terminal-stat-value-safe {
+  display: inline-flex;
+  align-items: center;
+  min-height: 64px;
+  line-height: 1;
+  padding-top: 4px;
+  overflow: visible;
+  font-family: var(--t-font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1280px) {
+  .terminal-stat-value-safe {
+    min-height: 54px;
+  }
+}
+
+/* ── TrendSummaryCard — three-section grid, no overflow, safe spacing ── */
+.terminal-trend-card {
+  display: grid;
+  grid-template-rows: auto minmax(44px, 1fr) auto;
+  align-content: stretch;
+  height: 100%;
+  min-height: 0;
+  padding: calc(var(--terminal-rem-base) * 1.286) calc(var(--terminal-rem-base) * 1.571) calc(var(--terminal-rem-base) * 1.429);
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.terminal-trend-card-label {
+  display: block;
+  line-height: 1.3;
+  min-height: 16px;
+  margin-bottom: calc(var(--terminal-rem-base) * 0.714);
+  white-space: nowrap;
+}
+
+.terminal-trend-card-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-height: 0;
+  padding-top: 6px;
+}
+
+.terminal-trend-card-value {
+  display: inline-flex;
+  align-items: center;
+  min-height: 64px;
+  font-size: clamp(calc(var(--terminal-rem-base) * 2.571), 3.4vw, calc(var(--terminal-rem-base) * 3.857));
+  line-height: 1;
+  margin: 0;
+  padding-top: 4px;
+  overflow: visible;
+  font-family: var(--t-font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.terminal-trend-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--terminal-rem-base) * 0.357);
+  padding-top: calc(var(--terminal-rem-base) * 0.714);
+  padding-bottom: 0;
+}
+
+.terminal-trend-card-meta,
+.terminal-trend-card-change,
+.terminal-trend-card-compare {
+  display: block;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+@media (max-width: 1440px) {
+  .terminal-trend-card {
+    padding: var(--t-space-md) calc(var(--terminal-rem-base) * 1.429) calc(var(--terminal-rem-base) * 1.286);
+  }
+  .terminal-trend-card-value {
+    min-height: 56px;
+    font-size: clamp(calc(var(--terminal-rem-base) * 2.429), 3.4vw, calc(var(--terminal-rem-base) * 3.571));
+  }
+  .terminal-trend-card-footer {
+    gap: 4px;
+    padding-top: 8px;
+  }
+}
+
+@media (max-width: 1440px) and (max-height: 820px) {
+  .terminal-trend-card-compare {
+    display: none;
+  }
+}
+
+@media (max-height: 920px) {
+  .terminal-trend-card {
+    grid-template-rows: auto minmax(34px, 1fr) auto;
+    padding: 14px 18px 14px;
+  }
+
+  .terminal-trend-card-label {
+    margin-bottom: 6px;
+  }
+
+  .terminal-trend-card-main {
+    padding-top: 2px;
+  }
+
+  .terminal-trend-card-value {
+    min-height: 46px;
+    font-size: clamp(32px, 3vw, 44px);
+  }
+
+  .terminal-trend-card-footer {
+    gap: 3px;
+    padding-top: 6px;
+  }
+
+  .terminal-trend-card-compare {
+    display: none;
+  }
+}
+
+@media (max-height: 820px) {
+  .terminal-trend-card {
+    padding: 12px 16px;
+  }
+
+  .terminal-trend-card-value {
+    min-height: 40px;
+    font-size: clamp(28px, 2.8vw, 38px);
+  }
+}
+
+@media (max-width: 1280px) {
+  .terminal-trend-card {
+    height: auto;
+    min-height: 148px;
+    padding: 16px 18px 16px;
+  }
+  .terminal-trend-card-label {
+    white-space: normal;
+    margin-bottom: 8px;
+  }
+  .terminal-trend-card-value {
+    min-height: 54px;
+    font-size: clamp(30px, 4vw, 44px);
+  }
+  .terminal-trend-card-footer {
+    gap: 3px;
+    padding-top: 8px;
+  }
+}
+
+/* ── CandidateChartPanel header responsive ── */
+.terminal-chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.terminal-chart-header-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.terminal-chart-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1280px) {
+  .terminal-chart-header {
+    gap: 6px;
+  }
+}
+
+/* ── candidate list container — drives card container queries ── */
+.terminal-candidate-list-container {
+  container-type: inline-size;
+  container-name: candidate-list;
+  min-width: 0;
+}
+
+/* pill button inside result card actions column */
+.terminal-result-pill-btn {
+  width: 100%;
+  min-width: calc(var(--terminal-rem-base) * 6.857);
+  max-width: calc(var(--terminal-rem-base) * 8.571);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CANDIDATE RESULT CARD — container-query responsive reflow
+   Container >980px:  identity | timeline | actions  (3-col)
+   Container ≤980px:  identity | actions / timeline  (2-col)
+   Container ≤760px:  single column stack
+   Breakpoints are relative to the LIST container width, not the
+   viewport, so zoom level and dock visibility don't cause jumps.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Default: 3-col layout (identity | timeline | actions) ── */
+.terminal-result-card-body {
+  display: grid;
+  grid-template-columns:
+    minmax(260px, 0.95fr)
+    minmax(200px, 1.15fr)
+    max-content;
+  grid-template-rows: auto;
+  grid-template-areas: 'identity timeline actions';
+  min-width: 0;
+}
+
+.terminal-candidate-identity { grid-area: identity; }
+.terminal-candidate-timeline { grid-area: timeline; }
+.terminal-candidate-actions  { grid-area: actions; }
+
+.terminal-result-meta-line {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: rgba(148, 163, 184, 0.82);
+  font-size: var(--t-text-xs);
+  line-height: var(--t-line-normal, 1.45);
+  letter-spacing: var(--t-letter-ui, 0.01em);
+  font-family: var(--t-font-ui);
+}
+
+.terminal-timeline-row {
+  display: grid;
+  grid-template-columns: max-content minmax(110px, max-content) minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: calc(var(--terminal-rem-base) * 1.714);
+  column-gap: var(--t-space-sm);
+}
+
+.terminal-timeline-kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: calc(var(--terminal-rem-base) * 1.286);
+  min-width: calc(var(--terminal-rem-base) * 3.143);
+  padding: 0 calc(var(--terminal-rem-base) * 0.357);
+  border: 1px solid currentColor;
+  border-radius: var(--t-radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--t-font-ui);
+  font-size: var(--t-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.terminal-timeline-period {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  color: var(--t-text-muted);
+  font-family: var(--t-font-mono);
+  font-size: var(--t-text-2xs);
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.terminal-timeline-title {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.4;
+  color: var(--t-text-secondary);
+  font-family: var(--t-font-cjk);
+  font-size: var(--t-text-xs);
+}
+
+/* actions column — sized to button content */
+.terminal-result-card-actions {
+  width: max-content;
+  min-width: calc(var(--terminal-rem-base) * 6.857);
+  max-width: calc(var(--terminal-rem-base) * 8.571);
+  justify-self: end;
+  align-self: center;
+}
+
+/* ── Wide-mid: list container ≤1180px — compress columns, still 3-col ── */
+@container candidate-list (max-width: 1180px) {
+  .terminal-result-card-body {
+    grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.2fr) max-content;
+    grid-template-rows: auto;
+    grid-template-areas:
+      'identity timeline actions';
+  }
+}
+
+/* ── Mid: list container ≤680px — identity|actions top, timeline below ── */
+@container candidate-list (max-width: 680px) {
+  .terminal-result-card-body {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      'identity actions'
+      'timeline timeline';
+  }
+  .terminal-candidate-identity {
+    border-right: none !important;
+    border-bottom: 1px solid var(--t-border-subtle);
+  }
+  .terminal-candidate-timeline {
+    border-right: none !important;
+  }
+}
+
+/* ── Narrow: list container ≤500px — single column ── */
+@container candidate-list (max-width: 500px) {
+  .terminal-result-card-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      'identity'
+      'timeline'
+      'actions';
+  }
+  .terminal-candidate-identity {
+    border-right: none !important;
+    border-bottom: 1px solid var(--t-border-subtle);
+  }
+  .terminal-candidate-timeline {
+    border-right: none !important;
+    border-bottom: 1px solid var(--t-border-subtle);
+  }
+  .terminal-candidate-actions {
+    flex-direction: row !important;
+    padding: 8px 12px !important;
+    gap: 8px !important;
+  }
+  .terminal-result-card-actions {
+    min-width: unset;
+  }
+  .terminal-result-pill-btn {
+    width: auto;
+    flex: 1;
+    min-width: 72px;
+  }
+}
+
+@media (max-width: 720px) {
+  .terminal-platform-count-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Dock: hidden at ≤1380px (legacy class, keep for safety) ── */
+@media (max-width: 1380px) {
+  .terminal-responsive-hide-dock {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CANDIDATE CONVERSATION DOCK — responsive desktop + drawer
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Widescreen: show desktop dock, hide trigger row + overlay */
+.terminal-candidate-dock-desktop {
+  display: contents;
+}
+
+.terminal-candidate-dock-trigger-row,
+.terminal-candidate-dock-overlay {
+  display: none;
+}
+
+/* ≤1380px: hide desktop dock, show trigger row in document flow */
+@media (max-width: 1380px) {
+  .terminal-candidate-dock-desktop {
+    display: none;
+  }
+
+  .terminal-candidate-dock-trigger-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 6px 14px 4px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--t-border-subtle);
+  }
+
+  .terminal-candidate-dock-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: var(--t-radius);
+    border: 1px solid var(--t-border);
+    background: var(--t-bg-elevated);
+    color: var(--t-text-secondary);
+    font-size: var(--t-text-xs);
+    font-family: var(--t-font-cjk);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .terminal-candidate-dock-trigger:hover {
+    background: var(--t-bg-hover);
+    border-color: rgba(96, 165, 250, 0.4);
+    color: var(--t-text);
+  }
+
+  .terminal-candidate-dock-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    background: rgba(0, 0, 0, 0.42);
+  }
+
+  .terminal-candidate-dock-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: min(420px, 92vw);
+    height: 100%;
+    background: var(--t-bg-panel);
+    border-left: 1px solid var(--t-border);
+    box-shadow: -20px 0 50px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .terminal-candidate-dock-drawer-header {
+    height: 52px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--t-border);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--t-text-muted);
+    font-family: var(--t-font-ui);
+  }
+
+  .terminal-candidate-dock-drawer-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Force dock to fill drawer body */
+  .terminal-candidate-dock-drawer-body > aside {
+    width: 100% !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    height: 100% !important;
+  }
+}
+
+
+/* ──────────────────────────────────────────────────────────────────
+   AI Generating Animation — keyframes
+   Used by: src/components/ui/AIGeneratingAnimation.jsx
+──────────────────────────────────────────────────────────────────── */
+
+@keyframes ai-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes ai-exit {
+  0%   { opacity: 1; transform: scale(1);    }
+  100% { opacity: 0; transform: scale(0.97); }
+}
+
+@keyframes ai-wave {
+  from { transform: scaleY(0.25); }
+  to   { transform: scaleY(1);    }
+}
+
+@keyframes ai-particle {
+  0%   { transform: translateY(0)      translateX(0);                     opacity: 0;    }
+  10%  { opacity: 0.75; }
+  90%  { opacity: 0.2; }
+  100% { transform: translateY(-120px) translateX(var(--p-drift, 0px));   opacity: 0;    }
+}
+
+@keyframes ai-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes ai-orb-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0   rgba(59, 130, 246, 0);
+    transform:  scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.28), 0 0 8px rgba(59, 130, 246, 0.4);
+    transform:  scale(1.35);
+  }
+}
+
+@keyframes ai-dot-bounce {
+  0%, 75%, 100% { transform: translateY(0);    opacity: 0.38; }
+  38%            { transform: translateY(-5px); opacity: 1;    }
+}
+
+@keyframes ai-scanline-move {
+  0%   { background-position: 0 0;   }
+  100% { background-position: 0 8px; }
+}
+
+@keyframes ai-progress-slide {
+  0%   { transform: translateX(-150%); }
+  100% { transform: translateX(380%);  }
+}
+
+@keyframes ai-progress-done {
+  from { transform: scaleX(0); transform-origin: left; }
+  to   { transform: scaleX(1); transform-origin: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-gen-root,
+  .ai-gen-root * {
+    animation:  none !important;
+    transition: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MESSAGES — conversation list responsive width
+   ═══════════════════════════════════════════════════════════════ */
+
+.terminal-conv-list {
+  width: var(--t-conv-list-width);
+  flex-shrink: 0;
+}
+
+/* Messages page sidebar follows the intrinsic tab-strip width instead of viewport width. */
+.msg-conv-list {
+  width: fit-content;
+  min-width: 340px;
+  max-width: 360px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+  .terminal-conv-list {
+    width: clamp(190px, 16vw, 240px);
+  }
+  .msg-conv-list {
+    min-width: 320px;
+    max-width: 340px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-conv-list {
+    width: 185px;
+  }
+  .msg-conv-list {
+    min-width: 300px;
+    max-width: 320px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CANDIDATE CONVERSATION DOCK — responsive width
+   ═══════════════════════════════════════════════════════════════ */
+
+.terminal-conv-dock {
+  width: var(--t-dock-width);
+  flex-shrink: 0;
+  transition: width var(--t-rail-collapse-duration) var(--t-rail-ease);
+}
+
+.terminal-conv-dock.collapsed {
+  width: 40px;
+}
+
+@media (max-width: 1280px) {
+  .terminal-conv-dock {
+    width: clamp(185px, 15vw, 220px);
+  }
+}
+
+@media (max-width: 1100px) {
+  .terminal-conv-dock {
+    width: clamp(170px, 14vw, 200px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MATCH RESULT — job summary header responsive
+   ═══════════════════════════════════════════════════════════════ */
+
+.terminal-match-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: clamp(12px, 1.5vw, 20px);
+}
+
+.terminal-match-stats-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.5vw, 20px);
+  flex-wrap: wrap;
+}
+
+.terminal-match-page-pad {
+  padding-left: var(--t-page-h-pad);
+  padding-right: var(--t-page-h-pad);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CANDIDATE RESULT CARD — polish & status indicators
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Left accent stripe: colored bar that shows invite/unlock status */
+.terminal-result-card-stripe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: var(--t-radius) 0 0 var(--t-radius);
+  pointer-events: none;
+  z-index: 1;
+  transition: background 200ms;
+}
+
+/* Avatar pulse ring — "today updated" candidates */
+@keyframes t-pulse-ring {
+  0%   { box-shadow: 0 0 0 0   rgba(34, 197, 94, 0.50); }
+  70%  { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.00); }
+  100% { box-shadow: 0 0 0 0   rgba(34, 197, 94, 0.00); }
+}
+
+.terminal-avatar-fresh {
+  animation: t-pulse-ring 2.4s ease-out infinite;
+}
+
+/* Filter bar section header — left accent bar */
+.terminal-filter-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.terminal-filter-section-pip {
+  width: 2px;
+  height: 10px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CANDIDATE POOL FILTER SIDEBAR — width token usage
+   ═══════════════════════════════════════════════════════════════ */
+
+.terminal-filter-sidebar {
+  width: var(--t-filter-sidebar-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.terminal-filter-sidebar--collapsed {
+  width: 40px !important;
+}
+
+.terminal-filter-expand-btn {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: background 130ms, color 130ms;
+}
+
+@media (max-width: 1180px) {
+  .terminal-filter-sidebar {
+    width: clamp(190px, 16vw, 240px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .terminal-filter-sidebar {
+    width: 185px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Terminal Utility Classes
+   可在任何 .terminal-mode 内直接用，不绑定具体业务页面
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Chip / Tag / Filter Button ─────────────────────────────────── */
+
+/* 基础轮廓（未选中） */
+.terminal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--t-radius-sm);
+  border: 1px solid var(--t-border);
+  background: transparent;
+  color: var(--t-text-secondary);
+  font-family: var(--t-font-ui);
+  font-size: var(--t-text-xs);
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+
+/* 选中态 — 低饱和度蓝底 */
+.terminal-chip-selected {
+  background: var(--t-chip-selected-bg);
+  border-color: var(--t-chip-selected-border);
+  color: var(--t-text);
+}
+
+/* hover（未选中） */
+.terminal-chip:not(.terminal-chip-selected):hover {
+  background: var(--t-bg-hover);
+  border-color: var(--t-border-focus);
+}
+
+/* hover（选中） */
+.terminal-chip.terminal-chip-selected:hover {
+  background: var(--t-chip-selected-bg-hover);
+  border-color: var(--t-chip-selected-border-hover);
+}
+
+/* disabled */
+.terminal-chip:disabled,
+.terminal-chip[aria-disabled="true"] {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* focus-visible — 键盘可访问性 */
+.terminal-chip:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* ── Field Labels ────────────────────────────────────────────────── */
+
+/* 英文 label：uppercase + 0.06em */
+.terminal-field-label {
+  display: block;
+  font-family: var(--t-font-ui);
+  font-size: var(--t-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--t-text-muted);
+  margin-bottom: 4px;
+  line-height: var(--t-line-tight);
+}
+
+/* 中文 label：不 uppercase，0.04em */
+.terminal-field-label-cn {
+  display: block;
+  font-family: var(--t-font-cjk);
+  font-size: var(--t-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--t-text-secondary);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+/* Section label：uppercase + 0.06em，bold variant */
+.terminal-section-label {
+  display: block;
+  font-family: var(--t-font-ui);
+  font-size: var(--t-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--t-text-muted);
+  line-height: var(--t-line-tight);
+}
+
+/* ── Tabular Numbers ─────────────────────────────────────────────── */
+
+.terminal-tabular-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 数字输入框全局覆盖（terminal-mode 内） */
+.terminal-mode input[inputmode="numeric"],
+.terminal-mode input[inputmode="decimal"],
+.terminal-mode input[type="number"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+
+/* ── Skeleton Shimmer ─────────────────────────────────────────────── */
+
+@keyframes t-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.terminal-mode .t-skeleton,
+.terminal-shell .t-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--t-bg-panel)    25%,
+    var(--t-bg-elevated) 50%,
+    var(--t-bg-panel)    75%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--t-radius);
+  animation: t-shimmer 1.4s ease-in-out infinite;
+}
+
+
+/* ── Toast Slide-in ───────────────────────────────────────────────── */
+
+@keyframes t-toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.terminal-mode .t-toast-enter,
+.terminal-shell .t-toast-enter {
+  animation: t-toast-in var(--t-dur-slow) var(--t-ease-out) both;
+}
+
+
+/* ── Card press feedback ──────────────────────────────────────────── */
+
+.terminal-shell .t-card-pressable:active,
+.terminal-mode  .t-card-pressable:active {
+  transform: scale(0.995);
+}
+
+
+/* ── Accent bar fade-in (rail active indicator) ───────────────────── */
+
+@keyframes t-accent-in {
+  from { opacity: 0; transform: translateY(-50%) scaleY(0.4); }
+  to   { opacity: 1; transform: translateY(-50%) scaleY(1);   }
+}
+
+
+/* ── Dropdown / popover enter ─────────────────────────────────────── */
+
+@keyframes t-dropdown-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.terminal-mode .t-dropdown-enter,
+.terminal-shell .t-dropdown-enter {
+  animation: t-dropdown-in var(--t-dur-std) var(--t-ease-out) both;
+}
+
+
+/* ── Modal / dialog enter ─────────────────────────────────────────── */
+
+@keyframes t-modal-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* For centered modals using translate(-50%,-50%) */
+@keyframes t-modal-center-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)) scale(0.98); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.terminal-mode .t-modal-enter,
+.terminal-shell .t-modal-enter {
+  animation: t-modal-in var(--t-dur-slow) var(--t-ease-out) both;
+}
+
+.terminal-mode .t-modal-center-enter,
+.terminal-shell .t-modal-center-enter {
+  animation: t-modal-center-in var(--t-dur-slow) var(--t-ease-out) both;
+}
+
+
+/* ── Context menu enter ───────────────────────────────────────────── */
+
+@keyframes t-ctx-in {
+  from { opacity: 0; transform: scale(0.95); transform-origin: top left; }
+  to   { opacity: 1; transform: scale(1);    transform-origin: top left; }
+}
+
+.terminal-mode .t-ctx-enter,
+.terminal-shell .t-ctx-enter {
+  animation: t-ctx-in 100ms var(--t-ease-out) both;
+}
+
+
+/* ── Tab button hover (terminal) ──────────────────────────────────── */
+
+.terminal-shell .t-tab-btn:not([data-active="true"]):hover {
+  color: var(--t-text-secondary);
+}
+
+/* ── Job filter button hover (terminal) ───────────────────────────── */
+
+.terminal-shell .t-filter-btn {
+  transition: background var(--t-dur-std) var(--t-ease-std),
+              border-color var(--t-dur-std) var(--t-ease-std);
+}
+
+/* ── Retry link button (terminal) ─────────────────────────────────── */
+
+.terminal-shell .t-retry-btn {
+  transition: color var(--t-dur-std) var(--t-ease-std),
+              opacity var(--t-dur-std) var(--t-ease-std);
+  opacity: 0.85;
+}
+
+.terminal-shell .t-retry-btn:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
+.terminal-shell .t-retry-btn:active {
+  opacity: 0.7;
+}
+
+
+/* ── Dock content slide-in (CandidateConversationDock expand) ─────── */
+
+@keyframes t-dock-in {
+  from { opacity: 0; transform: translateX(6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.terminal-mode .t-dock-content-enter,
+.terminal-shell .t-dock-content-enter {
+  animation: t-dock-in 180ms cubic-bezier(0, 0, 0.2, 1) both;
 }

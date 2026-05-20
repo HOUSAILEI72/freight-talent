@@ -1,8 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Ship, Bell, Menu, X, LogOut } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Bell, Menu, X, LogOut, Shield } from 'lucide-react'
+import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { conversationsApi } from '../../api/conversations'
+import ComplianceModal from '../compliance/ComplianceModal'
 
 const NAV_BY_ROLE = {
   employer: [
@@ -10,7 +10,7 @@ const NAV_BY_ROLE = {
     { label: '候选人动态', href: '/employer/home' },
     { label: '发布岗位', href: '/employer/jobs/new' },
     { label: '候选人池', href: '/candidates' },
-    { label: '岗位广场', href: '/jobs' },
+    { label: '岗位广场', href: '/employer/jobs' },
     { label: '标签申请', href: '/tags' },
     { label: '消息', href: '/messages' },
   ],
@@ -33,11 +33,7 @@ const NAV_BY_ROLE = {
   ],
 }
 
-const DEFAULT_NAV = [
-  { label: '候选人', href: '/candidate/upload' },
-  { label: '企业招聘', href: '/employer/dashboard' },
-  { label: '岗位广场', href: '/employer/jobs/new' },
-]
+const DEFAULT_NAV = []
 
 // 角色对应的头像首字
 function avatarChar(user) {
@@ -52,30 +48,9 @@ export function Navbar() {
   const { user, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [totalUnread, setTotalUnread] = useState(0)
+  const [complianceOpen, setComplianceOpen] = useState(false)
 
   const navItems = user ? (NAV_BY_ROLE[user.role] ?? DEFAULT_NAV) : DEFAULT_NAV
-
-  // Poll total unread every 15s when logged in
-  useEffect(() => {
-    if (!user || !['employer', 'candidate', 'admin'].includes(user.role)) return
-    function fetchUnread() {
-      conversationsApi.getMyConversations()
-        .then(res => setTotalUnread(res.data.total_unread ?? 0))
-        .catch(() => {})
-    }
-    fetchUnread()
-    const timer = setInterval(fetchUnread, 30000)
-    return () => clearInterval(timer)
-  }, [user])
-
-  // Clear badge immediately when entering messages page
-  useEffect(() => {
-    if (location.pathname.startsWith('/messages')) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTotalUnread(0)
-    }
-  }, [location.pathname])
 
   async function handleLogout() {
     setShowUserMenu(false)
@@ -89,12 +64,10 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Ship size={16} className="text-white" />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="font-bold text-slate-800 text-sm">ACE-Talent</span>
-              <span className="text-[10px] text-slate-400 font-medium tracking-wide">货代精准招聘平台</span>
+            <img src="/logo.svg" alt="ACE-Talent" className="h-9 w-auto" />
+            <div className="flex flex-col gap-0.5">
+              <span className="font-bold text-slate-800 text-sm leading-none">ACE-Talent</span>
+              <span className="text-[10px] text-slate-400 font-medium leading-none tracking-wide">Access Career Everywhere</span>
             </div>
           </Link>
 
@@ -111,13 +84,15 @@ export function Navbar() {
                 }`}
               >
                 {item.label}
-                {item.href === '/messages' && totalUnread > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                    {totalUnread > 99 ? '99+' : totalUnread}
-                  </span>
-                )}
               </Link>
             ))}
+            <button
+              onClick={() => setComplianceOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            >
+              <Shield size={14} />
+              招聘规范
+            </button>
           </nav>
 
           {/* Right actions */}
@@ -135,8 +110,11 @@ export function Navbar() {
                     onClick={() => setShowUserMenu((v) => !v)}
                     className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
                   >
-                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-[10px] font-bold">{avatarChar(user)}</span>
+                    <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center bg-blue-600">
+                      {user.avatar_url
+                        ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                        : <span className="text-white text-[10px] font-bold">{avatarChar(user)}</span>
+                      }
                     </div>
                     <span className="text-sm font-medium text-slate-700 max-w-[90px] truncate">
                       {user.company_name ?? user.name}
@@ -196,6 +174,13 @@ export function Navbar() {
               {item.label}
             </Link>
           ))}
+          <button
+            onClick={() => { setMobileOpen(false); setComplianceOpen(true) }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-600"
+          >
+            <Shield size={14} />
+            招聘规范
+          </button>
           {user ? (
             <button
               onClick={() => { setMobileOpen(false); handleLogout() }}
@@ -214,6 +199,8 @@ export function Navbar() {
           )}
         </div>
       )}
+
+      <ComplianceModal open={complianceOpen} onClose={() => setComplianceOpen(false)} />
     </header>
   )
 }

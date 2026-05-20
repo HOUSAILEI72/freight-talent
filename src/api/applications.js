@@ -12,6 +12,15 @@ import client from './client'
  * back-end (CAND-5). The front-end here only owns the relation lifecycle.
  */
 export const applicationsApi = {
+  /** 候选人收藏岗位。 */
+  saveJob(jobId) {
+    return client.post(`/jobs/${jobId}/saved`)
+  },
+
+  unsaveJob(jobId) {
+    return client.delete(`/jobs/${jobId}/saved`)
+  },
+
   /**
    * 候选人向某岗位投递。
    * @param {number} jobId

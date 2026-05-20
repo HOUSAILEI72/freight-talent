@@ -1,535 +1,204 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, FileText, CheckCircle, ChevronRight, Sparkles, X, AlertCircle, Loader2 } from 'lucide-react'
+import { Upload, FileText, CheckCircle, Sparkles, AlertCircle } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
-import { useAuth } from '../../context/AuthContext'
 import { candidatesApi } from '../../api/candidates'
-import RegionSelector from '../../components/RegionSelector'
-
-const SUGGESTED_TAGS = [
-  '海运操作', '空运操作', '报关员', '单证制作', '货代销售',
-  'FBA发货', 'Cargowise', '整柜', '拼箱', '英语口语',
-  '大客户开发', '海外客服', '投诉处理', '信用证', 'HS编码',
-  '美线', '欧线', '团队管理', '危险品', '亚线',
-]
-
-const SALARY_OPTIONS = ['5k-8k', '8k-12k', '12k-18k', '18k-25k', '25k-35k', '35k-50k', '面议']
-const CITY_OPTIONS = ['上海', '广州', '深圳', '宁波', '青岛', '北京', '厦门', '天津']
-const STEPS = ['上传简历', 'AI 解析', '确认档案', '发布上线']
-
-function inferTagTypes(tags) {
-  const routeKeywords = ['美线', '欧线', '亚线', '中东线', '拉美线']
-  return {
-    route_tags: tags.filter(t => routeKeywords.includes(t)),
-    skill_tags: tags.filter(t => !routeKeywords.includes(t)),
-  }
-}
 
 export default function UploadResume({ terminal = false }) {
   const navigate = useNavigate()
-  const { user } = useAuth()
 
-  const [step, setStep] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const [uploading, setUploading] = useState(false)   // 文件上传中
-  const [saving, setSaving] = useState(false)          // 档案保存中
+  // phase: idle | uploading | parsing | done | error
+  const [phase, setPhase] = useState('idle')
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [dragging, setDragging] = useState(false)
   const [error, setError] = useState('')
-
-  // 已上传的简历文件元信息
-  const [uploadedFile, setUploadedFile] = useState(null)  // { name, uploaded_at }
-
-  // 表单数据（Step 1 可编辑）
-  const [form, setForm] = useState({
-    full_name: '',
-    current_title: '',
-    current_company: '',
-    current_city: '',
-    expected_city: '',
-    expected_salary_label: '',
-    experience_years: '',
-    education: '',
-    summary: '',
-  })
-  const [selectedTags, setSelectedTags] = useState([])
   const [existingProfile, setExistingProfile] = useState(null)
 
-  // Phase E: standard location (RegionSelector). business_area_* is purely
-  // display-side here — the back-end recomputes it on save and any value
-  // we send for it is discarded by validate_location_payload.
-  const [location, setLocation] = useState(null)
-
-  // 页面加载：拉取已有档案
   useEffect(() => {
     candidatesApi.getMyCandidateProfile()
-      .then(res => {
-        const p = res.data.profile
-        if (!p) return
-        setExistingProfile(p)
-        setForm({
-          full_name: p.full_name || '',
-          current_title: p.current_title || '',
-          current_company: p.current_company || '',
-          current_city: p.current_city || '',
-          expected_city: p.expected_city || '',
-          expected_salary_label: p.expected_salary_label || '',
-          experience_years: p.experience_years != null ? String(p.experience_years) : '',
-          education: p.education || '',
-          summary: p.summary || '',
-        })
-        setSelectedTags(p.all_tags || [])
-        // Hydrate RegionSelector from profile if back-end returned a
-        // standard location (Phase C onwards).
-        if (p.location_code) {
-          setLocation({
-            location_code: p.location_code,
-            location_name: p.location_name,
-            location_path: p.location_path,
-            location_type: p.location_type,
-            business_area_code: p.business_area_code,
-            business_area_name: p.business_area_name,
-          })
-        }
-        if (p.resume_file_name) {
-          setUploadedFile({
-            name: p.resume_file_name,
-            uploaded_at: p.resume_uploaded_at,
-          })
-        }
-      })
-      .catch(() => {
-        // 获取失败静默处理，用空白表单
-      })
+      .then(res => { if (res.data.profile) setExistingProfile(res.data.profile) })
+      .catch(() => {})
   }, [])
-
-  function setField(k, v) { setForm(f => ({ ...f, [k]: v })) }
-
-  function toggleTag(tag) {
-    setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    )
-  }
 
   async function handleFile(file) {
     setError('')
     const ext = file.name.split('.').pop().toLowerCase()
-    if (!['pdf', 'doc', 'docx'].includes(ext)) {
-      setError('仅支持 PDF、DOC、DOCX 格式')
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setError('文件大小不能超过 10MB')
-      return
-    }
+    if (!['pdf', 'doc', 'docx'].includes(ext)) { setError('仅支持 PDF、DOC、DOCX 格式'); return }
+    if (file.size > 10 * 1024 * 1024) { setError('文件大小不能超过 10MB'); return }
 
-    setUploading(true)
+    setPhase('uploading')
     setUploadProgress(0)
     try {
-      const res = await candidatesApi.uploadResumeFile(file, setUploadProgress)
-      setUploadedFile({
-        name: res.data.file_name,
-        uploaded_at: res.data.uploaded_at,
-      })
-      // 如果后端返回了新建的 profile，同步一下姓名
-      if (res.data.profile && !form.full_name) {
-        setField('full_name', res.data.profile.full_name || '')
+      await candidatesApi.uploadResumeFile(file, p => setUploadProgress(p))
+
+      setPhase('parsing')
+      try {
+        const parseRes = await candidatesApi.aiParseResume()
+        const d = parseRes.data?.data
+        if (d) sessionStorage.setItem('ai_parse_result', JSON.stringify(d))
+      } catch {
+        // AI 解析失败不阻断，直接进 edit 页让用户手填
       }
-      // 上传成功，进入 Step 1
-      setTimeout(() => {
-        setUploading(false)
-        setStep(1)
-      }, 800)
+
+      setPhase('done')
+      setTimeout(() => navigate('/candidate/profile/me?tab=edit&ai_prefill=1'), 700)
     } catch (err) {
-      setUploading(false)
+      setPhase('idle')
       setError(err.response?.data?.message ?? '上传失败，请重试')
     }
   }
 
   function handleDrop(e) {
-    e.preventDefault()
-    setDragging(false)
+    e.preventDefault(); setDragging(false)
     const f = e.dataTransfer.files[0]
     if (f) handleFile(f)
   }
 
-  function validateForm() {
-    if (!form.full_name.trim()) return '请填写姓名'
-    if (!form.current_title.trim()) return '请填写当前职位'
-    if (!location || !location.location_code) return '请选择所在地区'
-    if (!location.location_name || !location.location_path || !location.location_type) {
-      return '地区数据不完整，请重新选择'
-    }
-    if (form.experience_years && (isNaN(Number(form.experience_years)) || Number(form.experience_years) < 0)) {
-      return '工作年限请填写正整数'
-    }
-    return ''
-  }
+  const busy = phase === 'uploading' || phase === 'parsing' || phase === 'done'
 
-  async function handleConfirmPublish() {
-    const msg = validateForm()
-    if (msg) { setError(msg); return }
-    setError('')
-    setSaving(true)
-    try {
-      const { route_tags, skill_tags } = inferTagTypes(selectedTags)
-      await candidatesApi.updateMyCandidateProfile({
-        ...form,
-        // Phase E: standard location (back-end computes business_area_*).
-        // We DO NOT send business_area_code from the client.
-        location_code: location.location_code,
-        location_name: location.location_name,
-        location_path: location.location_path,
-        location_type: location.location_type,
-        // Compatibility: keep the legacy current_city column populated so
-        // pre-Phase-C list UIs that still read current_city continue to work.
-        current_city: location.location_name,
-        experience_years: form.experience_years ? Number(form.experience_years) : null,
-        route_tags,
-        skill_tags,
-        availability_status: 'open',
-      })
-      setStep(3)
-      // 跳转到本人 profile（使用 /me 路由，不依赖 user.id）
-      setTimeout(() => navigate('/candidate/profile/me'), 1800)
-    } catch (err) {
-      setError(err.response?.data?.message ?? '保存失败，请重试')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // 已有档案时，可以跳过上传直接到 Step 1 编辑
-  function goDirectToEdit() {
-    setError('')
-    setStep(1)
-  }
-
-  // ── 渲染 ──
   return (
     <div
-      className={
-        terminal
-          ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar px-6 py-8'
-          : 'max-w-3xl mx-auto px-6 py-12'
-      }
+      className={terminal
+        ? 'terminal-mode flex-1 w-full min-w-0 h-full min-h-0 overflow-y-auto terminal-scrollbar px-6 py-8'
+        : 'max-w-2xl mx-auto px-6 py-12'}
       style={terminal ? { background: 'var(--t-bg)', color: 'var(--t-text)' } : undefined}
     >
-      <div className={terminal ? 'mx-auto w-full max-w-3xl' : ''}>
-      {/* Step indicator */}
-      <div className="flex items-center gap-2 mb-10">
-        {STEPS.map((s, i) => (
-          <div key={s} className="flex items-center gap-2">
-            <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold ${
-              i < step ? 'bg-emerald-500 text-white' :
-              i === step ? 'bg-blue-600 text-white' :
-              'bg-slate-100 text-slate-400'
-            }`}>
-              {i < step ? <CheckCircle size={14} /> : i + 1}
-            </div>
-            <span className={`text-sm ${i === step ? 'font-semibold text-slate-800' : 'text-slate-400'}`}>{s}</span>
-            {i < STEPS.length - 1 && <ChevronRight size={14} className="text-slate-300 mx-1" />}
+      <div className={terminal ? 'mx-auto w-full max-w-2xl' : ''}>
+
+        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, color: terminal ? 'var(--t-text)' : '#1e293b' }}>
+          {existingProfile?.resume_file_name ? '更新你的简历' : '上传你的简历'}
+        </h1>
+        <p style={{ fontSize: 13, marginBottom: 24, color: terminal ? 'var(--t-text-muted)' : '#64748b' }}>
+          支持 PDF、Word 格式。上传后 AI 会自动解析并预填档案所有字段，直接进入编辑页确认即可。
+        </p>
+
+        {error && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            <AlertCircle size={15} className="flex-shrink-0" />{error}
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* ── Step 0：上传简历 ── */}
-      {step === 0 && (
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">
-            {existingProfile?.resume_file_name ? '更新你的简历' : '上传你的简历'}
-          </h1>
-          <p className="text-slate-500 mb-6">
-            支持 PDF、Word 格式，重新上传会替换当前简历文件并刷新档案更新时间
-          </p>
-
-          {error && (
-            <div className="flex items-center gap-2 mb-4 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-              <AlertCircle size={15} className="flex-shrink-0" />
-              {error}
+        {/* 已有简历提示 */}
+        {existingProfile?.resume_file_name && !busy && (
+          <div style={{
+            marginBottom: 20, padding: 14,
+            background: terminal ? 'rgba(74,222,128,0.08)' : '#f0fdf4',
+            border: `1px solid ${terminal ? 'rgba(74,222,128,0.3)' : '#bbf7d0'}`,
+            borderRadius: terminal ? 'var(--t-radius)' : 12,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <FileText size={16} style={{ color: terminal ? 'var(--t-success)' : '#16a34a', flexShrink: 0 }} />
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 500, color: terminal ? 'var(--t-success)' : '#16a34a' }}>
+                  当前简历：{existingProfile.resume_file_name}
+                </p>
+                <p style={{ fontSize: 11, color: terminal ? 'var(--t-text-muted)' : '#4ade80', marginTop: 2 }}>
+                  上传于 {existingProfile.resume_uploaded_at?.slice(0, 10) ?? '—'}
+                </p>
+              </div>
             </div>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/candidate/profile/me?tab=edit')}>
+              直接编辑档案
+            </Button>
+          </div>
+        )}
+
+        {/* 上传区域 */}
+        <div
+          style={{
+            border: `2px dashed ${
+              dragging ? (terminal ? 'var(--t-primary)' : '#3b82f6') :
+              busy      ? (terminal ? 'var(--t-border-focus)' : '#93c5fd') :
+              terminal  ? 'var(--t-border)' : '#e2e8f0'
+            }`,
+            borderRadius: 16,
+            padding: '60px 32px',
+            textAlign: 'center',
+            cursor: busy ? 'default' : 'pointer',
+            background: dragging ? (terminal ? 'var(--t-primary-muted)' : '#eff6ff') :
+                        busy     ? (terminal ? 'rgba(37,99,235,0.05)' : '#f8fafc') :
+                        'transparent',
+            transition: 'border-color 150ms, background 150ms',
+          }}
+          onDragOver={e => { e.preventDefault(); if (!busy) setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={busy ? undefined : handleDrop}
+          onClick={() => !busy && document.getElementById('resume-file-input').click()}
+          onMouseEnter={terminal && !busy ? e => { e.currentTarget.style.background = 'var(--t-bg-elevated)' } : undefined}
+          onMouseLeave={terminal && !busy ? e => { e.currentTarget.style.background = 'transparent' } : undefined}
+        >
+          <input id="resume-file-input" type="file" className="hidden" accept=".pdf,.doc,.docx"
+            onChange={e => e.target.files[0] && handleFile(e.target.files[0])} />
+
+          {phase === 'idle' && (
+            <>
+              <div style={{ width: 56, height: 56, borderRadius: 14, background: terminal ? 'var(--t-bg-elevated)' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <Upload size={24} style={{ color: terminal ? 'var(--t-text-muted)' : '#94a3b8' }} />
+              </div>
+              <p style={{ fontWeight: 600, marginBottom: 4, color: terminal ? 'var(--t-text)' : '#1e293b' }}>
+                {existingProfile?.resume_file_name ? '拖拽新简历到此处' : '拖拽简历到此处'}
+              </p>
+              <p style={{ fontSize: 13, marginBottom: 16, color: terminal ? 'var(--t-text-muted)' : '#94a3b8' }}>
+                或点击选择文件
+              </p>
+              <Badge color="gray">PDF / Word · 最大 10MB</Badge>
+            </>
           )}
 
-          {/* 已有简历提示 */}
-          {existingProfile?.resume_file_name && (
-            <div className="mb-5 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText size={18} className="text-emerald-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-emerald-800">已有简历：{existingProfile.resume_file_name}</p>
-                  <p className="text-xs text-emerald-600">
-                    上传于 {existingProfile.resume_uploaded_at?.slice(0, 10) ?? '—'}
-                  </p>
-                </div>
+          {phase === 'uploading' && (
+            <>
+              <div style={{ width: 56, height: 56, borderRadius: 14, background: terminal ? 'var(--t-primary-muted)' : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <Sparkles size={24} className="animate-pulse" style={{ color: terminal ? 'var(--t-primary)' : '#3b82f6' }} />
               </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="secondary" onClick={goDirectToEdit}>
-                  直接编辑档案
-                </Button>
+              <p style={{ fontWeight: 600, marginBottom: 4, color: terminal ? 'var(--t-text)' : '#1e293b' }}>上传中...</p>
+              <p style={{ fontSize: 13, marginBottom: 16, color: terminal ? 'var(--t-text-muted)' : '#64748b' }}>{uploadProgress}%</p>
+              <div style={{ height: 6, borderRadius: 9999, overflow: 'hidden', width: 180, margin: '0 auto', background: terminal ? 'var(--t-bg-elevated)' : '#e2e8f0' }}>
+                <div style={{ height: '100%', borderRadius: 9999, transition: 'width 200ms', width: `${uploadProgress}%`, background: terminal ? 'var(--t-primary)' : '#3b82f6' }} />
               </div>
-            </div>
+            </>
           )}
 
-          {/* 上传区域 */}
-          <div
-            className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer ${
-              dragging ? 'border-blue-400 bg-blue-50' :
-              uploading ? 'border-blue-300 bg-blue-50/50' :
-              'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
-            }`}
-            onDragOver={e => { e.preventDefault(); if (!uploading) setDragging(true) }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={uploading ? undefined : handleDrop}
-            onClick={() => !uploading && document.getElementById('file-input').click()}
-          >
-            <input
-              id="file-input"
-              type="file"
-              className="hidden"
-              accept=".pdf,.doc,.docx"
-              onChange={e => e.target.files[0] && handleFile(e.target.files[0])}
-            />
-
-            {uploading ? (
-              <div>
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-                  <Sparkles size={24} className="text-blue-500 animate-pulse" />
-                </div>
-                <p className="font-semibold text-slate-800 mb-2">AI 正在解析简历...</p>
-                <p className="text-sm text-slate-500 mb-4">提取工作经历、技能标签、行业背景中</p>
-                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden w-48 mx-auto">
-                  <div
-                    className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-slate-400 mt-2">{uploadProgress}%</p>
+          {phase === 'parsing' && (
+            <>
+              <div style={{ width: 56, height: 56, borderRadius: 14, background: terminal ? 'var(--t-primary-muted)' : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <Sparkles size={24} className="animate-pulse" style={{ color: terminal ? 'var(--t-primary)' : '#3b82f6' }} />
               </div>
-            ) : (
-              <div>
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                  <Upload size={24} className="text-slate-400" />
-                </div>
-                <p className="font-semibold text-slate-800 mb-1">
-                  {existingProfile?.resume_file_name ? '拖拽新简历到此处' : '拖拽简历文件到此处'}
-                </p>
-                <p className="text-sm text-slate-400 mb-4">
-                  {existingProfile?.resume_file_name ? '或点击选择新文件替换当前简历' : '或点击选择文件'}
-                </p>
-                <Badge color="gray">PDF / Word · 最大 10MB</Badge>
-              </div>
-            )}
-          </div>
+              <p style={{ fontWeight: 600, marginBottom: 4, color: terminal ? 'var(--t-text)' : '#1e293b' }}>AI 正在解析简历...</p>
+              <p style={{ fontSize: 13, color: terminal ? 'var(--t-text-muted)' : '#64748b' }}>
+                提取工作经历、教育背景、技能标签中
+              </p>
+            </>
+          )}
 
-          <div className="mt-8 p-4 bg-blue-50 rounded-xl border border-blue-100">
-            <p className="text-sm font-medium text-blue-800 mb-1">解析后系统将自动：</p>
-            <ul className="text-sm text-blue-700 space-y-1">
-              <li>· 提取工作经历与教育背景</li>
-              <li>· 生成货代行业专属技能标签</li>
-              <li>· 计算简历鲜度与活跃度评分</li>
-              <li>· 向匹配的招聘企业推送档案</li>
+          {phase === 'done' && (
+            <>
+              <div style={{ width: 56, height: 56, borderRadius: 14, background: terminal ? 'rgba(74,222,128,0.12)' : '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <CheckCircle size={24} style={{ color: terminal ? 'var(--t-success)' : '#16a34a' }} />
+              </div>
+              <p style={{ fontWeight: 600, marginBottom: 4, color: terminal ? 'var(--t-text)' : '#1e293b' }}>解析完成，正在跳转...</p>
+              <p style={{ fontSize: 13, color: terminal ? 'var(--t-text-muted)' : '#64748b' }}>即将进入档案编辑页</p>
+            </>
+          )}
+        </div>
+
+        {/* 说明 */}
+        {phase === 'idle' && (
+          <div style={{ marginTop: 24, padding: 16, borderRadius: 12, border: `1px solid ${terminal ? 'var(--t-border)' : '#bfdbfe'}`, background: terminal ? 'var(--t-primary-muted)' : '#eff6ff' }}>
+            <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 6, color: terminal ? 'var(--t-primary)' : '#1d4ed8' }}>AI 解析后将自动提取：</p>
+            <ul style={{ fontSize: 12, lineHeight: 1.8, color: terminal ? 'var(--t-text-secondary)' : '#3b82f6', margin: 0, paddingLeft: 0, listStyle: 'none' }}>
+              <li>· 姓名、性别、出生年月</li>
+              <li>· 当前任职（公司、职位、业务方向、薪资结构）</li>
+              <li>· 工作经历（每段公司、职位、起止月份、工作内容、薪资、福利）</li>
+              <li>· 期望职位 & 期望薪资</li>
+              <li>· 项目经历、教育经历、英语水平、资格证书</li>
+              <li>· 能力标签（岗位标签 & 软技能）</li>
             </ul>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Step 1：确认 / 编辑档案信息 ── */}
-      {step === 1 && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle size={20} className="text-emerald-500" />
-            <h1 className="text-2xl font-bold text-slate-800">
-              {uploadedFile ? '解析完成，请确认信息' : '编辑档案信息'}
-            </h1>
-          </div>
-          <p className="text-slate-500 mb-6">请核对并补充以下信息，完成后发布档案</p>
-
-          {error && (
-            <div className="flex items-center gap-2 mb-4 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-              <AlertCircle size={15} className="flex-shrink-0" />
-              {error}
-            </div>
-          )}
-
-          {/* 基本信息表单 */}
-          <div className="card p-6 mb-5 space-y-4">
-            <h2 className="font-semibold text-slate-700 text-sm uppercase tracking-wide">基本信息</h2>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">姓名 *</label>
-                <input
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                  value={form.full_name}
-                  onChange={e => setField('full_name', e.target.value)}
-                  placeholder="真实姓名"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">当前职位 *</label>
-                <input
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                  value={form.current_title}
-                  onChange={e => setField('current_title', e.target.value)}
-                  placeholder="如：海运操作主管"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">当前公司</label>
-                <input
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                  value={form.current_company}
-                  onChange={e => setField('current_company', e.target.value)}
-                  placeholder="公司名称（可选）"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">工作年限</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="60"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                  value={form.experience_years}
-                  onChange={e => setField('experience_years', e.target.value)}
-                  placeholder="年"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">学历</label>
-                <input
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                  value={form.education}
-                  onChange={e => setField('education', e.target.value)}
-                  placeholder="如：本科 · 国际贸易"
-                />
-              </div>
-            </div>
-
-            {/* 所在地区 (Phase E: standardised RegionSelector) */}
-            <div>
-              <label className="block text-xs text-slate-500 mb-1.5">所在地区 *</label>
-              <RegionSelector
-                value={location}
-                onChange={setLocation}
-                terminal={terminal}
-                placeholder="请选择所在地区（中国大陆 / 香港 / 台湾 / 海外 / Global / Remote）"
-              />
-              {location?.location_path && (
-                <p className="mt-1 text-xs text-slate-400">
-                  已选：{location.location_path}
-                  {location.business_area_name ? `（业务区域 ${location.business_area_name}）` : ''}
-                </p>
-              )}
-            </div>
-
-            {/* 期望薪资 */}
-            <div>
-              <label className="block text-xs text-slate-500 mb-1.5">期望薪资</label>
-              <div className="flex flex-wrap gap-2">
-                {SALARY_OPTIONS.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setField('expected_salary_label', s)}
-                    className={`px-3 py-1 rounded-lg text-sm border transition-colors ${
-                      form.expected_salary_label === s
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'border-slate-200 text-slate-600 hover:border-blue-300'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 个人简介 */}
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">个人简介</label>
-              <textarea
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
-                value={form.summary}
-                onChange={e => setField('summary', e.target.value)}
-                placeholder="简要介绍你的从业经历和核心优势..."
-              />
-            </div>
-          </div>
-
-          {/* 上传文件状态 */}
-          {uploadedFile && (
-            <div className="mb-5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
-              <FileText size={16} className="text-emerald-600 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-emerald-800">{uploadedFile.name}</p>
-                <p className="text-xs text-emerald-600">
-                  上传于 {uploadedFile.uploaded_at?.slice(0, 10) ?? '—'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* 标签 */}
-          <div className="card p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles size={16} className="text-blue-500" />
-              <h2 className="font-semibold text-slate-700 text-sm uppercase tracking-wide">技能标签</h2>
-              <span className="text-xs text-slate-400">· 可手动增删</span>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mb-4">
-              {selectedTags.map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => toggleTag(tag)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-blue-600 text-white"
-                >
-                  {tag} <X size={12} />
-                </button>
-              ))}
-              {selectedTags.length === 0 && (
-                <p className="text-sm text-slate-400">暂无标签，从下方添加</p>
-              )}
-            </div>
-
-            <p className="text-xs text-slate-400 mb-2">点击添加更多标签：</p>
-            <div className="flex flex-wrap gap-2">
-              {SUGGESTED_TAGS.filter(t => !selectedTags.includes(t)).map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => toggleTag(tag)}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                >
-                  + {tag}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => { setStep(0); setError('') }}>
-              返回
-            </Button>
-            <Button className="flex-1" onClick={handleConfirmPublish} disabled={saving}>
-              {saving && <Loader2 size={16} className="animate-spin" />}
-              {saving ? '正在保存...' : '确认发布档案'}
-              {!saving && <ChevronRight size={16} />}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Step 3：发布成功 ── */}
-      {step === 3 && (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={32} className="text-emerald-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">档案已发布！</h2>
-          <p className="text-slate-500">正在跳转到你的候选人档案页...</p>
-        </div>
-      )}
-    </div>
+      </div>
     </div>
   )
 }

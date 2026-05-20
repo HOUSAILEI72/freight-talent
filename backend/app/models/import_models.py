@@ -209,14 +209,14 @@ class ImportBatchTag(db.Model):
     """
     __tablename__ = "import_batch_tags"
 
-    id        = db.Column(db.Integer, primary_key=True)
-    batch_id  = db.Column(
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(
         db.Integer, db.ForeignKey("import_batches.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     row_index = db.Column(db.Integer, nullable=False)
-    category  = db.Column(db.String(64),  nullable=False)
-    tag_name  = db.Column(db.String(128), nullable=False)
+    category = db.Column(db.String(64), nullable=False)
+    tag_name = db.Column(db.String(128), nullable=False)
     is_new_cat = db.Column(db.Boolean, nullable=False, default=False)
     is_new_tag = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))

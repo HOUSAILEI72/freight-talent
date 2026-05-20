@@ -35,18 +35,12 @@ import os
 
 from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from werkzeug.utils import secure_filename
 from sqlalchemy import text
 
 from app.extensions import db
 from app.models.user import User
 from app.models.import_models import (
     FieldRegistry, ImportBatch, ImportBatchRow, ImportBatchTag,
-)
-from app.services.excel_preview import (
-    run_preview,
-    generate_annotated_excel,
-    _to_field_key,
 )
 from app.services.import_taxonomy import parse_excel as taxonomy_parse
 
@@ -147,7 +141,7 @@ def preview_import():
         text("SELECT category, name FROM tags WHERE status IN ('active','pending')")
     ).fetchall()
     known_categories = {r.category for r in known_cat_rows}
-    known_tags       = {(r.category, r.name) for r in known_tag_rows}
+    known_tags = {(r.category, r.name) for r in known_tag_rows}
 
     try:
         tx = taxonomy_parse(
@@ -220,9 +214,9 @@ def preview_import():
         db.session.add(br)
 
     # ── 写入 staging tag 表 ─────────────────────────────────────────────────
-    new_cats   = {c.category for c in tx.categories if c.is_new}
-    new_pairs  = {(c.category, t["name"])
-                  for c in tx.categories for t in c.tags if t["is_new"]}
+    new_cats = {c.category for c in tx.categories if c.is_new}
+    new_pairs = {(c.category, t["name"])
+                 for c in tx.categories for t in c.tags if t["is_new"]}
     for p in tx.rows:
         for cat, name in p.tags:
             db.session.add(ImportBatchTag(
@@ -258,13 +252,13 @@ def preview_import():
         "headers": tx.headers,
         # 新结构 — 前端可逐步迁移
         "fixed_field_map": tx.fixed_field_map,
-        "free_columns":    tx.free_columns,
+        "free_columns": tx.free_columns,
         "categories": [
             {
-                "category":  c.category,
-                "is_new":    c.is_new,
+                "category": c.category,
+                "is_new": c.is_new,
                 "tag_count": c.tag_count,
-                "tags":      c.tags,
+                "tags": c.tags,
             }
             for c in tx.categories
         ],
@@ -274,10 +268,12 @@ def preview_import():
         "new_fields": batch.new_fields,
         "fields_registration_skipped": False,
         "preview_stats": batch.preview_stats,
-        "errors":   [i for i in tx.issues] +
-                    [{"row_index": p.row_index, **i}
-                     for p in tx.rows for i in p.issues
-                     if i.get("issue_type") == "missing_required"],
+        "errors": (
+            [i for i in tx.issues]
+            + [{"row_index": p.row_index, **i}
+               for p in tx.rows for i in p.issues
+               if i.get("issue_type") == "missing_required"]
+        ),
         "warnings": [],
         "annotated_download_url": None,
         "detected_tags": detected_tags,
@@ -334,13 +330,13 @@ def _parse_salary_label(label):
 # ── 标签自动检测辅助 ──────────────────────────────────────────────────────────
 
 _TAG_COLUMNS = {
-    "city":          "城市",
-    "current_city":  "城市",
+    "city": "城市",
+    "current_city": "城市",
     "expected_city": "城市",
     "business_type": "业务类型",
-    "job_type":      "岗位类型",
-    "route_tags":    "航线",
-    "skill_tags":    "技能",
+    "job_type": "岗位类型",
+    "route_tags": "航线",
+    "skill_tags": "技能",
 }
 _LIST_TAG_COLUMNS = {"route_tags", "skill_tags"}
 
@@ -404,7 +400,7 @@ def _confirm_jobs(rows: list, uploader_id: int) -> tuple[int, list, dict]:
 
     for row in rows:
         raw = row.raw_data or {}
-        df  = raw.get("_data_fields") or {}
+        df = raw.get("_data_fields") or {}
 
         title = _safe_str(df.get("title"))
         province = _safe_str(df.get("province"))
@@ -429,7 +425,22 @@ def _confirm_jobs(rows: list, uploader_id: int) -> tuple[int, list, dict]:
                 company_id = owner.id
 
         salary_label = _safe_str(df.get("salary_label"))
-        salary_min, salary_max = _parse_salary_label(salary_label)
+        # 优先用结构化字段 salary_min/max，其次从 salary_label 解析
+        s_min = df.get("salary_min")
+        s_max = df.get("salary_max")
+        if s_min is None and s_max is None:
+            s_min, s_max = _parse_salary_label(salary_label)
+        else:
+            s_min = _safe_int(s_min)
+            s_max = _safe_int(s_max)
+        if not salary_label and (s_min or s_max):
+            lo = s_min or 0
+            hi = s_max or lo
+            salary_label = f"{lo // 1000}k-{hi // 1000}k" if lo >= 1000 or hi >= 1000 else f"{lo}-{hi}"
+
+        # function_code / function_name
+        function_code = _safe_str(df.get("function_code"))
+        function_name = function_code  # label == code in this system
 
         job = Job(
             company_id=company_id,
@@ -441,13 +452,26 @@ def _confirm_jobs(rows: list, uploader_id: int) -> tuple[int, list, dict]:
             description=_safe_str(df.get("description")) or "",
             requirements=_safe_str(df.get("requirements")),
             salary_label=salary_label,
-            salary_min=salary_min,
-            salary_max=salary_max,
+            salary_min=s_min,
+            salary_max=s_max,
+            salary_months=_safe_int(df.get("salary_months")),
             experience_required=_safe_str(df.get("experience_required")),
             degree_required=_safe_str(df.get("degree_required")),
             headcount=_safe_int(df.get("headcount")) or 1,
             urgency_level=2,
             status="published",
+            function_code=function_code,
+            function_name=function_name,
+            is_management_role=df.get("is_management_role"),
+            management_headcount=_safe_int(df.get("management_headcount")),
+            employment_type=_safe_str(df.get("employment_type")),
+            knowledge_requirements=df.get("knowledge_requirements") or [],
+            hard_skill_requirements=df.get("hard_skill_requirements") or [],
+            soft_skill_requirements=df.get("soft_skill_requirements") or [],
+            commission_bonus_period=_safe_str(df.get("commission_bonus_period")),
+            commission_bonus_amount=df.get("commission_bonus_amount"),
+            has_year_end_bonus=df.get("has_year_end_bonus"),
+            year_end_bonus_months=df.get("year_end_bonus_months"),
         )
         db.session.add(job)
         db.session.flush()
@@ -473,7 +497,7 @@ def _confirm_resumes(rows: list) -> tuple[int, list, dict]:
 
     for row in rows:
         raw = row.raw_data or {}
-        df  = raw.get("_data_fields") or {}
+        df = raw.get("_data_fields") or {}
 
         full_name = _safe_str(df.get("full_name"))
         if not full_name:
@@ -515,26 +539,71 @@ def _confirm_resumes(rows: list) -> tuple[int, list, dict]:
                                 current_title="", current_city="")
             db.session.add(profile)
 
-        profile.full_name        = full_name
-        profile.age              = _safe_int(df.get("age"))
+        profile.full_name = full_name
+        profile.age = _safe_int(df.get("age"))
         profile.experience_years = _safe_int(df.get("experience_years"))
-        profile.education        = _safe_str(df.get("education"))
-        profile.phone            = phone
+        profile.education = _safe_str(df.get("education"))
+        profile.phone = phone
         if email and not email.endswith("@placeholder.invalid"):
-            profile.email        = email
+            profile.email = email
 
         avail = _safe_str(df.get("availability_status")) or "open"
         if avail not in ("open", "passive", "closed"):
             avail = "open"
         profile.availability_status = avail
 
-        profile.work_experiences      = df.get("work_experiences") or []
+        profile.work_experiences = df.get("work_experiences") or []
         profile.education_experiences = df.get("education_experiences") or []
-        profile.certificates          = df.get("certificates") or []
+        profile.certificates = df.get("certificates") or []
+
+        # Phase C 新字段
+        gender_raw = _safe_str(df.get("gender"))
+        if gender_raw in ("male", "female"):
+            profile.gender = gender_raw
+        elif gender_raw in ("男",):
+            profile.gender = "male"
+        elif gender_raw in ("女",):
+            profile.gender = "female"
+
+        fc = _safe_str(df.get("function_code"))
+        if fc:
+            profile.function_code = fc
+            profile.function_name = fc
+        profile.is_management_role = df.get("is_management_role")
+        mhc = _safe_int(df.get("management_headcount"))
+        if mhc is not None:
+            profile.management_headcount = mhc
+        profile.knowledge_tags = df.get("knowledge_tags") or []
+        profile.hard_skill_tags = df.get("hard_skill_tags") or []
+        profile.soft_skill_tags = df.get("soft_skill_tags") or []
+        profile.expected_city = _safe_str(df.get("expected_city")) or profile.expected_city
+        profile.expected_salary_label = _safe_str(df.get("expected_salary_label")) or profile.expected_salary_label
+        profile.summary = _safe_str(df.get("summary")) or profile.summary
+        profile.current_title = _safe_str(df.get("current_title")) or profile.current_title
+        profile.current_company = _safe_str(df.get("current_company")) or profile.current_company
+        profile.current_responsibilities = _safe_str(df.get("current_responsibilities"))
+        profile.current_salary_min = _safe_int(df.get("current_salary_min"))
+        profile.current_salary_max = _safe_int(df.get("current_salary_max"))
+        profile.current_salary_months = _safe_int(df.get("current_salary_months"))
+        cab = df.get("current_average_bonus_percent")
+        if cab is not None:
+            try:
+                profile.current_average_bonus_percent = float(cab)
+            except (TypeError, ValueError):
+                pass
+        chyb = df.get("current_has_year_end_bonus")
+        if chyb is not None:
+            profile.current_has_year_end_bonus = chyb
+        cyebm = df.get("current_year_end_bonus_months")
+        if cyebm is not None:
+            try:
+                profile.current_year_end_bonus_months = float(cyebm)
+            except (TypeError, ValueError):
+                pass
 
         profile.profile_confirmed_at = now
-        profile.last_active_at       = now
-        profile.updated_at           = now
+        profile.last_active_at = now
+        profile.updated_at = now
 
         db.session.flush()
         row_to_id[row.row_index] = profile.id
@@ -551,8 +620,11 @@ def _commit_tags_and_junction(batch_id: int, import_type: str,
     并在 job_tags / candidate_tags 中链接到对应行的实体。
     返回 (新建 tag 数, junction 链接数)。
     """
-    junction_table = "job_tags" if import_type == "job" else "candidate_tags"
-    fk_col         = "job_id"   if import_type == "job" else "candidate_id"
+    _JUNCTION = {
+        "job": ("job_tags", "job_id"),
+        "resume": ("candidate_tags", "candidate_id"),
+    }
+    junction_table, fk_col = _JUNCTION[import_type]
 
     staging = db.session.query(ImportBatchTag).filter_by(batch_id=batch_id).all()
     if not staging:
@@ -710,11 +782,11 @@ def confirm_import(batch_id):
             logger.exception("chart cache flush failed (non-fatal)")
     except Exception as exc:
         db.session.rollback()
-        logger.exception("confirm failed: batch_id=%d type=%s",
-                         batch_id, batch.import_type)
+        logger.exception("confirm failed: batch_id=%d type=%s exc=%s",
+                         batch_id, batch.import_type, exc)
         return jsonify({
             "success": False,
-            "message": f"导入写入失败：{exc}",
+            "message": "导入写入失败，请检查数据格式后重试",
             "batch_id": batch_id,
         }), 500
 

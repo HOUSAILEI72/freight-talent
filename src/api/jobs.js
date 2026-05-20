@@ -44,11 +44,39 @@ export const jobsApi = {
       const s = serializeTagGroups(filters.tagGroups)
       if (s) params.tag_groups = s
     }
+    if (filters.page)      params.page = filters.page
+    if (filters.page_size) params.page_size = filters.page_size
+    if (filters.own)       params.own = 1
     return client.get('/jobs/public', { params })
   },
 
   /** GET /api/jobs/area-filters — counts of published jobs by business_area_code */
   getAreaFilters() {
     return client.get('/jobs/area-filters')
+  },
+
+  /** PATCH /api/jobs/:id/status — employer closes/reopens own job */
+  updateStatus(jobId, status) {
+    return client.patch(`/jobs/${jobId}/status`, { status })
+  },
+
+  /** PATCH /api/jobs/:id — 编辑岗位 */
+  updateJob(jobId, data) {
+    return client.patch(`/jobs/${jobId}`, data)
+  },
+
+  /** DELETE /api/jobs/:id — 物理删除岗位 */
+  deleteJob(jobId) {
+    return client.delete(`/jobs/${jobId}`)
+  },
+
+  /** PATCH /api/jobs/:id/template — 设为/取消模板 */
+  setTemplate(jobId, isTemplate = true) {
+    return client.patch(`/jobs/${jobId}/template`, { is_template: isTemplate })
+  },
+
+  /** GET /api/jobs/templates — 当前企业模板岗位列表 */
+  getTemplates() {
+    return client.get('/jobs/templates')
   },
 }

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Search, X, Globe2, MapPin } from 'lucide-react'
 import {
   TOP_LEVEL_GROUPS,
@@ -9,10 +10,30 @@ import {
 } from '../utils/regionTree.js'
 import { OVERSEAS_COUNTRIES } from '../utils/overseasCountries.js'
 import {
-  getBusinessAreaByLocationCode,
   buildLocationObject,
   CN_MAINLAND_ALL_LOCATION,
+  HK_LOCATION,
+  TW_LOCATION,
+  MO_LOCATION,
 } from '../utils/businessArea.js'
+
+const TOP_LEVEL_LABELS_ZH = {
+  GLOBAL: '全球',
+  GREAT_CHINA: '中国',
+  OVERSEAS: '海外',
+  REMOTE: '远程',
+}
+
+const SPECIAL_LOCATION_LABELS_ZH = {
+  Global: '全球',
+  Remote: '远程',
+  China: '中国',
+  Overseas: '海外',
+  'Hong Kong': '香港',
+  Taiwan: '台湾',
+  Macau: '澳门',
+  'Mainland China': '中国大陆',
+}
 
 /**
  * RegionSelector
@@ -34,11 +55,12 @@ import {
  *  - placeholder: string
  *  - terminal:    boolean   — switch palette to terminal tokens
  *  - className:   string    — extra classes on the trigger
+ *  - onOpenChange: optional callback for parent scroll-reserve coordination
  *
  * Architecture
  *  - All static data + search lives in `src/utils/regionTree.js` (JSX-free).
  *  - The component is two views inside one popover:
- *      1) drill-down (no query):  top-level groups → Great China tree /
+ *      1) drill-down (no query):  top-level groups → China tree /
  *         Overseas country list
  *      2) search results:         flat list across every selectable node
  */
@@ -49,21 +71,25 @@ export default function RegionSelector({
   placeholder = 'Select location',
   terminal = false,
   className = '',
+  highlightStyle,
+  onOpenChange,
 }) {
   const [open, setOpen]       = useState(false)
   const [query, setQuery]     = useState('')
   const [navStack, setNavStack] = useState([]) // [{type:'great-china'|'overseas'|'province'|'city', node?}]
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 340 })
 
   const wrapperRef = useRef(null)
+  const panelRef   = useRef(null)
   const searchRef  = useRef(null)
 
   // ── Close on outside click / Escape ───────────────────────────────────────
   useEffect(() => {
     if (!open) return
     function onClickOutside(e) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setOpen(false)
-      }
+      const inWrap  = wrapperRef.current?.contains(e.target)
+      const inPanel = panelRef.current?.contains(e.target)
+      if (!inWrap && !inPanel) setOpen(false)
     }
     function onKey(e) {
       if (e.key === 'Escape') setOpen(false)
@@ -79,13 +105,18 @@ export default function RegionSelector({
   // ── Reset transient state on open ─────────────────────────────────────────
   useEffect(() => {
     if (open) {
-      setQuery('')
-      setNavStack([])
       // Defer focus until after the popover is in the DOM.
       const t = setTimeout(() => searchRef.current?.focus(), 30)
       return () => clearTimeout(t)
     }
   }, [open])
+
+  useEffect(() => {
+    onOpenChange?.(open)
+    return () => {
+      if (open) onOpenChange?.(false)
+    }
+  }, [open, onOpenChange])
 
   function commit(location) {
     if (!location) {
@@ -116,18 +147,44 @@ export default function RegionSelector({
   // ── Styling primitives (split per terminal/light to avoid tailwind hover
   //    leaking into public mode) ─────────────────────────────────────────────
   const triggerStyle = terminal
-    ? { background: 'var(--t-bg-input)', borderColor: 'var(--t-border)', color: value ? 'var(--t-text)' : 'var(--t-text-muted)' }
+    ? { background: 'var(--t-bg-input)', borderColor: 'var(--t-border)', color: value ? 'var(--t-text)' : 'var(--t-text-muted)', ...highlightStyle }
     : undefined
   const popoverStyle = terminal
-    ? { background: 'var(--t-bg-panel)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }
+    ? { background: 'var(--t-bg-elevated, #18243a)', borderColor: 'var(--t-border, #2c4060)', color: 'var(--t-text, #e2e8f0)' }
     : undefined
   const searchInputStyle = terminal
-    ? { background: 'var(--t-bg-input)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }
+    ? {
+        background: 'var(--t-bg-input)',
+        borderColor: 'var(--t-border)',
+        color: 'var(--t-text)',
+        fontFamily: 'var(--t-font-cjk, "PingFang SC", "Microsoft YaHei", sans-serif)',
+        fontSize: 12,
+      }
     : undefined
+
+  function formatLocationText(text) {
+    if (!text) return ''
+    return String(text)
+      .split('/')
+      .map((segment) => SPECIAL_LOCATION_LABELS_ZH[segment] || segment)
+      .join('/')
+      .replace('全国 (Mainland China)', '全国（中国大陆）')
+  }
+
+  function formatSearchHitLabel(hit) {
+    const country = OVERSEAS_COUNTRIES.find((c) => c.code === hit.location.location_code || c.name === hit.displayLabel)
+    return country?.name_zh || formatLocationText(hit.displayLabel)
+  }
+
+  function formatSearchHitPath(hit) {
+    const country = OVERSEAS_COUNTRIES.find((c) => c.code === hit.location.location_code || c.name === hit.displayLabel)
+    if (country) return `海外/${country.name_zh}`
+    return formatLocationText(hit.displayPath)
+  }
 
   function rowBaseClass(active = false) {
     if (terminal) {
-      return 'flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors'
+      return 'flex items-center gap-2 cursor-pointer transition-colors'
     }
     return active
       ? 'flex items-center gap-2 px-3 py-2 text-sm cursor-pointer bg-blue-50 text-blue-700'
@@ -135,9 +192,15 @@ export default function RegionSelector({
   }
   function rowStyle(active = false) {
     if (!terminal) return undefined
+    const base = {
+      padding: '5px 10px',
+      fontFamily: 'var(--t-font-cjk, "PingFang SC", "Microsoft YaHei", sans-serif)',
+      fontSize: 12,
+      lineHeight: 1.45,
+    }
     return active
-      ? { background: 'var(--t-bg-active)', color: 'var(--t-text)' }
-      : undefined
+      ? { ...base, background: 'var(--t-bg-active)', color: 'var(--t-text)' }
+      : base
   }
   // JS-driven hover so terminal mode doesn't leak into public mode.
   function rowMouseEnter(e) {
@@ -153,12 +216,120 @@ export default function RegionSelector({
 
   // ── Renderers ─────────────────────────────────────────────────────────────
 
+  function getScrollableAncestor() {
+    let node = wrapperRef.current?.parentElement
+    while (node && node !== document.body) {
+      const style = window.getComputedStyle(node)
+      const canScrollY = /(auto|scroll|overlay)/.test(style.overflowY)
+      if (canScrollY && node.scrollHeight > node.clientHeight + 1) return node
+      node = node.parentElement
+    }
+    return null
+  }
+
+  function scrollColumnForDropdown() {
+    const rect = wrapperRef.current?.getBoundingClientRect()
+    const scrollEl = getScrollableAncestor()
+    if (!rect || !scrollEl) return false
+
+    const margin = 6
+    const desiredPanelH = 340
+    const scrollRect = scrollEl.getBoundingClientRect()
+    const visibleBottom = Math.min(window.innerHeight, scrollRect.bottom) - margin
+    const projectedDropdownBottom = rect.bottom + margin + desiredPanelH
+    if (projectedDropdownBottom <= visibleBottom) return false
+
+    const targetTriggerTop = scrollRect.top + 96
+    const overflowFix = projectedDropdownBottom - visibleBottom + 16
+    const liftIntoView = Math.max(0, rect.top - targetTriggerTop)
+    const scrollNeed = Math.max(overflowFix, liftIntoView)
+    const maxScroll = scrollEl.scrollHeight - scrollEl.clientHeight - scrollEl.scrollTop
+    const nextScroll = Math.min(scrollNeed, Math.max(0, maxScroll))
+    if (nextScroll <= 0) return false
+
+    scrollEl.scrollBy({ top: nextScroll, behavior: 'auto' })
+    return true
+  }
+
+  const updateDropdownPosition = useCallback(() => {
+    const rect = wrapperRef.current?.getBoundingClientRect()
+    if (!rect) return false
+    // When html has overflow-y:scroll, position:fixed is relative to the html
+    // element, not the viewport. Subtract html's own rect to correct the offset.
+    const htmlRect = document.documentElement.getBoundingClientRect()
+    const margin = 6
+    const preferredPanelH = 340
+    const minUsablePanelH = 96
+    const scrollEl = getScrollableAncestor()
+    const scrollRect = scrollEl?.getBoundingClientRect()
+    const visibleBottom = Math.min(window.innerHeight, scrollRect?.bottom ?? window.innerHeight) - margin
+    const spaceBelow = visibleBottom - rect.bottom
+    const maxHeight = Math.max(
+      minUsablePanelH,
+      Math.min(preferredPanelH, spaceBelow),
+    )
+    const rawTop = rect.bottom - htmlRect.top + margin
+    const top = Math.max(margin, rawTop)
+    const left = rect.left - htmlRect.left
+    setDropPos(prev => {
+      if (prev && prev.top === top && prev.left === left && prev.width === rect.width && prev.maxHeight === maxHeight) return prev
+      return { top, left, width: rect.width, maxHeight }
+    })
+    return true
+  }, [])
+
+  function openDropdown() {
+    setQuery('')
+    setNavStack([])
+    if (terminal) {
+      onOpenChange?.(true)
+      setOpen(true)
+      return
+    }
+    const didScroll = scrollColumnForDropdown()
+    if (didScroll) {
+      window.requestAnimationFrame(() => {
+        updateDropdownPosition()
+        setOpen(true)
+      })
+      return
+    }
+    updateDropdownPosition()
+    setOpen(true)
+  }
+
+  useLayoutEffect(() => {
+    if (!open || !terminal) return undefined
+    let secondRaf = 0
+    scrollColumnForDropdown()
+    const raf = window.requestAnimationFrame(() => {
+      scrollColumnForDropdown()
+      updateDropdownPosition()
+      secondRaf = window.requestAnimationFrame(updateDropdownPosition)
+    })
+    window.addEventListener('resize', updateDropdownPosition)
+    window.addEventListener('scroll', updateDropdownPosition, true)
+    return () => {
+      window.cancelAnimationFrame(raf)
+      window.cancelAnimationFrame(secondRaf)
+      window.removeEventListener('resize', updateDropdownPosition)
+      window.removeEventListener('scroll', updateDropdownPosition, true)
+    }
+  }, [open, terminal, updateDropdownPosition])
+
   function renderTrigger() {
     return (
       <button
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setOpen(o => !o)}
+        onClick={() => {
+          if (disabled) return
+          if (open) {
+            setOpen(false)
+          } else {
+            openDropdown()
+          }
+        }}
         className={`relative inline-flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors disabled:opacity-50 ${
           terminal ? '' : (value ? 'border-slate-200 text-slate-700' : 'border-slate-200 text-slate-400')
         } ${className}`}
@@ -166,7 +337,7 @@ export default function RegionSelector({
       >
         <Globe2 size={14} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
         <span className="flex-1 min-w-0 truncate">
-          {value ? value.location_path || value.location_name : placeholder}
+          {value ? formatLocationText(value.location_path || value.location_name) : placeholder}
         </span>
         {value && !disabled && (
           <span
@@ -189,10 +360,10 @@ export default function RegionSelector({
     if (hits.length === 0) {
       return (
         <div
-          className="px-4 py-6 text-center text-sm"
+          className="px-4 py-6 text-center text-xs"
           style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}
         >
-          No matching location
+          未找到匹配地区
         </div>
       )
     }
@@ -210,10 +381,10 @@ export default function RegionSelector({
             <MapPin size={12} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
             <div className="min-w-0 flex-1">
               <div className="truncate" style={terminal ? { color: 'var(--t-text)' } : undefined}>
-                {h.displayLabel}
+                {formatSearchHitLabel(h)}
               </div>
               <div className="truncate text-xs" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>
-                {h.displayPath}
+                {formatSearchHitPath(h)}
               </div>
             </div>
           </div>
@@ -246,7 +417,7 @@ export default function RegionSelector({
             >
               <Globe2 size={12} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
               <span className="flex-1 truncate" style={terminal ? { color: 'var(--t-text)' } : undefined}>
-                {g.label}
+                {TOP_LEVEL_LABELS_ZH[g.key] || g.label_zh || g.label}
               </span>
               {g.kind === 'group' && (
                 <span className="text-xs" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>›</span>
@@ -261,8 +432,8 @@ export default function RegionSelector({
   function renderBreadcrumb() {
     if (!top) return null
     const segments = []
-    if (top.type === 'great-china') segments.push({ label: 'Great China', onClick: () => setNavStack([{ type: 'great-china' }]) })
-    if (top.type === 'overseas')    segments.push({ label: 'Overseas',    onClick: () => setNavStack([{ type: 'overseas' }]) })
+    if (top.type === 'great-china') segments.push({ label: '中国', onClick: () => setNavStack([{ type: 'great-china' }]) })
+    if (top.type === 'overseas')    segments.push({ label: '海外', onClick: () => setNavStack([{ type: 'overseas' }]) })
     if (province) segments.push({ label: province.name, onClick: () => setNavStack(navStack.slice(0, navStack.findIndex(s => s.type === 'province') + 1)) })
     if (city)     segments.push({ label: city.name,     onClick: () => setNavStack(navStack.slice(0, navStack.findIndex(s => s.type === 'city') + 1)) })
     return (
@@ -275,7 +446,7 @@ export default function RegionSelector({
           onClick={() => setNavStack([])}
           style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}
         >
-          ‹ Back
+          ‹ 返回
         </button>
         {segments.map((s, i) => (
           <span key={i} className="flex items-center gap-1">
@@ -288,7 +459,12 @@ export default function RegionSelector({
   }
 
   function renderGreatChina() {
-    // 1) "全国 (Mainland China)" + 2) provinces grid
+    // 1) "全国 (Mainland China)" + 2) HK / TW / MO + 3) provinces grid
+    const chinaSpecials = [
+      { loc: HK_LOCATION, label: '香港' },
+      { loc: TW_LOCATION, label: '台湾' },
+      { loc: MO_LOCATION, label: '澳门' },
+    ]
     return (
       <>
         <div
@@ -300,7 +476,7 @@ export default function RegionSelector({
         >
           <MapPin size={12} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
           <span className="flex-1" style={terminal ? { color: 'var(--t-text)' } : undefined}>
-            全国 / Mainland China
+            全国 / 中国大陆
           </span>
         </div>
         <div className="max-h-60 overflow-y-auto">
@@ -314,10 +490,6 @@ export default function RegionSelector({
                 onMouseEnter={rowMouseEnter}
                 onMouseLeave={rowMouseLeave}
                 onClick={() => {
-                  // Has children → drill down so the user can pick a city /
-                  // district. The "选择 XX 整体" row inside the next level
-                  // covers the case where they want to commit the province
-                  // as a whole. No children → commit directly.
                   if (hasChildren) {
                     setNavStack([{ type: 'great-china' }, { type: 'province', node: p }])
                   } else {
@@ -331,14 +503,6 @@ export default function RegionSelector({
                   style={terminal ? { color: 'var(--t-text)' } : undefined}
                 >
                   {p.name}
-                  {p.name_en && (
-                    <span
-                      className="ml-2 text-xs"
-                      style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}
-                    >
-                      {p.name_en}
-                    </span>
-                  )}
                 </span>
                 {hasChildren && (
                   <span
@@ -351,6 +515,21 @@ export default function RegionSelector({
               </div>
             )
           })}
+          {chinaSpecials.map(({ loc, label }) => (
+            <div
+              key={loc.location_code}
+              className={rowBaseClass()}
+              style={rowStyle()}
+              onMouseEnter={rowMouseEnter}
+              onMouseLeave={rowMouseLeave}
+              onClick={() => commit(loc)}
+            >
+              <MapPin size={12} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+              <span className="flex-1" style={terminal ? { color: 'var(--t-text)' } : undefined}>
+                {label}
+              </span>
+            </div>
+          ))}
         </div>
       </>
     )
@@ -408,14 +587,6 @@ export default function RegionSelector({
                 style={terminal ? { color: 'var(--t-text)' } : undefined}
               >
                 {child.name}
-                {child.name_en && (
-                  <span
-                    className="ml-2 text-xs"
-                    style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}
-                  >
-                    {child.name_en}
-                  </span>
-                )}
               </span>
               {hasGrandchildren && (
                 <span
@@ -460,11 +631,6 @@ export default function RegionSelector({
             <MapPin size={12} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
             <span className="flex-1 truncate" style={terminal ? { color: 'var(--t-text)' } : undefined}>
               {area.name}
-              {area.name_en && (
-                <span className="ml-2 text-xs" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>
-                  {area.name_en}
-                </span>
-              )}
             </span>
           </div>
         ))}
@@ -486,9 +652,9 @@ export default function RegionSelector({
           >
             <Globe2 size={12} className="flex-shrink-0" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
             <span className="flex-1 truncate" style={terminal ? { color: 'var(--t-text)' } : undefined}>
-              {c.name}
+              {c.name_zh}
               <span className="ml-2 text-xs" style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>
-                {c.name_zh} · {c.code}
+                {c.code}
               </span>
             </span>
           </div>
@@ -509,47 +675,65 @@ export default function RegionSelector({
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
+  const popoverContent = open ? (
+    <div
+      ref={panelRef}
+      className={terminal ? 'terminal-mode terminal-region-popover rounded-lg border' : 'absolute z-50 mt-1 w-full rounded-lg border shadow-lg'}
+      style={terminal
+        ? {
+            position: 'fixed',
+            top: dropPos.top,
+            left: dropPos.left,
+            width: dropPos.width,
+            zIndex: 9999,
+            maxHeight: dropPos.maxHeight,
+            overflowY: 'auto',
+            fontSize: 12,
+            fontFamily: 'var(--t-font-cjk, "PingFang SC", "Microsoft YaHei", sans-serif)',
+            ...popoverStyle,
+            boxShadow: 'var(--t-shadow-elevated, 0 18px 46px rgba(0, 0, 0, 0.72))',
+          }
+        : popoverStyle}
+    >
+      {/* Search box */}
+      <div
+        className="flex items-center gap-2 border-b"
+        style={terminal ? { borderColor: 'var(--t-border-subtle)', padding: '6px 8px' } : { borderColor: '#e2e8f0' }}
+      >
+        <Search size={terminal ? 11 : 14} style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
+        <input
+          ref={searchRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="搜索地区名称 / 编码（如 上海、德国、440300、DE）"
+          className="w-full bg-transparent outline-none border-none"
+          style={searchInputStyle}
+        />
+        {query && (
+          <button type="button" onClick={() => setQuery('')} style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>
+            <X size={12} />
+          </button>
+        )}
+      </div>
+
+      {/* Body */}
+      {isSearching ? renderSearchHits() : (
+        <>
+          {renderBreadcrumb()}
+          {renderDrillDown()}
+        </>
+      )}
+    </div>
+  ) : null
+
   return (
     <div ref={wrapperRef} className="relative w-full">
       {renderTrigger()}
-      {open && (
-        <div
-          className="absolute z-50 mt-1 w-full rounded-lg border shadow-lg"
-          style={popoverStyle}
-        >
-          {/* Search box */}
-          <div
-            className="flex items-center gap-2 border-b px-3 py-2"
-            style={terminal ? { borderColor: 'var(--t-border-subtle)' } : { borderColor: '#e2e8f0' }}
-          >
-            <Search size={14} style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }} />
-            <input
-              ref={searchRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name / code (e.g. Shanghai, Germany, 440300, DE)"
-              className="w-full bg-transparent text-sm outline-none border-none"
-              style={searchInputStyle}
-            />
-            {query && (
-              <button type="button" onClick={() => setQuery('')} style={terminal ? { color: 'var(--t-text-muted)' } : { color: '#94a3b8' }}>
-                <X size={12} />
-              </button>
-            )}
-          </div>
-
-          {/* Body */}
-          {isSearching ? renderSearchHits() : (
-            <>
-              {renderBreadcrumb()}
-              {renderDrillDown()}
-            </>
-          )}
-        </div>
-      )}
-      {/* Hidden import to keep getBusinessAreaByLocationCode used (silences
-          unused-import warnings if commit() ever stops calling it). */}
-      {process.env.NODE_ENV === 'never' && <span>{String(getBusinessAreaByLocationCode('GLOBAL'))}</span>}
+      {/* Portal to body. body[data-terminal-theme] is mirrored by TerminalLayout
+          so --t-* tokens resolve correctly even outside .terminal-shell. */}
+      {terminal
+        ? popoverContent && createPortal(popoverContent, document.body)
+        : popoverContent}
     </div>
   )
 }

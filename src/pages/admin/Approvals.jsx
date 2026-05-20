@@ -4,6 +4,7 @@ import {
   getPendingTags, reviewTag, reviewTagsBulk,
   getPendingNotes, reviewNote,
 } from '../../api/tagsV2'
+import { useToast } from '../../components/ui/Toast'
 
 function Section({ items, onApprove, onReject, processing, rejectId, setRejectId,
                   rejectReason, setRejectReason, renderItem, emptyText }) {
@@ -72,6 +73,7 @@ function Section({ items, onApprove, onReject, processing, rejectId, setRejectId
 }
 
 function PendingTagsPanel() {
+  const toast = useToast()
   const [tags, setTags] = useState([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(null)
@@ -90,18 +92,18 @@ function PendingTagsPanel() {
   const approve = async (id) => {
     setProcessing(id)
     try { await reviewTag(id, 'approve'); setTags(ts => ts.filter(t => t.id !== id)) }
-    catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
   const reject = async (id) => {
-    if (!rejectReason.trim()) { alert('请填写拒绝原因'); return }
+    if (!rejectReason.trim()) { toast.show('请填写拒绝原因', 'warning'); return }
     setProcessing(id)
     try {
       await reviewTag(id, 'reject', rejectReason)
       setTags(ts => ts.filter(t => t.id !== id))
       setRejectId(null); setRejectReason('')
-    } catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    } catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
@@ -111,18 +113,18 @@ function PendingTagsPanel() {
     try {
       await reviewTagsBulk(ids, 'approve')
       setTags(ts => ts.filter(t => !ids.includes(t.id)))
-    } catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    } catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
   const bulkReject = async (cat, ids) => {
-    if (!bulkRejectReason.trim()) { alert('请填写拒绝原因'); return }
+    if (!bulkRejectReason.trim()) { toast.show('请填写拒绝原因', 'warning'); return }
     setProcessing(`cat:${cat}`)
     try {
       await reviewTagsBulk(ids, 'reject', bulkRejectReason)
       setTags(ts => ts.filter(t => !ids.includes(t.id)))
       setBulkRejectCat(null); setBulkRejectReason('')
-    } catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    } catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
@@ -279,6 +281,7 @@ function PendingTagsPanel() {
 }
 
 function PendingNotesPanel() {
+  const toast = useToast()
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(null)
@@ -294,18 +297,18 @@ function PendingNotesPanel() {
   const approve = async (id) => {
     setProcessing(id)
     try { await reviewNote(id, 'approve'); setNotes(ns => ns.filter(n => n.id !== id)) }
-    catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
   const reject = async (id) => {
-    if (!rejectReason.trim()) { alert('请填写拒绝原因'); return }
+    if (!rejectReason.trim()) { toast.show('请填写拒绝原因', 'warning'); return }
     setProcessing(id)
     try {
       await reviewNote(id, 'reject', rejectReason)
       setNotes(ns => ns.filter(n => n.id !== id))
       setRejectId(null); setRejectReason('')
-    } catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    } catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
@@ -343,6 +346,7 @@ function PendingNotesPanel() {
 }
 
 export default function Approvals() {
+  const toast = useToast()
   const [tab, setTab] = useState('tags')
   const [tagCount, setTagCount] = useState(0)
   const [noteCount, setNoteCount] = useState(0)

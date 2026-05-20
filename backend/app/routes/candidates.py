@@ -7,7 +7,17 @@ from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.models.user import User
 from app.models.candidate import Candidate
-from app.models.junction_tags import CandidateTag
+from app.models.company import Company
+from app.models.candidate_blocked_company import CandidateBlockedCompany
+from app.modules.candidates.serializers import build_public_dict
+from app.modules.candidates.repository import (
+    get_candidate_by_user_id,
+    get_candidate_by_id,
+    list_candidates_with_filters,
+    count_candidates_by_business_area,
+    load_tags_by_category,
+    sync_candidate_tags,
+)
 
 candidates_bp = Blueprint("candidates", __name__, url_prefix="/api/candidates")
 
@@ -26,16 +36,19 @@ def _allowed_file(filename):
     return ext in current_app.config["ALLOWED_EXTENSIONS"]
 
 
-def _parse_salary(label):
-    if not label or label == "面议":
-        return None, None
-    try:
-        parts = label.lower().replace("k", "000").split("-")
-        lo = int(parts[0])
-        hi = int(parts[1]) if len(parts) > 1 else lo
-        return lo, hi
-    except Exception:
-        return None, None
+def _build_salary_label(salary_min, salary_max, period):
+    """Auto-compute display label, e.g. '18K-25K/月' or '180K/年'."""
+    if not salary_min and not salary_max:
+        return None
+    period_label = "/年" if period == "year" else "/月"
+
+    def fmt(n):
+        k = round(n / 1000)
+        return f"{k}K"
+    if salary_min and salary_max and salary_min != salary_max:
+        return f"{fmt(salary_min)}-{fmt(salary_max)}{period_label}"
+    val = salary_min or salary_max
+    return f"{fmt(val)}{period_label}"
 
 
 @candidates_bp.get("/me")
@@ -47,7 +60,7 @@ def get_me():
     if user.role not in ("candidate", "admin"):
         return _err("仅候选人账号可访问", 403)
 
-    profile = Candidate.query.filter_by(user_id=user.id).first()
+    profile = get_candidate_by_user_id(user.id)
     if not profile:
         return jsonify({"success": True, "profile": None})
     # Owner always sees the full record (including private + contact).
@@ -111,10 +124,60 @@ def update_me():
         except (ValueError, TypeError):
             return _err("工作年限格式不正确")
 
-    salary_label = (data.get("expected_salary_label") or "").strip() or None
-    salary_min, salary_max = _parse_salary(salary_label)
-    if salary_min and salary_max and salary_min > salary_max:
+    age_val = None
+    birth_year_val = None
+    birth_month_val = None
+    birth_year = data.get("birth_year")
+    if birth_year is not None:
+        from datetime import datetime as _dt
+        current_year = _dt.now().year
+        try:
+            birth_year = int(birth_year)
+            if birth_year < 1950 or birth_year > current_year - 16:
+                return _err(f"出生年份请填写 1950 至 {current_year - 16} 之间")
+            birth_year_val = birth_year
+            age_val = current_year - birth_year
+        except (ValueError, TypeError):
+            return _err("出生年份格式不正确")
+
+    birth_month = data.get("birth_month")
+    if birth_month is not None:
+        try:
+            birth_month = int(birth_month)
+            if birth_month < 1 or birth_month > 12:
+                return _err("出生月份请填写 1-12")
+            birth_month_val = birth_month
+        except (ValueError, TypeError):
+            return _err("出生月份格式不正确")
+
+    VALID_GENDER = {'male', 'female'}
+    gender_val = data.get("gender") or None
+    if gender_val is not None and gender_val not in VALID_GENDER:
+        return _err("gender 只能是 male / female")
+
+    VALID_SALARY_PERIOD = {'month', 'year'}
+    salary_period = data.get("expected_salary_period") or None
+    if salary_period is not None and salary_period not in VALID_SALARY_PERIOD:
+        return _err("expected_salary_period 只能是 month / year")
+
+    def _parse_int_field(key, label):
+        val = data.get(key)
+        if val is None or val == "":
+            return None, None
+        try:
+            return int(val), None
+        except (ValueError, TypeError):
+            return None, f"{label} 必须为整数"
+
+    salary_min, err = _parse_int_field("expected_salary_min", "期望薪资最小值")
+    if err:
+        return _err(err)
+    salary_max, err = _parse_int_field("expected_salary_max", "期望薪资最大值")
+    if err:
+        return _err(err)
+    if salary_min is not None and salary_max is not None and salary_min > salary_max:
         return _err("薪资最小值不能大于最大值")
+    salary_label = _build_salary_label(salary_min, salary_max, salary_period)
 
     def _validate_tags(val, field_name):
         if val is None:
@@ -136,20 +199,23 @@ def update_me():
     # Only overwrite when the client actually sent a key — otherwise we
     # preserve the existing column value (UploadResume legacy path never
     # sends these).
-    knowledge_tags_val   = None
-    hard_skill_tags_val  = None
-    soft_skill_tags_val  = None
+    knowledge_tags_val = None
+    hard_skill_tags_val = None
+    soft_skill_tags_val = None
     if "knowledge_tags" in data:
         knowledge_tags_val, err = _validate_tags(data.get("knowledge_tags"), "knowledge_tags")
-        if err: return _err(err)
+        if err:
+            return _err(err)
     if "hard_skill_tags" in data:
         hard_skill_tags_val, err = _validate_tags(data.get("hard_skill_tags"), "hard_skill_tags")
-        if err: return _err(err)
+        if err:
+            return _err(err)
     if "soft_skill_tags" in data:
         soft_skill_tags_val, err = _validate_tags(data.get("soft_skill_tags"), "soft_skill_tags")
-        if err: return _err(err)
+        if err:
+            return _err(err)
 
-    VALID_AVAIL = {'open', 'passive', 'closed'}
+    VALID_AVAIL = {'open', 'passive_now', 'passive', 'closed'}
     avail = data.get("availability_status") or "open"
     if avail not in VALID_AVAIL:
         return _err(f"availability_status 只能是 {sorted(VALID_AVAIL)} 之一")
@@ -196,38 +262,52 @@ def update_me():
         is_management_val = bool(v) if v is not None else None
 
     def _opt_int(name):
-        if name not in data: return sentinel, None
+        if name not in data:
+            return sentinel, None
         v = data.get(name)
-        if v is None or v == "": return None, None
+        if v is None or v == "":
+            return None, None
         try:
             return int(v), None
         except (ValueError, TypeError):
             return None, f"{name} 必须为整数"
 
     def _opt_float(name):
-        if name not in data: return sentinel, None
+        if name not in data:
+            return sentinel, None
         v = data.get(name)
-        if v is None or v == "": return None, None
+        if v is None or v == "":
+            return None, None
         try:
             return float(v), None
         except (ValueError, TypeError):
             return None, f"{name} 必须为数字"
 
     csm_val, e = _opt_int("current_salary_min")
-    if e: return _err(e)
+    if e:
+        return _err(e)
     csx_val, e = _opt_int("current_salary_max")
-    if e: return _err(e)
+    if e:
+        return _err(e)
     cs_months_val, e = _opt_int("current_salary_months")
-    if e: return _err(e)
+    if e:
+        return _err(e)
     if cs_months_val is not sentinel and cs_months_val is not None and cs_months_val not in (12, 13, 14):
         return _err("current_salary_months 只能是 12 / 13 / 14")
-    abp_val, e = _opt_float("current_average_bonus_percent")
-    if e: return _err(e)
-    if abp_val is not sentinel and abp_val is not None and not (0 <= abp_val <= 100):
-        return _err("current_average_bonus_percent 必须在 0-100 之间")
+    VALID_COMMISSION_PERIODS = {'not_applicable', 'monthly', 'quarterly', 'semi_annual'}
+    cbp_val = sentinel
+    if "current_commission_bonus_period" in data:
+        v = data.get("current_commission_bonus_period")
+        if v is not None and v not in VALID_COMMISSION_PERIODS:
+            return _err("current_commission_bonus_period 只能是 not_applicable / monthly / quarterly / semi_annual")
+        cbp_val = v
+    cba_val, e = _opt_float("current_commission_bonus_amount")
+    if e:
+        return _err(e)
     yebm_val, e = _opt_float("current_year_end_bonus_months")
-    if e: return _err(e)
-    if yebm_val is not sentinel and yebm_val is not None and not (0 <= yebm_val <= 24):
+    if e:
+        return _err(e)
+    if yebm_val is not sentinel and yebm_val is not None and not (0 < yebm_val <= 24):
         return _err("current_year_end_bonus_months 必须在 0-24 之间")
 
     has_yeb_val = sentinel
@@ -237,7 +317,7 @@ def update_me():
 
     # 当前 salary min/max 关系（只在两个值都存在时校验）
     # 用 profile 既有值兜底，避免单字段更新时误报。
-    existing_for_salary = Candidate.query.filter_by(user_id=user.id).first()
+    existing_for_salary = get_candidate_by_user_id(user.id)
     eff_min = csm_val if csm_val is not sentinel else (existing_for_salary.current_salary_min if existing_for_salary else None)
     eff_max = csx_val if csx_val is not sentinel else (existing_for_salary.current_salary_max if existing_for_salary else None)
     if eff_min is not None and eff_max is not None and eff_min > eff_max:
@@ -245,7 +325,8 @@ def update_me():
 
     # ── CAND-2A: structured array shapes ────────────────────────────────────
     def _validate_object_array(val, name, required_keys=()):
-        if val is None: return [], None
+        if val is None:
+            return [], None
         if not isinstance(val, list):
             return None, f"{name} 必须为数组"
         out = []
@@ -265,15 +346,26 @@ def update_me():
             data.get("work_experiences"), "work_experiences",
             required_keys=("company_name", "title")
         )
-        if err: return _err(err)
+        if err:
+            return _err(err)
         work_exp_val = we
+
+    proj_exp_val = sentinel
+    if "project_experiences" in data:
+        pe, err = _validate_object_array(
+            data.get("project_experiences"), "project_experiences"
+        )
+        if err:
+            return _err(err)
+        proj_exp_val = pe
 
     edu_exp_val = sentinel
     if "education_experiences" in data:
         ee, err = _validate_object_array(
             data.get("education_experiences"), "education_experiences"
         )
-        if err: return _err(err)
+        if err:
+            return _err(err)
         edu_exp_val = ee
 
     certificates_val = sentinel
@@ -288,7 +380,7 @@ def update_me():
         else:
             certificates_val = c
 
-    profile = Candidate.query.filter_by(user_id=user.id).first()
+    profile = get_candidate_by_user_id(user.id)
     now = datetime.now(timezone.utc)
 
     if not profile:
@@ -297,13 +389,23 @@ def update_me():
 
     profile.full_name = full_name
     profile.current_title = current_title
+    profile.desired_position = (data.get("desired_position") or "").strip() or None
     profile.current_city = current_city
     profile.current_company = (data.get("current_company") or "").strip() or None
     profile.expected_city = (data.get("expected_city") or "").strip() or None
-    profile.expected_salary_label = salary_label
     profile.expected_salary_min = salary_min
     profile.expected_salary_max = salary_max
+    profile.expected_salary_period = salary_period
+    profile.expected_salary_label = salary_label
     profile.experience_years = exp
+    if age_val is not None:
+        profile.age = age_val
+    if birth_year_val is not None:
+        profile.birth_year = birth_year_val
+    if birth_month_val is not None:
+        profile.birth_month = birth_month_val
+    if "gender" in data:
+        profile.gender = gender_val
     profile.education = (data.get("education") or "").strip() or None
     profile.english_level = (data.get("english_level") or "").strip() or None
     profile.summary = (data.get("summary") or "").strip() or None
@@ -324,10 +426,10 @@ def update_me():
 
     # Phase C: persist standard location + computed business_area
     if location_dict:
-        profile.location_code      = location_dict["location_code"]
-        profile.location_name      = location_dict["location_name"]
-        profile.location_path      = location_dict["location_path"]
-        profile.location_type      = location_dict["location_type"]
+        profile.location_code = location_dict["location_code"]
+        profile.location_name = location_dict["location_name"]
+        profile.location_path = location_dict["location_path"]
+        profile.location_type = location_dict["location_type"]
         profile.business_area_code = location_dict["business_area_code"]
         profile.business_area_name = location_dict["business_area_name"]
 
@@ -352,40 +454,175 @@ def update_me():
         profile.current_salary_max = csx_val
     if cs_months_val is not sentinel:
         profile.current_salary_months = cs_months_val
-    if abp_val is not sentinel:
-        profile.current_average_bonus_percent = abp_val
+    if cbp_val is not sentinel:
+        profile.current_commission_bonus_period = cbp_val
+    if cba_val is not sentinel:
+        profile.current_commission_bonus_amount = cba_val
     if has_yeb_val is not sentinel:
         profile.current_has_year_end_bonus = has_yeb_val
     if yebm_val is not sentinel:
         profile.current_year_end_bonus_months = yebm_val
     if work_exp_val is not sentinel:
         profile.work_experiences = work_exp_val
+    if proj_exp_val is not sentinel:
+        profile.project_experiences = proj_exp_val
     if edu_exp_val is not sentinel:
         profile.education_experiences = edu_exp_val
     if certificates_val is not sentinel:
         profile.certificates = certificates_val
 
+    # ── 简历增强字段 ─────────────────────────────────────────────────────────
+
+    # hukou_city
+    hukou_city_val = sentinel
+    if "hukou_city" in data:
+        hukou_city_val = (data.get("hukou_city") or "").strip() or None
+
+    # expected_salary_months
+    esm_val, e = _opt_int("expected_salary_months")
+    if e:
+        return _err(e)
+
+    # desired_positions: [{title, salary_min, salary_max, salary_period, salary_months, industries:[]}]
+    dp_val = sentinel
+    if "desired_positions" in data:
+        dp_raw = data.get("desired_positions")
+        if dp_raw is None:
+            dp_val = []
+        elif not isinstance(dp_raw, list):
+            return _err("desired_positions 必须为数组")
+        else:
+            out = []
+            for idx, item in enumerate(dp_raw):
+                if not isinstance(item, dict):
+                    return _err(f"desired_positions[{idx}] 必须为对象")
+                t = (item.get("title") or "").strip()
+                if not t:
+                    continue
+                entry = {"title": t}
+                for k in ("salary_min", "salary_max", "salary_months"):
+                    v = item.get(k)
+                    if v is not None and v != "":
+                        try:
+                            entry[k] = int(v)
+                        except (ValueError, TypeError):
+                            return _err(f"desired_positions[{idx}].{k} 必须为整数")
+                sp = item.get("salary_period")
+                if sp in ("month", "year"):
+                    entry["salary_period"] = sp
+                inds = item.get("industries")
+                if isinstance(inds, list):
+                    entry["industries"] = [str(x) for x in inds if x]
+                out.append(entry)
+            dp_val = out
+
+    # language_abilities: [{language, proficiency_level}]
+    lang_val = sentinel
+    if "language_abilities" in data:
+        lang_raw = data.get("language_abilities")
+        if lang_raw is None:
+            lang_val = []
+        elif not isinstance(lang_raw, list):
+            return _err("language_abilities 必须为数组")
+        else:
+            out = []
+            for idx, item in enumerate(lang_raw):
+                if not isinstance(item, dict):
+                    return _err(f"language_abilities[{idx}] 必须为对象")
+                lang = (item.get("language") or "").strip()
+                if not lang:
+                    continue
+                entry = {"language": lang}
+                pl = (item.get("proficiency_level") or "").strip()
+                if pl:
+                    entry["proficiency_level"] = pl
+                out.append(entry)
+            lang_val = out
+
+    # training_experiences: [{course_name, institution, location, start_date, end_date}]
+    train_val = sentinel
+    if "training_experiences" in data:
+        tr_raw = data.get("training_experiences")
+        if tr_raw is None:
+            train_val = []
+        elif not isinstance(tr_raw, list):
+            return _err("training_experiences 必须为数组")
+        else:
+            out = []
+            for idx, item in enumerate(tr_raw):
+                if not isinstance(item, dict):
+                    return _err(f"training_experiences[{idx}] 必须为对象")
+                cn = (item.get("course_name") or "").strip()
+                if not cn:
+                    continue
+                entry = {"course_name": cn}
+                for k in ("institution", "location", "start_date", "end_date"):
+                    v = (item.get(k) or "").strip()
+                    if v:
+                        entry[k] = v
+                out.append(entry)
+            train_val = out
+
+    # certificate_entries: [{name, level, issue_date}]
+    cert_entries_val = sentinel
+    if "certificate_entries" in data:
+        ce_raw = data.get("certificate_entries")
+        if ce_raw is None:
+            cert_entries_val = []
+        elif not isinstance(ce_raw, list):
+            return _err("certificate_entries 必须为数组")
+        else:
+            out = []
+            for idx, item in enumerate(ce_raw):
+                if not isinstance(item, dict):
+                    return _err(f"certificate_entries[{idx}] 必须为对象")
+                name = (item.get("name") or "").strip()
+                if not name:
+                    continue
+                entry = {"name": name}
+                for k in ("level", "issue_date"):
+                    v = (item.get(k) or "").strip()
+                    if v:
+                        entry[k] = v
+                out.append(entry)
+            cert_entries_val = out
+
+    # 持久化增强字段
+    if hukou_city_val is not sentinel:
+        profile.hukou_city = hukou_city_val
+    if esm_val is not sentinel:
+        profile.expected_salary_months = esm_val
+    if dp_val is not sentinel:
+        profile.desired_positions = dp_val
+    if lang_val is not sentinel:
+        profile.language_abilities = lang_val
+    if train_val is not sentinel:
+        profile.training_experiences = train_val
+    if cert_entries_val is not sentinel:
+        profile.certificate_entries = cert_entries_val
+
     # ── CAND-2A: server-computed profile_status (mirrors front-end gate) ───
     def _is_nonempty_str(v):
         return isinstance(v, str) and v.strip() != ""
+
     def _is_nonempty_arr(v):
         return isinstance(v, list) and len(v) > 0
 
     is_complete = (
-        _is_nonempty_str(profile.full_name) and
-        _is_nonempty_str(profile.phone) and
-        _is_nonempty_str(profile.email) and
-        _is_nonempty_str(profile.location_code) and
-        _is_nonempty_str(profile.location_name) and
-        _is_nonempty_str(profile.location_path) and
-        _is_nonempty_str(profile.location_type) and
-        _is_nonempty_str(profile.current_company) and
-        _is_nonempty_str(profile.current_title) and
-        _is_nonempty_str(profile.current_responsibilities) and
-        _is_nonempty_arr(profile.work_experiences) and
-        _is_nonempty_arr(profile.knowledge_tags) and
-        _is_nonempty_arr(profile.hard_skill_tags) and
-        _is_nonempty_arr(profile.soft_skill_tags)
+        _is_nonempty_str(profile.full_name)
+        and _is_nonempty_str(profile.phone)
+        and _is_nonempty_str(profile.email)
+        and _is_nonempty_str(profile.location_code)
+        and _is_nonempty_str(profile.location_name)
+        and _is_nonempty_str(profile.location_path)
+        and _is_nonempty_str(profile.location_type)
+        and _is_nonempty_str(profile.current_company)
+        and _is_nonempty_str(profile.current_title)
+        and _is_nonempty_str(profile.current_responsibilities)
+        and _is_nonempty_arr(profile.work_experiences)
+        and _is_nonempty_arr(profile.knowledge_tags)
+        and _is_nonempty_arr(profile.hard_skill_tags)
+        and _is_nonempty_arr(profile.soft_skill_tags)
     )
     profile.profile_status = "complete" if is_complete else "incomplete"
     if is_complete and not profile.profile_completed_at:
@@ -401,20 +638,7 @@ def update_me():
     tag_ids = data.get("tag_ids")
     if isinstance(tag_ids, list):
         db.session.flush()  # 确保 profile.id 已赋值（新建时）
-        db.session.execute(
-            db.text("DELETE FROM candidate_tags WHERE candidate_id = :cid"),
-            {"cid": profile.id},
-        )
-        for tid in tag_ids:
-            if not isinstance(tid, int):
-                continue
-            db.session.execute(
-                db.text(
-                    "INSERT IGNORE INTO candidate_tags (candidate_id, tag_id, created_at)"
-                    " VALUES (:cid, :tid, :now)"
-                ),
-                {"cid": profile.id, "tid": tid, "now": now},
-            )
+        sync_candidate_tags(profile.id, tag_ids, now)
 
     db.session.commit()
     return jsonify({
@@ -432,7 +656,7 @@ def confirm_latest_resume():
     if user.role not in ("candidate", "admin"):
         return _err("仅候选人账号可确认最新简历", 403)
 
-    profile = Candidate.query.filter_by(user_id=user.id).first()
+    profile = get_candidate_by_user_id(user.id)
     if not profile:
         return _err("候选人档案不存在", 404)
     if profile.profile_status != "complete":
@@ -448,6 +672,73 @@ def confirm_latest_resume():
         "success": True,
         "profile": profile.to_dict(include_private=True, include_contact=True),
     })
+
+
+@candidates_bp.get("/me/blocked-companies")
+@jwt_required()
+def get_blocked_companies():
+    """GET /api/candidates/me/blocked-companies — 返回当前候选人屏蔽的公司列表。"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("candidate", "admin"):
+        return _err("仅候选人账号可访问", 403)
+
+    profile = get_candidate_by_user_id(user.id)
+    if not profile:
+        return _err("候选人档案不存在", 404)
+
+    rows = (
+        db.session.query(Company)
+        .join(CandidateBlockedCompany, CandidateBlockedCompany.company_id == Company.id)
+        .filter(CandidateBlockedCompany.candidate_id == profile.id)
+        .order_by(Company.name)
+        .all()
+    )
+    return jsonify({"success": True, "companies": [c.to_dict() for c in rows]})
+
+
+@candidates_bp.put("/me/blocked-companies")
+@jwt_required()
+def update_blocked_companies():
+    """PUT /api/candidates/me/blocked-companies — 全量替换屏蔽公司列表。
+    Body: {"company_ids": [1, 2, 3]}
+    """
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("candidate", "admin"):
+        return _err("仅候选人账号可访问", 403)
+
+    profile = get_candidate_by_user_id(user.id)
+    if not profile:
+        return _err("候选人档案不存在", 404)
+
+    data = request.get_json(silent=True) or {}
+    raw_ids = data.get("company_ids", [])
+    if not isinstance(raw_ids, list):
+        return _err("company_ids 必须为数组", 400)
+
+    # 校验传入 ID 均合法
+    company_ids = [int(i) for i in raw_ids if str(i).isdigit() or isinstance(i, int)]
+    valid_count = Company.query.filter(Company.id.in_(company_ids)).count() if company_ids else 0
+    if valid_count != len(company_ids):
+        return _err("包含无效的公司 ID", 400)
+
+    # 全量替换：删旧 → 插新
+    CandidateBlockedCompany.query.filter_by(candidate_id=profile.id).delete()
+    for cid in company_ids:
+        db.session.add(CandidateBlockedCompany(candidate_id=profile.id, company_id=cid))
+    db.session.commit()
+
+    rows = (
+        db.session.query(Company)
+        .join(CandidateBlockedCompany, CandidateBlockedCompany.company_id == Company.id)
+        .filter(CandidateBlockedCompany.candidate_id == profile.id)
+        .order_by(Company.name)
+        .all()
+    )
+    return jsonify({"success": True, "companies": [c.to_dict() for c in rows]})
 
 
 @candidates_bp.get("")
@@ -468,96 +759,56 @@ def list_candidates():
     if user.role not in ("employer", "admin"):
         return _err("仅企业或管理员账号可查看候选人列表", 403)
 
-    query = Candidate.query
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+        page_size = max(1, min(int(request.args.get("page_size", 20)), 100))
+    except (ValueError, TypeError):
+        page, page_size = 1, 20
 
-    # availability_status 过滤
-    avail_param = request.args.get("availability_status", "open").strip()
-    if avail_param == "all":
-        # open + passive（任何角色都不返回 closed）
-        query = query.filter(Candidate.availability_status.in_(["open", "passive"]))
-    elif avail_param in ("open", "passive"):
-        query = query.filter(Candidate.availability_status == avail_param)
-    else:
-        query = query.filter(Candidate.availability_status == "open")
+    pool_type = request.args.get("pool_type", "all").strip()
+    employer_id = user.id if user.role == "employer" else None
 
-    city          = request.args.get("city", "").strip()
-    business_type = request.args.get("business_type", "").strip()
-    job_type      = request.args.get("job_type", "").strip()
-    function_code = request.args.get("function_code", "").strip()
-    business_area_code = request.args.get("business_area_code", "").strip()
-    location_code_filter = request.args.get("location_code", "").strip()
-    q             = request.args.get("q", "").strip()
-    tag_ids_raw   = request.args.get("tag_ids", "").strip()
+    job_id_raw = request.args.get("job_id", "").strip()
+    job_id: int | None = None
+    if job_id_raw.isdigit():
+        job_id = int(job_id_raw)
 
-    if city:
-        query = query.filter(
-            db.or_(Candidate.current_city == city, Candidate.expected_city == city)
-        )
-    if business_type:
-        query = query.filter(Candidate.business_type == business_type)
-    if job_type:
-        query = query.filter(Candidate.job_type == job_type)
-    if function_code:
-        # Candidates share `business_type` with the job side's `function_code`
-        # taxonomy (PostJob mirrors function_code → business_type on save).
-        query = query.filter(Candidate.business_type == function_code)
-    if business_area_code:
-        query = query.filter(Candidate.business_area_code == business_area_code)
-    if location_code_filter:
-        from app.utils.business_area import location_filter_clause
-        clause = location_filter_clause(
-            Candidate.location_code, Candidate.business_area_code, location_code_filter
-        )
-        if clause is not None:
-            query = query.filter(clause)
-    if q:
-        like = f"%{q}%"
-        query = query.filter(
-            db.or_(
-                Candidate.full_name.ilike(like),
-                Candidate.current_title.ilike(like),
-                Candidate.current_city.ilike(like),
-                Candidate.location_name.ilike(like),
-                Candidate.location_path.ilike(like),
-            )
-        )
-    if tag_ids_raw:
-        ids = [int(x) for x in tag_ids_raw.split(",") if x.strip().isdigit()]
-        if ids:
-            query = (
-                query
-                .join(CandidateTag, CandidateTag.candidate_id == Candidate.id)
-                .filter(CandidateTag.tag_id.in_(ids))
-                .distinct()
-            )
+    result = list_candidates_with_filters(
+        avail_param=request.args.get("availability_status", "open").strip(),
+        city=request.args.get("city", "").strip(),
+        business_type=request.args.get("business_type", "").strip(),
+        job_type=request.args.get("job_type", "").strip(),
+        function_code=request.args.get("function_code", "").strip(),
+        business_area_code=request.args.get("business_area_code", "").strip(),
+        location_code_filter=request.args.get("location_code", "").strip(),
+        q=request.args.get("q", "").strip(),
+        tag_ids_raw=request.args.get("tag_ids", "").strip(),
+        tag_groups_raw=request.args.get("tag_groups", "").strip(),
+        gender=request.args.get("gender", "").strip(),
+        page=page,
+        page_size=page_size,
+        pool_type=pool_type,
+        employer_id=employer_id,
+        job_id=job_id,
+    )
 
-    # tag_groups：分面筛选 — 同分类 OR、跨分类 AND
-    # 格式：'1,2;5,6' → [[1,2],[5,6]]
-    tag_groups_raw = request.args.get("tag_groups", "").strip()
-    if tag_groups_raw:
-        groups = []
-        for seg in tag_groups_raw.split(";"):
-            grp = [int(x) for x in seg.split(",") if x.strip().isdigit()]
-            if grp:
-                groups.append(grp)
-        for grp in groups:
-            sub = (
-                db.session.query(CandidateTag.candidate_id)
-                .filter(CandidateTag.candidate_id == Candidate.id,
-                        CandidateTag.tag_id.in_(grp))
-            )
-            query = query.filter(sub.exists())
+    candidates_list = result["items"]
 
-    # MySQL 8 不支持 "ORDER BY ... DESC NULLS LAST" 语法。
-    # 用 CASE WHEN 把 NULL 排到末尾，等价于 PostgreSQL 的 nullslast()。
-    candidates_list = query.order_by(
-        db.case((Candidate.profile_confirmed_at.is_(None), 0), else_=1).desc(),
-        Candidate.profile_confirmed_at.desc(),
-    ).all()
+    # 屏蔽过滤：employer 查看时，过滤掉已将该公司加入屏蔽列表的候选人。
+    if user.role == "employer" and candidates_list and user.company_name:
+        company = Company.query.filter_by(name=user.company_name).first()
+        if company:
+            blocked_cand_ids = {
+                row[0]
+                for row in db.session.query(CandidateBlockedCompany.candidate_id)
+                .filter_by(company_id=company.id)
+                .all()
+            }
+            if blocked_cand_ids:
+                candidates_list = [c for c in candidates_list if c.id not in blocked_cand_ids]
 
-    # 候选人池列表：admin 看全私；employer 仅对已解锁的候选人开放隐私。
-    # 解锁规则（CAND-5）= accepted invitation OR active application
-    # （submitted / viewed / shortlisted），单次批量预取避免 N+1。
+    # 候选人池列表：admin 看全私；employer 仅订阅覆盖的候选人开放隐私（Phase 8）。
+    # 解锁规则：active subscription 且 function_code + business_area_code 双命中。
     is_admin = user.role == "admin"
     cand_ids = [c.id for c in candidates_list]
     unlocked_ids: set[int] = set()
@@ -565,20 +816,62 @@ def list_candidates():
         from app.utils.candidate_privacy import employer_unlocked_candidate_ids
         unlocked_ids = employer_unlocked_candidate_ids(user.id, cand_ids)
 
-    tag_map = _load_tags_by_category(cand_ids)
+    tag_map = load_tags_by_category(cand_ids)
+    application_map = result.get("application_map", {})
 
     out = []
     for c in candidates_list:
         priv = is_admin or (c.id in unlocked_ids)
-        out.append(_public_dict(
+        d = build_public_dict(
             c, include_contact=priv, include_private=priv,
             tags_by_category=tag_map.get(c.id, {}),
-        ))
+        )
+        if c.id in application_map:
+            d.update(application_map[c.id])
+        out.append(d)
+
+    # Compute pool_counts for the rail badges (only all + applied for now)
+    pool_counts = {}
+    if user.role == "employer":
+        from app.models.job_application import JobApplication
+        from app.models.job import Job
+        from app.extensions import db as _db
+        from app.models.candidate import Candidate as _Cand
+        try:
+            pool_counts["all"] = _db.session.query(_db.func.count(_Cand.id)).filter(
+                _Cand.availability_status.in_(["open", "passive_now", "passive"])
+            ).scalar() or 0
+        except Exception:
+            pool_counts["all"] = None
+        try:
+            pool_counts["applied"] = (
+                _db.session.query(_db.func.count(_db.distinct(JobApplication.candidate_id)))
+                .join(Job, Job.id == JobApplication.job_id)
+                .filter(JobApplication.employer_id == employer_id)
+                .scalar() or 0
+            )
+        except Exception:
+            pool_counts["applied"] = None
+        try:
+            from app.models.employer_candidate_favorite import EmployerCandidateFavorite as _Fav
+            pool_counts["favorited"] = (
+                _db.session.query(_db.func.count(_Fav.id))
+                .filter(_Fav.employer_id == employer_id)
+                .scalar() or 0
+            )
+        except Exception:
+            pool_counts["favorited"] = None
+        for k in ("personal_headhunter", "team_headhunter", "entrusted"):
+            pool_counts[k] = None
 
     return jsonify({
         "success": True,
         "candidates": out,
-        "total": len(candidates_list),
+        "total": result["total"],
+        "page": result["page"],
+        "page_size": result["page_size"],
+        "total_pages": result["total_pages"],
+        "pool_counts": pool_counts,
     })
 
 
@@ -599,13 +892,7 @@ def area_filters_candidates():
 
     from app.utils.business_area import BUSINESS_AREAS
 
-    rows = (
-        db.session.query(Candidate.business_area_code, db.func.count(Candidate.id))
-        .filter(Candidate.availability_status.in_(["open", "passive"]))
-        .filter(Candidate.business_area_code.isnot(None))
-        .group_by(Candidate.business_area_code)
-        .all()
-    )
+    rows = count_candidates_by_business_area()
     counts = {code: cnt for code, cnt in rows}
 
     default_order = [
@@ -637,7 +924,7 @@ def get_candidate_public(candidate_id):
     if not user or not user.is_active:
         return _err("用户不存在", 404)
 
-    profile = Candidate.query.filter_by(id=candidate_id).first()
+    profile = get_candidate_by_id(candidate_id)
     if not profile:
         return _err("候选人不存在", 404)
 
@@ -648,27 +935,43 @@ def get_candidate_public(candidate_id):
     if not is_own and profile.availability_status == "closed" and user.role != "admin":
         return _err("该候选人暂不开放查看", 403)
 
-    # 隐私可见性判定（CAND-5）：
+    # 屏蔽检查：employer 查看时验证其公司是否被该候选人屏蔽。
+    if not is_own and user.role == "employer" and user.company_name:
+        company = Company.query.filter_by(name=user.company_name).first()
+        if company:
+            is_blocked = CandidateBlockedCompany.query.filter_by(
+                candidate_id=profile.id, company_id=company.id
+            ).first()
+            if is_blocked:
+                return _err("候选人不存在", 404)
+
+    # 隐私可见性判定（Phase 8）：
     #   - 候选人本人 / admin → 永远私有
-    #   - employer → accepted invitation OR active application（submitted /
-    #     viewed / shortlisted）
+    #   - employer → active subscription 且 function+area 双命中
     #   - 其它角色（不会到达这里，前面已 403）→ 公开视图
     if is_own or user.role == "admin":
         include_private = True
     elif user.role == "employer":
-        from app.utils.candidate_privacy import employer_can_view_private_profile
-        include_private = employer_can_view_private_profile(user.id, profile.id)
+        # Single subscription load — covers both access check and quota increment.
+        from app.utils.subscription_access import _get_active_subscription
+        from app.models.subscription import Subscription
+        _sub = _get_active_subscription(user.id)
+        include_private = bool(
+            _sub and _sub.covers_candidate(profile.function_code, profile.business_area_code)
+        )
+        if include_private and _sub and _sub.resume_views_used < Subscription.RESUME_VIEW_LIMIT:
+            _sub.resume_views_used += 1
+            db.session.commit()
     else:
         include_private = False
 
-    # CAND-5: contact_visible 不再控制企业可见性。已解锁即可看到
-    # 联系方式；未解锁始终隐藏。本人 / admin 也永远可见。
+    # contact 可见性与 private 一致，订阅覆盖则可见，否则隐藏。
     include_contact = include_private
 
-    tag_map = _load_tags_by_category([profile.id])
+    tag_map = load_tags_by_category([profile.id])
     return jsonify({
         "success": True,
-        "candidate": _public_dict(
+        "candidate": build_public_dict(
             profile,
             include_contact=include_contact,
             include_private=include_private,
@@ -683,155 +986,6 @@ def _employer_has_accepted_invite(employer_id: int, candidate_id: int) -> bool:
     `app.utils.candidate_privacy`. Use that going forward."""
     from app.utils.candidate_privacy import employer_can_view_private_profile
     return employer_can_view_private_profile(employer_id, candidate_id)
-
-
-def _load_tags_by_category(candidate_ids: list[int]) -> dict[int, dict[str, list[str]]]:
-    """
-    批量加载候选人的标签，按分类聚合。包括 pending（导入后未审批的也展示）。
-    返回 {candidate_id: {category: [name, ...]}}
-    """
-    if not candidate_ids:
-        return {}
-    rows = db.session.execute(
-        db.text("""
-            SELECT ct.candidate_id, t.category, t.name
-            FROM candidate_tags ct
-            JOIN tags t ON t.id = ct.tag_id
-            WHERE ct.candidate_id IN :ids
-              AND t.status IN ('active', 'pending')
-            ORDER BY t.category, t.name
-        """).bindparams(db.bindparam("ids", expanding=True)),
-        {"ids": candidate_ids},
-    ).fetchall()
-    out: dict[int, dict[str, list[str]]] = {}
-    for r in rows:
-        out.setdefault(r.candidate_id, {}).setdefault(r.category, []).append(r.name)
-    return out
-
-
-def _public_dict(profile: Candidate, include_contact: bool = False,
-                 include_private: bool = False,
-                 tags_by_category: dict[str, list[str]] | None = None) -> dict:
-    """返回候选人公开信息（CAND-5 重整后）。
-
-    `include_private=True` 时暴露隐私字段（候选人本人 / admin / 已解锁的 employer）。
-    `include_contact` 与 `include_private` 同步，因 CAND-5 起两者总是一起开关 ——
-    保留参数仅是为了减少 call-site 改动。
-
-    永远公开（用于列表筛选、卡片展示、匹配）：
-      function_code / function_name / is_management_role / location_* /
-      business_area_* / knowledge_tags / hard_skill_tags / soft_skill_tags /
-      route_tags / skill_tags / job_type / business_type / expected_* /
-      english_level / summary / profile_status / freshness_days / 时间戳
-
-    隐私字段（仅 include_private=True 时返回真实值）：
-      full_name / age / experience_years / education / availability_status /
-      work_experiences / education_experiences / certificates /
-      current_company / current_responsibilities / current_salary_min/max/months /
-      current_average_bonus_percent / current_has_year_end_bonus /
-      current_year_end_bonus_months / email / phone / address
-    """
-    data = {
-        "id": profile.id,
-        # 公开字段（永远返回）
-        "current_title": profile.current_title,
-        "current_city": profile.current_city,
-        "expected_city": profile.expected_city,
-        "expected_salary_min": profile.expected_salary_min,
-        "expected_salary_max": profile.expected_salary_max,
-        "expected_salary_label": profile.expected_salary_label,
-        "english_level": profile.english_level,
-        "summary": profile.summary,
-        "business_type": profile.business_type,
-        "job_type": profile.job_type,
-        "route_tags": profile.route_tags or [],
-        "skill_tags": profile.skill_tags or [],
-        "all_tags": profile.all_tags(),
-        "contact_visible": profile.contact_visible,
-        # Phase C: standard location
-        "location_code": profile.location_code,
-        "location_name": profile.location_name,
-        "location_path": profile.location_path,
-        "location_type": profile.location_type,
-        "business_area_code": profile.business_area_code,
-        "business_area_name": profile.business_area_name,
-        # CAND-2A: capability profile (always public; used by matching)
-        "function_code":      profile.function_code,
-        "function_name":      profile.function_name,
-        "is_management_role": profile.is_management_role,
-        "knowledge_tags":     profile.knowledge_tags or [],
-        "hard_skill_tags":    profile.hard_skill_tags or [],
-        "soft_skill_tags":    profile.soft_skill_tags or [],
-        "profile_status":     profile.profile_status,
-        "profile_completed_at": (
-            profile.profile_completed_at.isoformat()
-            if profile.profile_completed_at else None
-        ),
-        "freshness_days": profile.freshness_days(),
-        "resume_file_name": profile.resume_file_name,
-        "resume_uploaded_at": (
-            profile.resume_uploaded_at.isoformat() if profile.resume_uploaded_at else None
-        ),
-        "profile_confirmed_at": (
-            profile.profile_confirmed_at.isoformat() if profile.profile_confirmed_at else None
-        ),
-        "updated_at": profile.updated_at.isoformat() if profile.updated_at else None,
-    }
-
-    if include_private:
-        data.update({
-            "full_name":             profile.full_name,
-            "age":                   profile.age,
-            "experience_years":      profile.experience_years,
-            "education":             profile.education,
-            "availability_status":   profile.availability_status,
-            "work_experiences":      profile.work_experiences or [],
-            "education_experiences": profile.education_experiences or [],
-            "certificates":          profile.certificates or [],
-            # CAND-5: 当前任职敏感字段
-            "current_company":               profile.current_company,
-            "current_responsibilities":      profile.current_responsibilities,
-            "current_salary_min":            profile.current_salary_min,
-            "current_salary_max":            profile.current_salary_max,
-            "current_salary_months":         profile.current_salary_months,
-            "current_average_bonus_percent": profile.current_average_bonus_percent,
-            "current_has_year_end_bonus":    profile.current_has_year_end_bonus,
-            "current_year_end_bonus_months": profile.current_year_end_bonus_months,
-            "private_visible":       True,
-        })
-    else:
-        data.update({
-            "full_name":             f"候选人 #{profile.id}",
-            "age":                   None,
-            "experience_years":      None,
-            "education":             None,
-            "availability_status":   None,
-            "work_experiences":      [],
-            "education_experiences": [],
-            "certificates":          [],
-            "current_company":               None,
-            "current_responsibilities":      None,
-            "current_salary_min":            None,
-            "current_salary_max":            None,
-            "current_salary_months":         None,
-            "current_average_bonus_percent": None,
-            "current_has_year_end_bonus":    None,
-            "current_year_end_bonus_months": None,
-            "private_visible":       False,
-        })
-
-    if include_contact and include_private:
-        data["email"]   = profile.email
-        data["phone"]   = profile.phone
-        data["address"] = profile.address
-    else:
-        data["email"]   = None
-        data["phone"]   = None
-        data["address"] = None
-
-    # 注入按分类聚合的标签（含 pending）— 供前端按分类展示
-    data["tags_by_category"] = tags_by_category or {}
-    return data
 
 
 @candidates_bp.post("/upload-resume")
@@ -851,17 +1005,13 @@ def upload_resume():
     if not _allowed_file(f.filename):
         return _err("仅支持 PDF、DOC、DOCX 格式")
 
-    # 生成安全、唯一的存储文件名
+    # 读取文件内容（一次性，供 COS 上传或本地存储复用）
+    file_bytes = f.read()
     ext = f.filename.rsplit(".", 1)[-1].lower()
-    safe_name = f"{user.id}_{uuid.uuid4().hex}.{ext}"
-    upload_dir = current_app.config["UPLOAD_FOLDER"]
-    os.makedirs(upload_dir, exist_ok=True)
-    save_path = os.path.join(upload_dir, safe_name)
-    f.save(save_path)
 
     # 更新或创建 Candidate 记录中的简历字段
     now = datetime.now(timezone.utc)
-    profile = Candidate.query.filter_by(user_id=user.id).first()
+    profile = get_candidate_by_user_id(user.id)
     if not profile:
         # 简历上传时档案尚未完整填写，设为 closed 避免半成品出现在候选人池。
         # 候选人完成 PUT /candidates/me 确认档案时，才会更新为 open/passive。
@@ -874,12 +1024,28 @@ def upload_resume():
         )
         db.session.add(profile)
 
-    # 删除旧文件（静默失败）
-    if profile.resume_file_path and os.path.exists(profile.resume_file_path):
-        try:
-            os.remove(profile.resume_file_path)
-        except OSError:
-            pass
+    # 删除旧简历（COS 对象或本地文件）
+    from app.utils.cos_storage import upload_resume as _cos_upload, delete_resume as _cos_delete
+    if profile.resume_file_path:
+        if profile.resume_file_path.startswith("https://"):
+            _cos_delete(profile.resume_file_path)
+        elif os.path.exists(profile.resume_file_path):
+            try:
+                os.remove(profile.resume_file_path)
+            except OSError:
+                pass
+
+    # 优先上传到 COS；未配置时降级到本地磁盘
+    cos_url = _cos_upload(file_bytes, user.id, f.filename)
+    if cos_url:
+        save_path = cos_url
+    else:
+        safe_name = f"{user.id}_{uuid.uuid4().hex}.{ext}"
+        upload_dir = current_app.config["UPLOAD_FOLDER"]
+        os.makedirs(upload_dir, exist_ok=True)
+        save_path = os.path.join(upload_dir, safe_name)
+        with open(save_path, "wb") as fh:
+            fh.write(file_bytes)
 
     profile.resume_file_path = save_path
     profile.resume_file_name = secure_filename(f.filename)
@@ -894,3 +1060,348 @@ def upload_resume():
         "uploaded_at": profile.resume_uploaded_at.isoformat(),
         "profile": profile.to_dict(),
     }), 201
+
+
+@candidates_bp.delete("/me/resume")
+@jwt_required()
+def delete_my_resume():
+    """DELETE /api/candidates/me/resume — 候选人删除自己的附件简历。"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("candidate", "admin"):
+        return _err("仅候选人账号可删除简历", 403)
+
+    profile = get_candidate_by_user_id(user.id)
+    if not profile:
+        return _err("候选人档案不存在", 404)
+    if not profile.resume_file_path:
+        return _err("暂无附件可删除", 404)
+
+    from app.utils.cos_storage import delete_resume as _cos_delete
+    if profile.resume_file_path.startswith("https://"):
+        _cos_delete(profile.resume_file_path)
+    elif os.path.exists(profile.resume_file_path):
+        try:
+            os.remove(profile.resume_file_path)
+        except OSError:
+            pass
+
+    profile.resume_file_path = None
+    profile.resume_file_name = None
+    profile.resume_uploaded_at = None
+    db.session.commit()
+
+    return jsonify({"success": True})
+
+
+# ── 附件简历查看 ─────────────────────────────────────────────────────────────
+
+@candidates_bp.get("/<int:candidate_id>/resume")
+@jwt_required()
+def view_candidate_resume(candidate_id):
+    """GET /api/candidates/:id/resume — 供 employer/admin 查看候选人附件简历。
+    PDF 内联显示，DOC/DOCX 触发下载。
+    """
+    from flask import send_file as _send_file
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+
+    profile = get_candidate_by_id(candidate_id)
+    if not profile:
+        return _err("候选人不存在", 404)
+
+    is_own = (user.role == "candidate" and profile.user_id == user.id)
+
+    if not is_own and user.role not in ("employer", "admin"):
+        return _err("仅企业或管理员账号可查看简历", 403)
+
+    if not profile.resume_file_path or not profile.resume_file_name:
+        return _err("该候选人暂未上传附件简历", 404)
+
+    if not is_own and user.role == "employer":
+        from app.utils.candidate_privacy import employer_can_view_private_profile
+        if not employer_can_view_private_profile(user.id, profile.id):
+            return _err("您的订阅暂不支持查看该候选人的简历", 403)
+
+    # ── COS 存储：生成 1 小时预签名 URL，302 重定向（不走 Flask 带宽） ──────────
+    if profile.resume_file_path.startswith("https://"):
+        from flask import redirect as _redirect
+        from app.utils.cos_storage import get_presigned_url
+        url = get_presigned_url(profile.resume_file_path, expires=3600)
+        return _redirect(url, code=302)
+
+    # ── 兼容旧本地文件 ────────────────────────────────────────────────────────
+    if not os.path.exists(profile.resume_file_path):
+        return _err("简历文件不存在，请联系候选人重新上传", 404)
+
+    ext = profile.resume_file_name.rsplit(".", 1)[-1].lower() if "." in profile.resume_file_name else ""
+    mimetype_map = {
+        "pdf": "application/pdf",
+        "doc": "application/msword",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    return _send_file(
+        profile.resume_file_path,
+        download_name=profile.resume_file_name,
+        as_attachment=ext != "pdf",
+        mimetype=mimetype_map.get(ext, "application/octet-stream"),
+    )
+
+
+# ── 收藏 toggle ───────────────────────────────────────────────────────────────
+
+@candidates_bp.post("/<int:candidate_id>/favorite")
+@jwt_required()
+def toggle_favorite(candidate_id):
+    """POST /api/candidates/:id/favorite — 切换收藏状态，返回 {favorited: bool}"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role != "employer":
+        return _err("仅企业账号可收藏候选人", 403)
+
+    from app.models.employer_candidate_favorite import EmployerCandidateFavorite
+    from datetime import datetime, timezone
+
+    existing = EmployerCandidateFavorite.query.filter_by(
+        employer_id=user.id, candidate_id=candidate_id
+    ).first()
+
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify({"success": True, "favorited": False})
+    else:
+        fav = EmployerCandidateFavorite(
+            employer_id=user.id,
+            candidate_id=candidate_id,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.session.add(fav)
+        db.session.commit()
+        return jsonify({"success": True, "favorited": True})
+
+
+@candidates_bp.post("/favorites/sync")
+@jwt_required()
+def sync_favorites():
+    """POST /api/candidates/favorites/sync
+    body: { candidate_ids: [1,2,3] }
+    用于前端迁移 localStorage → 后端，批量写入不存在的收藏记录，已有的跳过。
+    返回 { synced: N, already_existed: M, favorited_ids: [...] }
+    """
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role != "employer":
+        return _err("仅企业账号可同步收藏", 403)
+
+    data = request.get_json(silent=True) or {}
+    ids = data.get("candidate_ids", [])
+    if not isinstance(ids, list):
+        return _err("candidate_ids 必须为数组")
+
+    from app.models.employer_candidate_favorite import EmployerCandidateFavorite
+    from app.models.candidate import Candidate
+    from datetime import datetime, timezone
+
+    # 只保留实际存在的 candidate id
+    valid_ids = {
+        r.id for r in db.session.query(Candidate.id).filter(Candidate.id.in_(ids)).all()
+    }
+    existing_ids = {
+        r.candidate_id
+        for r in EmployerCandidateFavorite.query.filter_by(employer_id=user.id)
+        .filter(EmployerCandidateFavorite.candidate_id.in_(valid_ids))
+        .all()
+    }
+
+    now = datetime.now(timezone.utc)
+    synced = 0
+    for cid in valid_ids:
+        if cid not in existing_ids:
+            db.session.add(EmployerCandidateFavorite(
+                employer_id=user.id, candidate_id=cid, created_at=now,
+            ))
+            synced += 1
+    db.session.commit()
+
+    all_fav_ids = [
+        r.candidate_id
+        for r in EmployerCandidateFavorite.query.filter_by(employer_id=user.id).all()
+    ]
+    return jsonify({
+        "success": True,
+        "synced": synced,
+        "already_existed": len(existing_ids),
+        "favorited_ids": all_fav_ids,
+    })
+
+
+@candidates_bp.get("/favorites")
+@jwt_required()
+def get_favorites():
+    """GET /api/candidates/favorites — 返回该企业收藏的所有 candidate_id 列表"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role != "employer":
+        return _err("仅企业账号可查看收藏", 403)
+
+    from app.models.employer_candidate_favorite import EmployerCandidateFavorite
+    rows = EmployerCandidateFavorite.query.filter_by(employer_id=user.id).all()
+    return jsonify({"success": True, "favorited_ids": [r.candidate_id for r in rows]})
+
+
+# ── Email action constants ─────────────────────────────────────────────────────
+
+_EMAIL_ACTION_WHITELIST = {"interview", "not_fit", "resume_update", "interview_address"}
+
+_ACTION_TEMPLATES = {
+    "interview": {
+        "subject": "面试邀请 | ACE-Talent",
+        "body": "您好 {name}，\n\n我们对您的背景很感兴趣，想邀请您进一步面试沟通。请您回复方便的面试时间。\n\n{company_name}\nACE-Talent",
+    },
+    "not_fit": {
+        "subject": "岗位匹配结果通知 | ACE-Talent",
+        "body": "您好 {name}，\n\n感谢您关注我们的岗位。综合当前岗位要求评估后，这次机会暂时不太匹配。后续如有更合适机会，我们会再联系您。\n\n{company_name}\nACE-Talent",
+    },
+    "resume_update": {
+        "subject": "请更新您的简历信息 | ACE-Talent",
+        "body": "您好 {name}，\n\n我们查看了您的档案，部分简历信息还需要补充或更新。请完善近期工作经历、项目经验、联系方式等内容，便于进一步沟通。\n\n{company_name}\nACE-Talent",
+    },
+    "interview_address": {
+        "subject": "面试地址通知 | ACE-Talent",
+        "body": "您好 {name}，\n\n面试地址如下：\n\n地址：请填写具体面试地址\n时间：请填写面试时间\n联系人：请填写联系人及电话\n\n请确认是否方便参加。\n\n{company_name}\nACE-Talent",
+    },
+}
+
+
+@candidates_bp.post("/<int:candidate_id>/email-action")
+@jwt_required()
+def send_candidate_email_action(candidate_id):
+    """POST /api/candidates/:id/email-action — 发送邮件动作给候选人并落库状态"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("employer", "admin"):
+        return _err("仅企业或管理员可发送候选人邮件", 403)
+
+    data = request.get_json(silent=True) or {}
+    action = data.get("action")
+    job_id = data.get("job_id")
+    thread_id = data.get("thread_id")
+
+    if action not in _EMAIL_ACTION_WHITELIST:
+        return _err(f"无效的 action，允许值：{', '.join(sorted(_EMAIL_ACTION_WHITELIST))}", 400)
+    if not job_id:
+        return _err("job_id 为必填项", 400)
+
+    profile = get_candidate_by_id(candidate_id)
+    if not profile:
+        return _err("候选人不存在", 404)
+
+    from app.models.job import Job
+    job = db.session.get(Job, job_id)
+    if not job:
+        return _err("岗位不存在", 404)
+    if user.role == "employer" and job.company_id != user.id:
+        return _err("只能对自己发布的岗位发送邮件", 403)
+
+    candidate_email = (profile.email or "").strip()
+    if not candidate_email and profile.user:
+        candidate_email = (profile.user.email or "").strip()
+    if not candidate_email:
+        return _err("候选人未配置邮箱，无法发送邮件", 422)
+
+    candidate_name = profile.full_name or (profile.user.name if profile.user else None) or "候选人"
+    company_name = user.company_name or user.name or "企业"
+
+    tpl = _ACTION_TEMPLATES[action]
+    subject = tpl["subject"]
+    body = tpl["body"].format(name=candidate_name, company_name=company_name)
+
+    # Upsert 状态记录
+    from app.models.candidate_email_action import CandidateEmailAction
+    from datetime import datetime, timezone
+    record = CandidateEmailAction.query.filter_by(
+        employer_id=user.id,
+        candidate_id=candidate_id,
+        job_id=job_id,
+        action=action,
+    ).first()
+
+    if not record:
+        record = CandidateEmailAction(
+            employer_id=user.id,
+            candidate_id=candidate_id,
+            job_id=job_id,
+            action=action,
+        )
+        db.session.add(record)
+
+    record.status = "pending"
+    record.thread_id = thread_id
+    record.subject = subject
+    record.body = body
+    record.error_message = None
+    db.session.commit()
+
+    # 发送邮件
+    from app.services.email_service import send_candidate_action_email
+    try:
+        send_candidate_action_email(candidate_email, candidate_name, company_name, action)
+        record.status = "sent"
+        record.sent_at = datetime.now(timezone.utc)
+        record.error_message = None
+        db.session.commit()
+    except Exception as exc:
+        record.status = "failed"
+        record.error_message = str(exc)[:500]
+        db.session.commit()
+        return _err("邮件发送失败，请稍后重试", 500)
+
+    return jsonify({
+        "success": True,
+        "message": "邮件已发送",
+        "action": action,
+        "status": "sent",
+        "sent_at": record.sent_at.isoformat() if record.sent_at else None,
+    })
+
+
+@candidates_bp.get("/<int:candidate_id>/email-actions")
+@jwt_required()
+def get_candidate_email_actions(candidate_id):
+    """GET /api/candidates/:id/email-actions?job_id=X — 查询邮件发送状态"""
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role not in ("employer", "admin"):
+        return _err("仅企业或管理员可查询邮件状态", 403)
+
+    job_id = request.args.get("job_id", type=int)
+    if not job_id:
+        return _err("job_id 为必填项", 400)
+
+    from app.models.candidate_email_action import CandidateEmailAction
+    rows = CandidateEmailAction.query.filter_by(
+        employer_id=user.id,
+        candidate_id=candidate_id,
+        job_id=job_id,
+    ).all()
+
+    # 补全四个 action 的状态，无记录时为 idle
+    actions = {}
+    for key in _EMAIL_ACTION_WHITELIST:
+        actions[key] = {"status": "idle", "sent_at": None, "updated_at": None}
+    for row in rows:
+        actions[row.action] = {
+            "status": row.status,
+            "sent_at": row.sent_at.isoformat() if row.sent_at else None,
+            "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        }
+
+    return jsonify({"success": True, "actions": actions})

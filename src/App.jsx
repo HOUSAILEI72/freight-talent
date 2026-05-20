@@ -2,6 +2,7 @@ import { useLayoutEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Navbar } from './components/layout/Navbar'
 import { Footer } from './components/layout/Footer'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Reset scroll to top on every route change, before the browser paints,
 // so the new page always starts at the top without a visible jump.
@@ -23,40 +24,46 @@ const TERMINAL_PREFIXES = [
   '/employer/match',
   '/employer/messages',
   '/employer/tags',
+  '/employer/settings',
+  '/employer/pricing',
+  '/employer/headhunting',
   '/candidate/home',
   '/candidate/jobs',
   '/candidate/messages',
   '/candidate/tags',
   '/candidate/upload',
-  '/candidate/invitations',
-  '/candidate/applications',
   '/candidate/profile/me',
   '/candidate/profile/builder',
+  '/candidate/settings',
 ]
+
+const FULLSCREEN_ROUTES = ['/login']
 
 export default function App() {
   const location = useLocation()
   const hideFooter = location.pathname.startsWith('/admin')
   const isTerminal = TERMINAL_PREFIXES.some((p) => location.pathname.startsWith(p))
+  const isFullscreen = FULLSCREEN_ROUTES.includes(location.pathname)
 
-  if (isTerminal) {
+  if (isTerminal || isFullscreen) {
     return (
-      <>
+      <ErrorBoundary showDetails={import.meta.env.DEV}>
         <ScrollToTop />
         <Outlet />
-      </>
+      </ErrorBoundary>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <ScrollToTop />
-      <Navbar />
-      {/* min-height keeps the footer anchored at the bottom even on short/loading pages */}
-      <main className="flex-1" style={{ minHeight: 'calc(100vh - 64px)' }}>
-        <Outlet />
-      </main>
-      {!hideFooter && <Footer />}
-    </div>
+    <ErrorBoundary showDetails={import.meta.env.DEV}>
+      <div className="min-h-screen flex flex-col">
+        <ScrollToTop />
+        <Navbar />
+        <main className="flex-1" style={{ minHeight: 'calc(100vh - 64px)' }}>
+          <Outlet />
+        </main>
+        {!hideFooter && <Footer />}
+      </div>
+    </ErrorBoundary>
   )
 }

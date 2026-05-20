@@ -25,17 +25,18 @@ from typing import Optional
 # ── Business-area taxonomy (mirrors front-end BUSINESS_AREAS) ────────────────
 
 BUSINESS_AREAS: dict[str, dict[str, str]] = {
-    "GLOBAL":        {"code": "GLOBAL",        "name": "Global"},
-    "REMOTE":        {"code": "REMOTE",        "name": "Remote"},
-    "GREAT_CHINA":   {"code": "GREAT_CHINA",   "name": "Great China"},
-    "EAST_CHINA":    {"code": "EAST_CHINA",    "name": "East China"},
-    "NORTH_CHINA":   {"code": "NORTH_CHINA",   "name": "North China"},
-    "SOUTH_CHINA":   {"code": "SOUTH_CHINA",   "name": "South China"},
-    "WEST_CHINA":    {"code": "WEST_CHINA",    "name": "West China"},
+    "GLOBAL": {"code": "GLOBAL", "name": "Global"},
+    "REMOTE": {"code": "REMOTE", "name": "Remote"},
+    "GREAT_CHINA": {"code": "GREAT_CHINA", "name": "China"},
+    "EAST_CHINA": {"code": "EAST_CHINA", "name": "East China"},
+    "NORTH_CHINA": {"code": "NORTH_CHINA", "name": "North China"},
+    "SOUTH_CHINA": {"code": "SOUTH_CHINA", "name": "South China"},
+    "WEST_CHINA": {"code": "WEST_CHINA", "name": "West China"},
     "CENTRAL_CHINA": {"code": "CENTRAL_CHINA", "name": "Central China"},
-    "HONG_KONG":     {"code": "HONG_KONG",     "name": "Hong Kong"},
-    "TAIWAN":        {"code": "TAIWAN",        "name": "Taiwan"},
-    "OVERSEAS":      {"code": "OVERSEAS",      "name": "Overseas"},
+    "HONG_KONG": {"code": "HONG_KONG", "name": "Hong Kong"},
+    "TAIWAN": {"code": "TAIWAN", "name": "Taiwan"},
+    "MACAU": {"code": "MACAU", "name": "Macau"},
+    "OVERSEAS": {"code": "OVERSEAS", "name": "Overseas"},
 }
 
 # ── Mainland-China province-prefix → business-area map ──────────────────────
@@ -48,8 +49,8 @@ _PROVINCE_TO_AREA: dict[str, str] = {
     # Northeast → grouped under North China (no NORTHEAST_CHINA bucket in spec)
     "21": "NORTH_CHINA", "22": "NORTH_CHINA", "23": "NORTH_CHINA",
     # East China
-    "31": "EAST_CHINA",  "32": "EAST_CHINA",  "33": "EAST_CHINA",
-    "34": "EAST_CHINA",  "35": "EAST_CHINA",  "36": "EAST_CHINA",
+    "31": "EAST_CHINA", "32": "EAST_CHINA", "33": "EAST_CHINA",
+    "34": "EAST_CHINA", "35": "EAST_CHINA", "36": "EAST_CHINA",
     "37": "EAST_CHINA",
     # Central China
     "41": "CENTRAL_CHINA", "42": "CENTRAL_CHINA", "43": "CENTRAL_CHINA",
@@ -73,39 +74,39 @@ _FORBIDDEN_MAINLAND_PREFIXES = frozenset({"71", "81", "82"})
 
 OVERSEAS_COUNTRIES: list[dict[str, str]] = [
     # Americas
-    {"code": "US", "name": "United States",  "name_zh": "美国"},
-    {"code": "CA", "name": "Canada",         "name_zh": "加拿大"},
-    {"code": "MX", "name": "Mexico",         "name_zh": "墨西哥"},
-    {"code": "BR", "name": "Brazil",         "name_zh": "巴西"},
-    {"code": "CL", "name": "Chile",          "name_zh": "智利"},
+    {"code": "US", "name": "United States", "name_zh": "美国"},
+    {"code": "CA", "name": "Canada", "name_zh": "加拿大"},
+    {"code": "MX", "name": "Mexico", "name_zh": "墨西哥"},
+    {"code": "BR", "name": "Brazil", "name_zh": "巴西"},
+    {"code": "CL", "name": "Chile", "name_zh": "智利"},
     # Europe
     {"code": "GB", "name": "United Kingdom", "name_zh": "英国"},
-    {"code": "DE", "name": "Germany",        "name_zh": "德国"},
-    {"code": "FR", "name": "France",         "name_zh": "法国"},
-    {"code": "NL", "name": "Netherlands",    "name_zh": "荷兰"},
-    {"code": "BE", "name": "Belgium",        "name_zh": "比利时"},
-    {"code": "IT", "name": "Italy",          "name_zh": "意大利"},
-    {"code": "ES", "name": "Spain",          "name_zh": "西班牙"},
-    {"code": "PL", "name": "Poland",         "name_zh": "波兰"},
+    {"code": "DE", "name": "Germany", "name_zh": "德国"},
+    {"code": "FR", "name": "France", "name_zh": "法国"},
+    {"code": "NL", "name": "Netherlands", "name_zh": "荷兰"},
+    {"code": "BE", "name": "Belgium", "name_zh": "比利时"},
+    {"code": "IT", "name": "Italy", "name_zh": "意大利"},
+    {"code": "ES", "name": "Spain", "name_zh": "西班牙"},
+    {"code": "PL", "name": "Poland", "name_zh": "波兰"},
     # Asia
-    {"code": "JP", "name": "Japan",          "name_zh": "日本"},
-    {"code": "KR", "name": "South Korea",    "name_zh": "韩国"},
-    {"code": "SG", "name": "Singapore",      "name_zh": "新加坡"},
-    {"code": "MY", "name": "Malaysia",       "name_zh": "马来西亚"},
-    {"code": "TH", "name": "Thailand",       "name_zh": "泰国"},
-    {"code": "VN", "name": "Vietnam",        "name_zh": "越南"},
-    {"code": "ID", "name": "Indonesia",      "name_zh": "印度尼西亚"},
-    {"code": "PH", "name": "Philippines",    "name_zh": "菲律宾"},
-    {"code": "IN", "name": "India",          "name_zh": "印度"},
+    {"code": "JP", "name": "Japan", "name_zh": "日本"},
+    {"code": "KR", "name": "South Korea", "name_zh": "韩国"},
+    {"code": "SG", "name": "Singapore", "name_zh": "新加坡"},
+    {"code": "MY", "name": "Malaysia", "name_zh": "马来西亚"},
+    {"code": "TH", "name": "Thailand", "name_zh": "泰国"},
+    {"code": "VN", "name": "Vietnam", "name_zh": "越南"},
+    {"code": "ID", "name": "Indonesia", "name_zh": "印度尼西亚"},
+    {"code": "PH", "name": "Philippines", "name_zh": "菲律宾"},
+    {"code": "IN", "name": "India", "name_zh": "印度"},
     # Middle East
     {"code": "AE", "name": "United Arab Emirates", "name_zh": "阿联酋"},
-    {"code": "SA", "name": "Saudi Arabia",         "name_zh": "沙特阿拉伯"},
+    {"code": "SA", "name": "Saudi Arabia", "name_zh": "沙特阿拉伯"},
     # Oceania
-    {"code": "AU", "name": "Australia",   "name_zh": "澳大利亚"},
+    {"code": "AU", "name": "Australia", "name_zh": "澳大利亚"},
     {"code": "NZ", "name": "New Zealand", "name_zh": "新西兰"},
     # Africa
     {"code": "ZA", "name": "South Africa", "name_zh": "南非"},
-    {"code": "EG", "name": "Egypt",        "name_zh": "埃及"},
+    {"code": "EG", "name": "Egypt", "name_zh": "埃及"},
 ]
 
 OVERSEAS_COUNTRY_CODES = frozenset(c["code"] for c in OVERSEAS_COUNTRIES)
@@ -169,8 +170,8 @@ def is_mainland_china_code(location_code: Optional[str]) -> bool:
 
 def is_allowed_special_location_code(code: Optional[str]) -> bool:
     """True iff `code` is one of the special non-numeric location codes the
-    system accepts (Global / Remote / mainland aggregate / HK / TW)."""
-    return code in {"GLOBAL", "REMOTE", "CN_MAINLAND_ALL", "HK", "TW"}
+    system accepts (Global / Remote / mainland aggregate / HK / TW / MO)."""
+    return code in {"GLOBAL", "REMOTE", "CN_MAINLAND_ALL", "HK", "TW", "MO"}
 
 
 def is_known_overseas_country_code(code: Optional[str]) -> bool:
@@ -197,11 +198,18 @@ def get_business_area_by_location_code(location_code: Optional[str]) -> Optional
     if not location_code:
         return None
 
-    if location_code == "GLOBAL":          return BUSINESS_AREAS["GLOBAL"]
-    if location_code == "REMOTE":          return BUSINESS_AREAS["REMOTE"]
-    if location_code == "CN_MAINLAND_ALL": return BUSINESS_AREAS["GREAT_CHINA"]
-    if location_code == "HK":              return BUSINESS_AREAS["HONG_KONG"]
-    if location_code == "TW":              return BUSINESS_AREAS["TAIWAN"]
+    if location_code == "GLOBAL":
+        return BUSINESS_AREAS["GLOBAL"]
+    if location_code == "REMOTE":
+        return BUSINESS_AREAS["REMOTE"]
+    if location_code == "CN_MAINLAND_ALL":
+        return BUSINESS_AREAS["GREAT_CHINA"]
+    if location_code == "HK":
+        return BUSINESS_AREAS["HONG_KONG"]
+    if location_code == "TW":
+        return BUSINESS_AREAS["TAIWAN"]
+    if location_code == "MO":
+        return BUSINESS_AREAS["MACAU"]
 
     if is_known_overseas_country_code(location_code):
         return BUSINESS_AREAS["OVERSEAS"]
@@ -224,18 +232,29 @@ def validate_location_payload(data: Optional[dict]) -> tuple[Optional[dict], Opt
     on failure. The normalized dict ALWAYS uses the back-end's computed
     business_area_code/name — any value the client put there is discarded.
     """
+    import re as _re
     if not isinstance(data, dict):
         return None, "location payload must be an object"
 
     code = data.get("location_code")
     name = data.get("location_name")
     path = data.get("location_path")
-    typ  = data.get("location_type")
+    typ = data.get("location_type")
 
-    if not code: return None, "location_code is required"
-    if not name: return None, "location_name is required"
-    if not path: return None, "location_path is required"
-    if not typ:  return None, "location_type is required"
+    if not code:
+        return None, "location_code is required"
+    if not name:
+        return None, "location_name is required"
+    if not path:
+        return None, "location_path is required"
+    if not typ:
+        return None, "location_type is required"
+
+    # ── Migrate legacy CN-XX-XXXX format → 6-digit numeric code ─────────────
+    # Old format: CN-{2-digit province}-{4-digit area}, e.g. CN-33-0113 → 330113
+    _legacy = _re.match(r'^CN-(\d{2})-(\d{4})$', str(code))
+    if _legacy:
+        code = _legacy.group(1) + _legacy.group(2)
 
     if not is_valid_location_code(code):
         return None, f"Unknown or forbidden location_code: {code}"
@@ -248,10 +267,10 @@ def validate_location_payload(data: Optional[dict]) -> tuple[Optional[dict], Opt
 
     return (
         {
-            "location_code":      code,
-            "location_name":      name,
-            "location_path":      path,
-            "location_type":      typ,
+            "location_code": code,
+            "location_name": name,
+            "location_path": path,
+            "location_type": typ,
             "business_area_code": area["code"],
             "business_area_name": area["name"],
         },
@@ -272,7 +291,7 @@ def location_filter_clause(column, business_area_column, location_code: str):
         city, including its districts and the city-level row itself).
       - Mainland area-level code (e.g. ``310101``): exact match.
       - ``CN_MAINLAND_ALL``: match every row whose ``business_area_code`` is
-        one of the mainland buckets (Great China / East / North / South /
+        one of the mainland buckets (China / East / North / South /
         West / Central). This is the only branch that goes through
         ``business_area_column``.
       - ``GLOBAL`` / ``REMOTE`` / ``HK`` / ``TW`` / overseas country code:
@@ -281,8 +300,6 @@ def location_filter_clause(column, business_area_column, location_code: str):
     Returns a SQLAlchemy clause, or ``None`` if the input is invalid (caller
     should treat that as "do not apply this filter").
     """
-    from sqlalchemy import or_, and_
-
     if not location_code:
         return None
     code = str(location_code).strip()

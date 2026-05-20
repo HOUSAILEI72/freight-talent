@@ -3,6 +3,7 @@ import { Send, X, Loader2 } from 'lucide-react'
 import { Button } from './Button'
 import { MatchScore } from './MatchScore'
 import { invitationsApi } from '../../api/invitations'
+import { useAutoResize } from '../../hooks/useAutoResize'
 
 /**
  * 通用发起邀约弹窗
@@ -24,6 +25,7 @@ export function InviteModal({ candidate, job, matchScore, onConfirm, onCancel, t
     : `您好 ${name}，\n\n我们正在寻访货代行业优秀人才，看到您的档案后非常感兴趣。期待与您进一步沟通，请问近期方便安排一次简短交流吗？\n\n感谢您的时间！`
 
   const [message, setMessage]   = useState(defaultMsg)
+  const messageRef = useAutoResize(message)
   const [sending, setSending]   = useState(false)
   const [apiError, setApiError] = useState('')
   const overlayRef = useRef(null)
@@ -119,8 +121,9 @@ export function InviteModal({ candidate, job, matchScore, onConfirm, onCancel, t
             邀约说明 <span className="ml-1.5 text-xs font-normal text-slate-400">（可编辑）</span>
           </label>
           <textarea
-            rows={6}
-            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
+            ref={messageRef}
+            rows={1}
+            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none overflow-hidden"
             value={message}
             onChange={e => setMessage(e.target.value)}
           />

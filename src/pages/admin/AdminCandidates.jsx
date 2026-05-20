@@ -180,9 +180,8 @@ export default function AdminCandidates() {
   const [avail, setAvail]               = useState('all')
 
   const fetchCandidates = useCallback((filters) => {
-    setLoading(true)
-    setError('')
-    candidatesApi.getCandidates(filters)
+    Promise.resolve()
+      .then(() => { setLoading(true); setError(''); return candidatesApi.getCandidates(filters) })
       .then(res => {
         const list = res.data.candidates
         setCandidates(list)

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Upload, ToggleLeft, ToggleRight, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Tag, FileSpreadsheet } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
+import { useToast } from '../../components/ui/Toast'
 import {
   getTags, getCategories, importTagsExcel,
   getPendingTags, reviewTag,
@@ -11,6 +12,7 @@ import {
 
 // ── 审批开关 ──────────────────────────────────────────────────────────────────
 function ApprovalToggle() {
+  const toast = useToast()
   const [enabled, setEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -28,7 +30,7 @@ function ApprovalToggle() {
       const res = await setTagApprovalSetting(!enabled)
       setEnabled(res.enabled)
     } catch (e) {
-      alert(e.response?.data?.detail || '操作失败')
+      toast.show(e.response?.data?.detail || '操作失败', 'error')
     } finally {
       setSaving(false)
     }
@@ -182,6 +184,7 @@ function TagLibrary() {
 
 // ── 待审批标签 Tab ─────────────────────────────────────────────────────────────
 function PendingTags() {
+  const toast = useToast()
   const [tags, setTags] = useState([])
   const [loading, setLoading] = useState(true)
   const [rejectId, setRejectId] = useState(null)
@@ -203,14 +206,14 @@ function PendingTags() {
       await reviewTag(id, 'approve')
       setTags(ts => ts.filter(t => t.id !== id))
     } catch (e) {
-      alert(e.response?.data?.detail || '操作失败')
+      toast.show(e.response?.data?.detail || '操作失败', 'error')
     } finally {
       setProcessing(null)
     }
   }
 
   const reject = async (id) => {
-    if (!rejectReason.trim()) { alert('请填写拒绝原因'); return }
+    if (!rejectReason.trim()) { toast.show('请填写拒绝原因', 'warning'); return }
     setProcessing(id)
     try {
       await reviewTag(id, 'reject', rejectReason)
@@ -218,7 +221,7 @@ function PendingTags() {
       setRejectId(null)
       setRejectReason('')
     } catch (e) {
-      alert(e.response?.data?.detail || '操作失败')
+      toast.show(e.response?.data?.detail || '操作失败', 'error')
     } finally {
       setProcessing(null)
     }
@@ -290,6 +293,7 @@ function PendingTags() {
 
 // ── 待审批描述 Tab ─────────────────────────────────────────────────────────────
 function PendingNotes() {
+  const toast = useToast()
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [rejectId, setRejectId] = useState(null)
@@ -311,14 +315,14 @@ function PendingNotes() {
       await reviewNote(id, 'approve')
       setNotes(ns => ns.filter(n => n.id !== id))
     } catch (e) {
-      alert(e.response?.data?.detail || '操作失败')
+      toast.show(e.response?.data?.detail || '操作失败', 'error')
     } finally {
       setProcessing(null)
     }
   }
 
   const reject = async (id) => {
-    if (!rejectReason.trim()) { alert('请填写拒绝原因'); return }
+    if (!rejectReason.trim()) { toast.show('请填写拒绝原因', 'warning'); return }
     setProcessing(id)
     try {
       await reviewNote(id, 'reject', rejectReason)
@@ -326,7 +330,7 @@ function PendingNotes() {
       setRejectId(null)
       setRejectReason('')
     } catch (e) {
-      alert(e.response?.data?.detail || '操作失败')
+      toast.show(e.response?.data?.detail || '操作失败', 'error')
     } finally {
       setProcessing(null)
     }
@@ -404,6 +408,7 @@ const TABS = [
 ]
 
 export default function TagManager() {
+  const toast = useToast()
   const [activeTab, setActiveTab] = useState('library')
 
   return (

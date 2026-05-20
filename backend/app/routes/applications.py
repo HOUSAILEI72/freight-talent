@@ -39,19 +39,16 @@ def _current_user():
     return db.session.get(User, uid)
 
 
-# ── POST /api/jobs/<job_id>/applications ─────────────────────────────────────
-@applications_bp.post("/api/jobs/<int:job_id>/applications")
-@jwt_required()
-def apply_to_job(job_id):
+def _current_candidate_profile():
     user = _current_user()
     if not user or not user.is_active:
-        return _err("用户不存在", 404)
+        return None, _err("用户不存在", 404)
     if user.role != "candidate":
-        return _err("仅候选人账号可以投递岗位", 403)
+        return None, _err("仅候选人账号可以操作岗位", 403)
 
     profile = Candidate.query.filter_by(user_id=user.id).first()
     if not profile:
-        return _err(
+        return None, _err(
             "请先完善候选人档案", 422,
             error_code="profile_incomplete",
             missing=["profile"],
@@ -65,17 +62,117 @@ def apply_to_job(job_id):
         else is_candidate_profile_complete(profile)
     )
     if not is_complete:
-        return _err(
+        return None, _err(
             "请先完善候选人档案", 422,
             error_code="profile_incomplete",
             missing=get_missing_profile_fields(profile),
         )
+    return profile, None
 
+
+def _published_job(job_id):
     job = db.session.get(Job, job_id)
     if not job:
-        return _err("岗位不存在", 404)
+        return None, _err("岗位不存在", 404)
     if job.status != "published":
-        return _err("该岗位未发布或已下线，无法投递", 400)
+        return None, _err("该岗位未发布或已下线，无法操作", 400)
+    return job, None
+
+
+# ── POST /api/jobs/<job_id>/saved ────────────────────────────────────────────
+@applications_bp.post("/api/jobs/<int:job_id>/saved")
+@jwt_required()
+def save_job(job_id):
+    # Saving only requires a candidate role — no profile completeness check.
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role != "candidate":
+        return _err("仅候选人账号可以收藏岗位", 403)
+
+    profile = Candidate.query.filter_by(user_id=user.id).first()
+    if not profile:
+        return _err(
+            "请先创建候选人档案", 422,
+            error_code="profile_incomplete",
+            missing=["profile"],
+        )
+
+    job, err = _published_job(job_id)
+    if err:
+        return err
+
+    existing = JobApplication.query.filter_by(
+        job_id=job.id, candidate_id=profile.id,
+    ).first()
+    if existing:
+        if existing.status == "withdrawn":
+            existing.status = "saved"
+        existing.is_saved = True
+        existing.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "duplicate": True,
+            "application": existing.to_dict(),
+        }), 200
+
+    app_row = JobApplication(
+        job_id=job.id,
+        candidate_id=profile.id,
+        employer_id=job.company_id,
+        status="saved",
+        is_saved=True,
+    )
+    db.session.add(app_row)
+    db.session.commit()
+
+    return jsonify({"success": True, "application": app_row.to_dict()}), 201
+
+
+# ── DELETE /api/jobs/<job_id>/saved ──────────────────────────────────────────
+@applications_bp.delete("/api/jobs/<int:job_id>/saved")
+@jwt_required()
+def unsave_job(job_id):
+    user = _current_user()
+    if not user or not user.is_active:
+        return _err("用户不存在", 404)
+    if user.role != "candidate":
+        return _err("仅候选人账号可以取消收藏", 403)
+
+    profile = Candidate.query.filter_by(user_id=user.id).first()
+    if not profile:
+        return _err("候选人档案不存在", 404)
+
+    existing = JobApplication.query.filter_by(
+        job_id=job_id, candidate_id=profile.id,
+    ).first()
+    if not existing:
+        return jsonify({"success": True, "message": "记录不存在"}), 200
+
+    if existing.status == "saved":
+        # pure save-only record — remove entirely
+        db.session.delete(existing)
+    else:
+        existing.is_saved = False
+        existing.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    return jsonify({"success": True}), 200
+
+
+# ── POST /api/jobs/<job_id>/applications ─────────────────────────────────────
+@applications_bp.post("/api/jobs/<int:job_id>/applications")
+@jwt_required()
+def apply_to_job(job_id):
+    profile, err = _current_candidate_profile()
+    if err:
+        return err
+
+    job, err = _published_job(job_id)
+    if err:
+        if err[1] == 400:
+            return _err("该岗位未发布或已下线，无法投递", 400)
+        return err
 
     # Idempotent: same candidate re-applying to same job returns the
     # existing record so the front-end button can settle on "已投递".
@@ -84,7 +181,7 @@ def apply_to_job(job_id):
     ).first()
     if existing:
         # Re-applying after withdrawal flips the status back to submitted.
-        if existing.status == "withdrawn":
+        if existing.status in ("saved", "withdrawn"):
             existing.status = "submitted"
             existing.updated_at = datetime.now(timezone.utc)
             db.session.commit()
@@ -109,6 +206,14 @@ def apply_to_job(job_id):
     )
     db.session.add(app_row)
     db.session.commit()
+
+    from app.utils.notifications import create_and_push_notification
+    create_and_push_notification(
+        user_id=job.company_id,
+        type='application_status_change',
+        title=f'收到新投递 — {job.title}',
+        data={'application_id': app_row.id, 'job_id': job.id},
+    )
 
     return jsonify({"success": True, "application": app_row.to_dict()}), 201
 
@@ -140,19 +245,19 @@ def my_applications():
         j = r.job
         if j is not None:
             d["job"] = {
-                "id":              j.id,
-                "title":           j.title,
+                "id": j.id,
+                "title": j.title,
                 # Job has no company_name column; it's derived from the
                 # relationship to User. Mirror Job.to_dict()'s convention.
-                "company_name":    j.company.company_name if j.company else None,
-                "city":            j.city,
-                "city_name":       getattr(j, "city_name", None),
-                "salary_label":    getattr(j, "salary_label", None),
-                "location_name":   getattr(j, "location_name", None),
-                "location_path":   getattr(j, "location_path", None),
-                "function_code":   getattr(j, "function_code", None),
-                "function_name":   getattr(j, "function_name", None),
-                "status":          j.status,
+                "company_name": j.company.company_name if j.company else None,
+                "city": j.city,
+                "city_name": getattr(j, "city_name", None),
+                "salary_label": getattr(j, "salary_label", None),
+                "location_name": getattr(j, "location_name", None),
+                "location_path": getattr(j, "location_path", None),
+                "function_code": getattr(j, "function_code", None),
+                "function_name": getattr(j, "function_name", None),
+                "status": j.status,
             }
         out.append(d)
     return jsonify({"success": True, "applications": out})
@@ -190,9 +295,9 @@ def received_applications():
         j = r.job
         if j is not None:
             d["job"] = {
-                "id":           j.id,
-                "title":        j.title,
-                "city":         j.city,
+                "id": j.id,
+                "title": j.title,
+                "city": j.city,
                 "function_code": getattr(j, "function_code", None),
                 "function_name": getattr(j, "function_name", None),
             }
@@ -201,16 +306,16 @@ def received_applications():
         c = r.candidate
         if c is not None:
             d["candidate"] = {
-                "id":              c.id,
-                "anonymous_name":  f"候选人 #{c.id}",
-                "current_title":   c.current_title,
-                "function_code":   getattr(c, "function_code", None),
-                "function_name":   getattr(c, "function_name", None),
+                "id": c.id,
+                "anonymous_name": (c.full_name or "")[0] + "**" if c.full_name else f"候选人 #{c.id}",
+                "current_title": c.current_title,
+                "function_code": getattr(c, "function_code", None),
+                "function_name": getattr(c, "function_name", None),
                 "business_area_code": getattr(c, "business_area_code", None),
                 "business_area_name": getattr(c, "business_area_name", None),
                 "expected_salary_label": c.expected_salary_label,
                 "experience_years": c.experience_years,
-                "freshness_days":   c.freshness_days(),
+                "freshness_days": c.freshness_days(),
             }
         out.append(d)
     return jsonify({"success": True, "applications": out})
@@ -234,7 +339,7 @@ def update_application_status(application_id):
     if not new_status:
         return _err("缺少 status 字段", 400)
 
-    VALID_STATUSES = {"submitted", "viewed", "shortlisted", "rejected", "withdrawn"}
+    VALID_STATUSES = {"saved", "submitted", "viewed", "shortlisted", "rejected", "withdrawn"}
     if new_status not in VALID_STATUSES:
         return _err(f"非法 status: {new_status}", 400)
 
@@ -273,11 +378,12 @@ def update_application_status(application_id):
 
     # ── State machine validation ─────────────────────────────────────────────
     ALLOWED_TRANSITIONS = {
-        "submitted":   {"viewed", "shortlisted", "rejected", "withdrawn"},
-        "viewed":      {"shortlisted", "rejected", "withdrawn"},
+        "saved": {"withdrawn"},
+        "submitted": {"viewed", "shortlisted", "rejected", "withdrawn"},
+        "viewed": {"shortlisted", "rejected", "withdrawn"},
         "shortlisted": {"rejected", "withdrawn"},
-        "rejected":    set(),  # terminal (admin can override via permission check above)
-        "withdrawn":   set(),  # terminal (admin can override via permission check above)
+        "rejected": set(),  # terminal (admin can override via permission check above)
+        "withdrawn": set(),  # terminal (admin can override via permission check above)
     }
 
     if user.role != "admin":
@@ -292,5 +398,24 @@ def update_application_status(application_id):
     app_row.status = new_status
     app_row.updated_at = datetime.now(timezone.utc)
     db.session.commit()
+
+    STATUS_LABELS = {
+        'viewed': '已查看您的投递',
+        'shortlisted': '已将您加入候选名单',
+        'rejected': '暂不匹配您的投递',
+    }
+    label = STATUS_LABELS.get(new_status)
+    if label and user.role == 'employer':
+        cand = db.session.get(Candidate, app_row.candidate_id)
+        if cand and cand.user_id:
+            from app.utils.notifications import create_and_push_notification
+            j = db.session.get(Job, app_row.job_id)
+            create_and_push_notification(
+                user_id=cand.user_id,
+                type='application_status_change',
+                title=label,
+                body=j.title if j else None,
+                data={'application_id': app_row.id},
+            )
 
     return jsonify({"success": True, "application": app_row.to_dict()})

@@ -2,6 +2,7 @@
  * /api/v2 (FastAPI) 标签体系接口
  */
 import axios from 'axios'
+import { applyRefreshInterceptor } from './refreshInterceptor'
 
 // v2 client — baseURL 指向 FastAPI，复用 localStorage token
 const v2 = axios.create({
@@ -15,6 +16,8 @@ v2.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
+
+applyRefreshInterceptor(v2)
 
 // ── 标签分类 ──────────────────────────────────────────────────────────────────
 

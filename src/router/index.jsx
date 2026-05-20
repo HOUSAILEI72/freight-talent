@@ -1,13 +1,37 @@
+import { Suspense, lazy } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import App from '../App'
-import Home from '../pages/Home'
-import UploadResume from '../pages/candidate/UploadResume'
-import CandidateProfile from '../pages/candidate/CandidateProfile'
-import MyInvitations from '../pages/candidate/MyInvitations'
-import JobMarketplace from '../pages/jobs/JobMarketplace'
-import CandidatePool from '../pages/employer/CandidatePool'
-import EmployerHome from '../pages/employer/EmployerHome'
-import Messages from '../pages/messages/Messages'
+import { useAuth } from '../context/AuthContext'
+
+function JobsRoute() {
+  const { user } = useAuth()
+  if (user?.role === 'employer') return <Navigate to="/employer/jobs" replace />
+  return <JobMarketplace />
+}
+
+// ── Lazy-loaded route components (code-split per page group) ──────────────────
+const Home               = lazy(() => import('../pages/Home'))
+const UploadResume       = lazy(() => import('../pages/candidate/UploadResume'))
+const CandidateProfile   = lazy(() => import('../pages/candidate/CandidateProfile'))
+const MyInvitations      = lazy(() => import('../pages/candidate/MyInvitations'))
+const JobMarketplace     = lazy(() => import('../pages/jobs/JobMarketplace'))
+const CandidatePool      = lazy(() => import('../features/candidatePool'))
+const EmployerHome       = lazy(() => import('../pages/employer/EmployerHome'))
+const Messages           = lazy(() => import('../features/messages'))
+const Dashboard          = lazy(() => import('../pages/employer/Dashboard'))
+const Overview           = lazy(() => import('../pages/admin/Overview'))
+const ImportManager      = lazy(() => import('../pages/admin/ImportManager'))
+const AdminCharts        = lazy(() => import('../pages/admin/AdminCharts'))
+const AdminCandidates    = lazy(() => import('../pages/admin/AdminCandidates'))
+const AdminJobs          = lazy(() => import('../pages/admin/AdminJobs'))
+const Approvals          = lazy(() => import('../pages/admin/Approvals'))
+const MyTags             = lazy(() => import('../pages/tags/MyTags'))
+const Login              = lazy(() => import('../pages/auth/Login'))
+const RequireAuth        = lazy(() => import('./RequireAuth'))
+const AuthLanding        = lazy(() => import('./AuthLanding'))
+const RedirectIfAuth     = lazy(() => import('./RedirectIfAuth'))
+
+// Terminal wrapper pages (lightweight — eager load)
 import TerminalJobs from '../pages/employer/TerminalJobs'
 import TerminalCandidates from '../pages/employer/TerminalCandidates'
 import TerminalMessages from '../pages/employer/TerminalMessages'
@@ -15,68 +39,72 @@ import TerminalTags from '../pages/employer/TerminalTags'
 import TerminalPostJob from '../pages/employer/TerminalPostJob'
 import TerminalMatchResult from '../pages/employer/TerminalMatchResult'
 import TerminalReceivedApplications from '../pages/employer/TerminalReceivedApplications'
-import Dashboard from '../pages/employer/Dashboard'
-import Overview from '../pages/admin/Overview'
-import ImportManager from '../pages/admin/ImportManager'
-import AdminCharts from '../pages/admin/AdminCharts'
-import AdminCandidates from '../pages/admin/AdminCandidates'
-import AdminJobs from '../pages/admin/AdminJobs'
-import Approvals from '../pages/admin/Approvals'
 import CandidateHome from '../pages/candidate/CandidateHome'
 import TerminalCandidateJobs from '../pages/candidate/TerminalCandidateJobs'
 import TerminalCandidateMessages from '../pages/candidate/TerminalCandidateMessages'
 import TerminalCandidateTags from '../pages/candidate/TerminalCandidateTags'
 import TerminalCandidateUpload from '../pages/candidate/TerminalCandidateUpload'
-import TerminalCandidateInvitations from '../pages/candidate/TerminalCandidateInvitations'
-import TerminalCandidateApplications from '../pages/candidate/TerminalCandidateApplications'
 import TerminalCandidateProfile from '../pages/candidate/TerminalCandidateProfile'
 import TerminalCandidateProfileBuilder from '../pages/candidate/TerminalCandidateProfileBuilder'
-import MyTags from '../pages/tags/MyTags'
-import Login from '../pages/auth/Login'
-import RequireAuth from './RequireAuth'
-import AuthLanding from './AuthLanding'
-import RedirectIfAuth from './RedirectIfAuth'
+import TerminalSettings from '../pages/employer/TerminalSettings'
+import TerminalPricing from '../pages/employer/TerminalPricing'
+import TerminalPersonalHeadhunting from '../pages/employer/TerminalPersonalHeadhunting'
+import TerminalTeamHeadhunting from '../pages/employer/TerminalTeamHeadhunting'
+import TerminalCandidateSettings from '../pages/candidate/TerminalCandidateSettings'
+import TerminalEmployerCandidateProfile from '../pages/employer/TerminalCandidateProfile'
+
+// Shared loading fallback — minimal, no layout shift
+function Fallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="w-8 h-8 border-2 border-slate-600 border-t-blue-400 rounded-full animate-spin" />
+    </div>
+  )
+}
+
+function Lazy({ children }) {
+  return <Suspense fallback={<Fallback />}>{children}</Suspense>
+}
 
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
     children: [
-      { index: true, element: <AuthLanding /> },
+      { index: true, element: <Lazy><AuthLanding /></Lazy> },
       {
         path: 'login',
         element: (
-          <RedirectIfAuth>
+          <Lazy><RedirectIfAuth>
             <Login />
-          </RedirectIfAuth>
+          </RedirectIfAuth></Lazy>
         ),
       },
 
-      // 岗位广场（candidate / employer / admin 均可访问）
+      // 岗位广场（candidate / admin 直接显示；employer 重定向到 /employer/jobs 保证 own=1 过滤）
       {
         path: 'jobs',
         element: (
-          <RequireAuth roles={['candidate', 'employer', 'admin']}>
-            <JobMarketplace />
-          </RequireAuth>
+          <Lazy><RequireAuth roles={['candidate', 'employer', 'admin']}>
+            <JobsRoute />
+          </RequireAuth></Lazy>
         ),
       },
 
-      // 消息中心（employer + candidate + admin）
       {
         path: 'messages',
         element: (
-          <RequireAuth roles={['employer', 'candidate', 'admin']}>
+          <Lazy><RequireAuth roles={['employer', 'candidate', 'admin']}>
             <Messages />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
       {
         path: 'messages/:threadId',
         element: (
-          <RequireAuth roles={['employer', 'candidate', 'admin']}>
+          <Lazy><RequireAuth roles={['employer', 'candidate', 'admin']}>
             <Messages />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
 
@@ -84,9 +112,9 @@ export const router = createBrowserRouter([
       {
         path: 'tags',
         element: (
-          <RequireAuth roles={['candidate', 'employer']}>
+          <Lazy><RequireAuth roles={['candidate', 'employer']}>
             <MyTags />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
 
@@ -99,7 +127,6 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // /candidate/profile/me — 候选人看自己的档案（统一入口，Terminal 壳）
       {
         path: 'candidate/profile/me',
         element: (
@@ -108,7 +135,6 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // /candidate/profile/builder — CAND-2B 档案构建（Terminal 深色，gate 跳转目标）
       {
         path: 'candidate/profile/builder',
         element: (
@@ -117,13 +143,12 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // /candidate/profile/:candidateId — 企业/管理员看候选人公开档案（数字 id）
       {
         path: 'candidate/profile/:id',
         element: (
-          <RequireAuth roles={['candidate', 'employer', 'admin']}>
+          <Lazy><RequireAuth roles={['candidate', 'employer', 'admin']}>
             <CandidateProfile />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
       {
@@ -167,33 +192,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'candidate/invitations',
+        path: 'candidate/settings',
         element: (
           <RequireAuth roles={['candidate']}>
-            <TerminalCandidateInvitations />
+            <TerminalCandidateSettings />
           </RequireAuth>
         ),
       },
-      // /candidate/applications — CAND-8B "我的投递"
-      {
-        path: 'candidate/applications',
-        element: (
-          <RequireAuth roles={['candidate']}>
-            <TerminalCandidateApplications />
-          </RequireAuth>
-        ),
-      },
-
       // 企业路由
       {
         path: 'candidates',
         element: (
-          <RequireAuth roles={['employer', 'admin']}>
+          <Lazy><RequireAuth roles={['employer', 'admin']}>
             <CandidatePool />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
-      // 别名路由，供 Home 和 Navbar 使用 — 企业 Terminal 版候选人池
       {
         path: 'employer/candidates',
         element: (
@@ -202,7 +216,14 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // 企业 Terminal 版岗位广场
+      {
+        path: 'employer/candidates/:id',
+        element: (
+          <RequireAuth roles={['employer', 'admin']}>
+            <TerminalEmployerCandidateProfile />
+          </RequireAuth>
+        ),
+      },
       {
         path: 'employer/jobs',
         element: (
@@ -211,7 +232,6 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // 企业 Terminal 版消息
       {
         path: 'employer/messages',
         element: (
@@ -228,7 +248,6 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // 企业 Terminal 版标签申请
       {
         path: 'employer/tags',
         element: (
@@ -246,6 +265,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'employer/jobs/:jobId/edit',
+        element: (
+          <RequireAuth roles={['employer']}>
+            <TerminalPostJob mode="edit" />
+          </RequireAuth>
+        ),
+      },
+      {
         path: 'employer/jobs/:jobId/match',
         element: (
           <RequireAuth roles={['employer']}>
@@ -253,7 +280,6 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // 企业 Terminal 版收到的投递 — CAND-8C
       {
         path: 'employer/applications/received',
         element: (
@@ -262,10 +288,6 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // ── Legacy compat: keep these so old in-app links / external bookmarks
-      // don't 404. /employer/post-job is a redirect to the Jobs sub-route;
-      // /employer/match/:jobId still mounts the Terminal page directly so
-      // we don't flash a white shell during a redirect tick.
       {
         path: 'employer/post-job',
         element: <Navigate to="/employer/jobs/new" replace />,
@@ -287,11 +309,43 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'employer/home',
+        path: 'employer/settings',
         element: (
           <RequireAuth roles={['employer']}>
-            <EmployerHome />
+            <TerminalSettings />
           </RequireAuth>
+        ),
+      },
+      {
+        path: 'employer/pricing',
+        element: (
+          <RequireAuth roles={['employer', 'admin', 'candidate']}>
+            <TerminalPricing />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'employer/headhunting/personal',
+        element: (
+          <RequireAuth roles={['employer', 'admin']}>
+            <TerminalPersonalHeadhunting />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'employer/headhunting/team',
+        element: (
+          <RequireAuth roles={['employer', 'admin']}>
+            <TerminalTeamHeadhunting />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'employer/home',
+        element: (
+          <Lazy><RequireAuth roles={['employer']}>
+            <EmployerHome />
+          </RequireAuth></Lazy>
         ),
       },
 
@@ -299,49 +353,49 @@ export const router = createBrowserRouter([
       {
         path: 'admin/overview',
         element: (
-          <RequireAuth roles={['admin']}>
+          <Lazy><RequireAuth roles={['admin']}>
             <Overview />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
       {
         path: 'admin/import',
         element: (
-          <RequireAuth roles={['admin']}>
+          <Lazy><RequireAuth roles={['admin']}>
             <ImportManager />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
       {
         path: 'admin/approvals',
         element: (
-          <RequireAuth roles={['admin']}>
+          <Lazy><RequireAuth roles={['admin']}>
             <Approvals />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
       {
         path: 'admin/charts',
         element: (
-          <RequireAuth roles={['admin']}>
+          <Lazy><RequireAuth roles={['admin']}>
             <AdminCharts />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
       {
         path: 'admin/candidates',
         element: (
-          <RequireAuth roles={['admin']}>
+          <Lazy><RequireAuth roles={['admin']}>
             <AdminCandidates />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
       {
         path: 'admin/jobs',
         element: (
-          <RequireAuth roles={['admin']}>
+          <Lazy><RequireAuth roles={['admin']}>
             <AdminJobs />
-          </RequireAuth>
+          </RequireAuth></Lazy>
         ),
       },
       {

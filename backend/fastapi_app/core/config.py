@@ -41,6 +41,16 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
+    # ── 腾讯 COS（头像存储） ──────────────────────────────────────────────────
+    cos_secret_id: str = ""
+    cos_secret_key: str = ""
+    cos_bucket: str = ""          # e.g. freight-talent-1234567890
+    cos_region: str = "ap-shanghai"
+    cos_cdn_domain: str = ""      # 可选：COS CDN 加速域名，配置后头像 URL 使用 CDN
+
+    # ── AI 分析 ───────────────────────────────────────────────────────────────
+    deepseek_api_key: str = ""
+
     # ── 服务元信息 ────────────────────────────────────────────────────────────
     app_name: str = "FreightTalent FastAPI"
     app_version: str = "0.1.0"

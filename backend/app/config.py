@@ -35,7 +35,7 @@ class Config:
             "Add it to backend/.env (at least 32 random characters)."
         )
     _access_minutes = os.getenv("JWT_ACCESS_TOKEN_EXPIRES_MINUTES")
-    _access_hours   = os.getenv("JWT_ACCESS_TOKEN_EXPIRES_HOURS")
+    _access_hours = os.getenv("JWT_ACCESS_TOKEN_EXPIRES_HOURS")
     if _access_minutes is not None:
         JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=int(_access_minutes))
     elif _access_hours is not None:
@@ -73,6 +73,9 @@ class Config:
     SERVE_STATIC = os.getenv("SERVE_STATIC", "false").lower() == "true"
     STATIC_FOLDER = os.path.join(os.path.dirname(__file__), "..", "..", "dist")
 
+    # ── Socket.IO ─────────────────────────────────────────────────────────────
+    ENABLE_SOCKETIO = os.getenv("ENABLE_SOCKETIO", "false").lower() == "true"
+
     # ── 邮件 ──────────────────────────────────────────────────────────────────
     MAIL_ENABLED = os.getenv("MAIL_ENABLED", "true").lower() == "true"
     MAIL_HOST = os.getenv("MAIL_HOST", "smtp.exmail.qq.com")
@@ -87,25 +90,19 @@ class Config:
 class DevelopmentConfig(Config):
     """本地开发配置。"""
     DEBUG = True
+    RATELIMIT_ENABLED = False
 
 
 class ProductionConfig(Config):
-    """生产配置（通过环境变量 FLASK_ENV=production 激活）。"""
+    """生产配置（通过环境变量 FLASK_ENV=production 激活）。
+
+    必填环境变量校验在 get_config() 中执行（运行时而非 import 时）。
+    """
     DEBUG = False
 
-    # 生产必须用 Redis 限流（避免多进程内存隔离）
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI")
-    if not RATELIMIT_STORAGE_URI:
-        raise ValueError(
-            "生产环境必须设置 RATELIMIT_STORAGE_URI（如 redis://127.0.0.1:6379/0）"
-        )
-
-    # 生产必须用 Redis JWT blocklist（跨 worker 生效）
     REDIS_URL = os.getenv("REDIS_URL")
-    if not REDIS_URL:
-        raise ValueError(
-            "生产环境必须设置 REDIS_URL（如 redis://127.0.0.1:6379/0）"
-        )
+    CORS_ORIGINS = (os.getenv("CORS_ORIGINS") or "").split(",") if os.getenv("CORS_ORIGINS") else []
 
     # 连接池在生产用更保守配置
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -118,5 +115,22 @@ class ProductionConfig(Config):
 def get_config():
     env = os.getenv("FLASK_ENV", "development")
     if env == "production":
+        _validate_production_env()
         return ProductionConfig
     return DevelopmentConfig
+
+
+def _validate_production_env():
+    """运行时校验生产必填环境变量（延迟到 get_config() 调用时而非 import 时）。"""
+    missing = []
+    for var, desc in [
+        ("RATELIMIT_STORAGE_URI", "redis://127.0.0.1:6379/0"),
+        ("REDIS_URL", "redis://127.0.0.1:6379/0"),
+        ("CORS_ORIGINS", "https://yourdomain.com"),
+    ]:
+        if not os.getenv(var):
+            missing.append(f"  {var}  (例: {desc})")
+    if missing:
+        raise ValueError(
+            "生产环境缺少以下必填环境变量：\n" + "\n".join(missing)
+        )

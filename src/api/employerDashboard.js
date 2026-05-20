@@ -15,4 +15,13 @@ export const employerDashboardApi = {
       },
     })
   },
+
+  getTrendSummary({ functionValue = 'ALL', regionValue = 'ALL' } = {}) {
+    return client.get('/employer/dashboard-trend-summary', {
+      params: {
+        function: functionValue,
+        region: regionValue,
+      },
+    })
+  },
 }

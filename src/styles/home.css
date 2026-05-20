@@ -1,0 +1,201 @@
+/* ══════════════════════════════════════════════════════════════
+   Home Page — Liquid Glass · Mouse Effects · Scroll Reveal
+   All animations respect prefers-reduced-motion at the bottom
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 1. Liquid Glass (dark surface) ──────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(28px) saturate(200%) brightness(1.12);
+  -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(1.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ── 2. Liquid Glass (light surface) ─────────────────────────── */
+.glass-light {
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.07),
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+/* ── 3. Animated gradient text ───────────────────────────────── */
+@keyframes grad-shift {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+
+.grad-text {
+  background: linear-gradient(
+    120deg,
+    #60a5fa 0%,
+    #38bdf8 40%,
+    #22d3ee 100%
+  );
+  background-size: 100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── 4. Shimmer sweep ────────────────────────────────────────── */
+@keyframes shimmer-sweep {
+  0%   { transform: translateX(-130%) skewX(-15deg); }
+  100% { transform: translateX(230%)  skewX(-15deg); }
+}
+
+.shimmer-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent                0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent               100%
+  );
+  transform: translateX(-130%) skewX(-15deg);
+  animation: shimmer-sweep 4s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ── 5. Float ────────────────────────────────────────────────── */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
+.float-anim {
+  animation: float-y 5s ease-in-out infinite;
+}
+
+/* ── 6. Hero ambient orbs ────────────────────────────────────── */
+@keyframes orb-breathe-a {
+  0%, 100% { opacity: 0.10; transform: scale(1)    translate(0px,   0px); }
+  40%       { opacity: 0.22; transform: scale(1.08) translate(16px, -12px); }
+  70%       { opacity: 0.14; transform: scale(0.93) translate(-10px, 18px); }
+}
+
+@keyframes orb-breathe-b {
+  0%, 100% { opacity: 0.12; transform: scale(1)    translate(0px, 0px); }
+  35%       { opacity: 0.18; transform: scale(1.1)  translate(-18px, 10px); }
+  70%       { opacity: 0.08; transform: scale(0.9)  translate(10px, -14px); }
+}
+
+@keyframes orb-breathe-c {
+  0%, 100% { opacity: 0.08; transform: scale(1) translate(0, 0); }
+  50%       { opacity: 0.15; transform: scale(1.12) translate(8px, 8px); }
+}
+
+.orb-a { animation: orb-breathe-a 9s  ease-in-out infinite; }
+.orb-b { animation: orb-breathe-b 12s ease-in-out infinite 1.5s; }
+.orb-c { animation: orb-breathe-c 15s ease-in-out infinite 3s; }
+
+/* ── 7. Scroll reveal ────────────────────────────────────────── */
+.reveal-item {
+  opacity: 0;
+  transform: translateY(28px);
+  filter: blur(3px);
+  transition:
+    opacity   0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    filter    0.5s ease;
+}
+
+.reveal-item.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
+/* Stagger via nth-child on the reveal container */
+.reveal-group > .reveal-item:nth-child(1) { transition-delay: 0ms; }
+.reveal-group > .reveal-item:nth-child(2) { transition-delay: 90ms; }
+.reveal-group > .reveal-item:nth-child(3) { transition-delay: 180ms; }
+.reveal-group > .reveal-item:nth-child(4) { transition-delay: 270ms; }
+.reveal-group > .reveal-item:nth-child(5) { transition-delay: 360ms; }
+.reveal-group > .reveal-item:nth-child(6) { transition-delay: 450ms; }
+
+/* ── 8. Tilt card base ───────────────────────────────────────── */
+.tilt-card {
+  transform-style: preserve-3d;
+  will-change: transform;
+  isolation: isolate;
+}
+
+/* ── 9. Glow hover (business line cards) ────────────────────── */
+.glow-hover {
+  transition: box-shadow 0.35s ease;
+}
+
+.glow-hover:hover {
+  box-shadow:
+    0 0 0 1.5px rgba(139, 92, 246, 0.35),
+    0 0 28px rgba(99,  102, 241, 0.18),
+    0 0 56px rgba(6,   182, 212, 0.10),
+    0 16px 48px rgba(0, 0, 0, 0.10);
+}
+
+/* ── 10. Noise grain texture ─────────────────────────────────── */
+.grain {
+  position: relative;
+}
+
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* ── 11. Inline highlight pill ───────────────────────────────── */
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+/* ── 12. Pulsing active dot ──────────────────────────────────── */
+@keyframes ping-slow {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%       { transform: scale(1.6); opacity: 0; }
+}
+
+.ping-slow {
+  animation: ping-slow 2.4s ease-in-out infinite;
+}
+
+/* ── 13. Reduced motion overrides ────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .grad-text               { animation: none; -webkit-text-fill-color: unset; background: none; color: inherit; }
+  .shimmer-wrap::after     { animation: none; display: none; }
+  .float-anim              { animation: none; }
+  .orb-a, .orb-b, .orb-c  { animation: none; }
+  .ping-slow               { animation: none; }
+  .reveal-item             { opacity: 1; transform: none; filter: none; transition: none; }
+}

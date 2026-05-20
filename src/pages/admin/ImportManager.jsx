@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { adminApi } from '../../api/admin'
 import { Button } from '../../components/ui/Button'
+import { useToast } from '../../components/ui/Toast'
 import {
   getTags, getCategories, importTagsExcel,
   getPendingTags, reviewTag,
@@ -105,6 +106,7 @@ function StatusBadge({ status, isConfirmed }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function PreviewPanel({ result, onConfirm, onDryRun, confirming, dryRunning }) {
+  const toast = useToast()
   const {
     batch_id, import_type, original_filename,
     preview_stats, errors = [], warnings = [], new_fields = [],
@@ -127,7 +129,7 @@ function PreviewPanel({ result, onConfirm, onDryRun, confirming, dryRunning }) {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      alert('下载失败，请重试')
+      toast.show('下载失败，请重试', 'error')
     } finally {
       setDownloading(false)
     }
@@ -178,7 +180,7 @@ function PreviewPanel({ result, onConfirm, onDryRun, confirming, dryRunning }) {
           <div className="grid sm:grid-cols-2 gap-2">
             {new_fields.map(f => (
               <div key={f.field_key} className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg text-xs">
-                <span className="font-mono text-blue-700 font-semibold">{f.field_key}</span>
+                <span className="font-sans text-blue-700 font-semibold">{f.field_key}</span>
                 <span className="text-slate-400">·</span>
                 <span className="text-slate-600">{f.label}</span>
                 <span className="ml-auto text-blue-400">{f.inferred_type}</span>
@@ -372,6 +374,7 @@ function BatchHistory({ batches, loading, onSelect, activeBatchId }) {
 }
 
 function UploadZone({ onPreview, previewing }) {
+  const toast = useToast()
   const [importType, setImportType] = useState('job')
   const [dragging, setDragging] = useState(false)
   const [file, setFile]   = useState(null)
@@ -426,7 +429,7 @@ function UploadZone({ onPreview, previewing }) {
                 a.click()
                 URL.revokeObjectURL(url)
               })
-              .catch(() => alert('模板下载失败'))
+              .catch(() => toast.show('模板下载失败', 'error'))
           }}
           className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
         >
@@ -473,6 +476,7 @@ function UploadZone({ onPreview, previewing }) {
 }
 
 function DataImportTab() {
+  const toast = useToast()
   const [batches, setBatches]               = useState([])
   const [batchesLoading, setBatchesLoading] = useState(true)
   const [previewResult, setPreviewResult]   = useState(null)
@@ -533,7 +537,7 @@ function DataImportTab() {
     try {
       const res = await adminApi.dryRunImport(batchId)
       setPreviewResult(prev => ({ ...prev, dry_run_result: res.data }))
-    } catch (err) { alert(err.response?.data?.message || 'Dry Run 失败') }
+    } catch (err) { toast.show(err.response?.data?.message || 'Dry Run 失败', 'error') }
     finally { setDryRunning(false) }
   }
 
@@ -701,6 +705,7 @@ function TagLibraryTab() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function PendingTagsTab() {
+  const toast = useToast()
   const [tags, setTags]           = useState([])
   const [loading, setLoading]     = useState(true)
   const [rejectId, setRejectId]   = useState(null)
@@ -716,18 +721,18 @@ function PendingTagsTab() {
   const approve = async id => {
     setProcessing(id)
     try { await reviewTag(id, 'approve'); setTags(ts => ts.filter(t => t.id !== id)) }
-    catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
   const reject = async id => {
-    if (!rejectReason.trim()) { alert('请填写拒绝原因'); return }
+    if (!rejectReason.trim()) { toast.show('请填写拒绝原因', 'warning'); return }
     setProcessing(id)
     try {
       await reviewTag(id, 'reject', rejectReason)
       setTags(ts => ts.filter(t => t.id !== id))
       setRejectId(null); setRejectReason('')
-    } catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    } catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
@@ -792,6 +797,7 @@ function PendingTagsTab() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function PendingNotesTab() {
+  const toast = useToast()
   const [notes, setNotes]               = useState([])
   const [loading, setLoading]           = useState(true)
   const [rejectId, setRejectId]         = useState(null)
@@ -807,18 +813,18 @@ function PendingNotesTab() {
   const approve = async id => {
     setProcessing(id)
     try { await reviewNote(id, 'approve'); setNotes(ns => ns.filter(n => n.id !== id)) }
-    catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
   const reject = async id => {
-    if (!rejectReason.trim()) { alert('请填写拒绝原因'); return }
+    if (!rejectReason.trim()) { toast.show('请填写拒绝原因', 'warning'); return }
     setProcessing(id)
     try {
       await reviewNote(id, 'reject', rejectReason)
       setNotes(ns => ns.filter(n => n.id !== id))
       setRejectId(null); setRejectReason('')
-    } catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    } catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setProcessing(null) }
   }
 
@@ -883,6 +889,7 @@ function PendingNotesTab() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ApprovalToggle() {
+  const toast = useToast()
   const [enabled, setEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
@@ -894,7 +901,7 @@ function ApprovalToggle() {
   const toggle = async () => {
     setSaving(true)
     try { const res = await setTagApprovalSetting(!enabled); setEnabled(res.enabled) }
-    catch (e) { alert(e.response?.data?.detail || '操作失败') }
+    catch (e) { toast.show(e.response?.data?.detail || '操作失败', 'error') }
     finally { setSaving(false) }
   }
 
@@ -924,6 +931,7 @@ const TABS = [
 ]
 
 export default function ImportManager() {
+  const toast = useToast()
   const [activeTab, setActiveTab] = useState('import')
 
   return (

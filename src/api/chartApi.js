@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { serializeTagGroups } from '../lib/tagGroups'
+import { applyRefreshInterceptor } from './refreshInterceptor'
 
 const v2 = axios.create({
   baseURL: '/api/v2',
@@ -12,6 +13,8 @@ v2.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
+
+applyRefreshInterceptor(v2)
 
 /** @param {{ tagGroups?: Record<string,number[]>, granularity?: string, periods?: number, refresh?: boolean }} params */
 export const getCandidateChart = ({ tagGroups = {}, granularity = 'month', periods = 12, refresh = false }) =>
