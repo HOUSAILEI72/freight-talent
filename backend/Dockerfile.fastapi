@@ -42,4 +42,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
   CMD curl -fsS http://localhost:8000/api/v2/health || exit 1
 
-CMD ["uvicorn", "fastapi_app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# 单 worker：asyncio 事件循环处理所有并发 I/O，Semaphore/app.state 进程内全局有效。
+# 需要横向扩容时改用多容器副本（而非多 worker），并将 Semaphore 替换为 Redis 计数。
+CMD ["uvicorn", "fastapi_app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

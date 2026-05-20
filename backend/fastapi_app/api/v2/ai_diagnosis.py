@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from fastapi_app.core.auth import get_current_user_id
 from fastapi_app.core.config import get_settings
 from fastapi_app.core.database import get_db
+from fastapi_app.core.redis import get_redis_client
 
 logger = logging.getLogger("fastapi_app.ai_diagnosis")
 
@@ -41,6 +42,27 @@ def _get_semaphore() -> asyncio.Semaphore:
     if _SEMAPHORE is None:
         _SEMAPHORE = asyncio.Semaphore(5)
     return _SEMAPHORE
+
+
+# ── 每用户每日限流（10 次/天） ─────────────────────────────────────────────────
+_DAILY_LIMIT = 20
+_DAILY_WINDOW = 86400  # 24h
+
+
+def _check_rate_limit(user_id: int) -> bool:
+    """返回 True 表示允许，False 表示超限。Redis 不可用时放行。"""
+    redis = get_redis_client()
+    if redis is None:
+        return True
+    key = f"ratelimit:ai:diagnose:{user_id}"
+    try:
+        pipe = redis.pipeline()
+        pipe.incr(key)
+        pipe.expire(key, _DAILY_WINDOW)
+        count = pipe.execute()[0]
+        return count <= _DAILY_LIMIT
+    except Exception:
+        return True
 
 
 # ── Pydantic schemas ───────────────────────────────────────────────────────────
@@ -258,6 +280,12 @@ async def diagnose_resume(
         raise HTTPException(
             status_code=503,
             detail="AI 功能未配置：请在 backend/.env 中设置 DEEPSEEK_API_KEY=sk-...",
+        )
+
+    if not _check_rate_limit(user_id):
+        raise HTTPException(
+            status_code=429,
+            detail=f"今日 AI 诊断次数已达上限（{_DAILY_LIMIT} 次/天），请明天再试",
         )
 
     profile = _get_candidate_profile(db, user_id)

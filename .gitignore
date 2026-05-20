@@ -89,3 +89,7 @@ scripts/ai_backup_*/
 .superpowers/
 .worktrees/
 .superpowers/
+
+# 运维脚本（含危险操作，不入主仓库）
+backend/scripts/clear_candidate_pool.py
+backend/scripts/import_resumes.py

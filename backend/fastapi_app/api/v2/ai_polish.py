@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 from fastapi_app.core.auth import get_current_user_id
 from fastapi_app.core.config import get_settings
+from fastapi_app.core.redis import get_redis_client
 
 logger = logging.getLogger("fastapi_app.ai_polish")
 
@@ -37,6 +38,37 @@ def _get_semaphore() -> asyncio.Semaphore:
     if _SEMAPHORE is None:
         _SEMAPHORE = asyncio.Semaphore(5)
     return _SEMAPHORE
+
+
+# ── 每用户限流：30 次/天 + 5 次/分钟（双维度） ────────────────────────────────
+_DAILY_LIMIT = 30
+_DAILY_WINDOW = 86400
+_MINUTE_LIMIT = 5
+_MINUTE_WINDOW = 60
+
+
+def _check_rate_limit(user_id: int) -> tuple[bool, str]:
+    """返回 (允许, 错误描述)。Redis 不可用时放行。"""
+    redis = get_redis_client()
+    if redis is None:
+        return True, ""
+    day_key = f"ratelimit:ai:polish:day:{user_id}"
+    min_key = f"ratelimit:ai:polish:min:{user_id}"
+    try:
+        pipe = redis.pipeline()
+        pipe.incr(day_key)
+        pipe.expire(day_key, _DAILY_WINDOW)
+        pipe.incr(min_key)
+        pipe.expire(min_key, _MINUTE_WINDOW)
+        results = pipe.execute()
+        day_count, min_count = results[0], results[2]
+        if day_count > _DAILY_LIMIT:
+            return False, f"今日 AI 润色次数已达上限（{_DAILY_LIMIT} 次/天），请明天再试"
+        if min_count > _MINUTE_LIMIT:
+            return False, f"操作过于频繁，每分钟最多润色 {_MINUTE_LIMIT} 次，请稍后再试"
+    except Exception:
+        pass
+    return True, ""
 
 
 _FIELD_PROMPTS: dict[str, str] = {
@@ -123,6 +155,13 @@ async def polish_text(
     if not api_key:
         return StreamingResponse(
             iter(["data: [ERROR: DeepSeek API key not configured]\n\n"]),
+            media_type="text/event-stream",
+        )
+
+    allowed, rate_msg = _check_rate_limit(user_id)
+    if not allowed:
+        return StreamingResponse(
+            iter([f"data: [ERROR: {rate_msg}]\n\n"]),
             media_type="text/event-stream",
         )
 

@@ -103,6 +103,9 @@ services:
       COS_SECRET_KEY: ${COS_SECRET_KEY:-}
       COS_BUCKET: ${COS_BUCKET:-}
       COS_REGION: ${COS_REGION:-ap-guangzhou}
+      COS_CDN_DOMAIN: ${COS_CDN_DOMAIN:-}
+    volumes:
+      - uploads_data:/app/uploads
     networks:
       - app_net
     expose:
